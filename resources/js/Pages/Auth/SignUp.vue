@@ -18,6 +18,18 @@ const form = ref({
 const passwordsMatch = computed(
     () => form.value.confirmPassword.length > 0 && form.value.confirmPassword === form.value.password,
 );
+
+function formatUsPhone(value) {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length === 0) return '';
+    if (digits.length < 4) return `(${digits}`;
+    if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function onPhoneInput(event) {
+    form.value.phone = formatUsPhone(event.target.value);
+}
 </script>
 
 <template>
@@ -31,7 +43,30 @@ const passwordsMatch = computed(
             <form class="mt-5 flex flex-col gap-3.5" @submit.prevent>
                 <Input v-model="form.username" :label="$t('signUp.usernameLabel')" type="text" />
                 <Input v-model="form.fullName" :label="$t('signUp.fullNameLabel')" type="text" />
-                <Input v-model="form.phone" :label="$t('signUp.phoneLabel')" type="tel" />
+                <label class="flex flex-col gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                        $t('signUp.phoneLabel')
+                    }}</span>
+                    <div
+                        class="flex items-center gap-2.5 rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 focus-within:border-[var(--green-border)]"
+                    >
+                        <span
+                            class="flex shrink-0 items-center gap-1.5 border-r border-[var(--border-strong)] pr-2.5 text-sm font-semibold text-[var(--text-strong)]"
+                        >
+                            <span class="text-base leading-none">🇺🇸</span>
+                            +1
+                        </span>
+                        <input
+                            :value="form.phone"
+                            type="tel"
+                            inputmode="numeric"
+                            autocomplete="tel-national"
+                            :placeholder="$t('signUp.phonePlaceholder')"
+                            class="w-full bg-transparent text-sm font-semibold text-[var(--text-strong)] placeholder:font-medium placeholder:text-[var(--text-faint)] focus:outline-none"
+                            @input="onPhoneInput"
+                        />
+                    </div>
+                </label>
                 <Input v-model="form.email" :label="$t('signUp.emailLabel')" type="email" />
 
                 <label class="flex flex-col gap-2">

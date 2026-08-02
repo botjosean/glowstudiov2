@@ -130,6 +130,7 @@
         "usernameLabel": "Usuario",
         "fullNameLabel": "Nombre completo",
         "phoneLabel": "Teléfono",
+        "phonePlaceholder": "(305) 555-0123",
         "emailLabel": "Email",
         "passwordLabel": "Contraseña",
         "confirmPasswordLabel": "Confirmar contraseña",
