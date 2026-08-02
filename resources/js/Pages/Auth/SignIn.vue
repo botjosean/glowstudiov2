@@ -1,16 +1,19 @@
 <script setup>
-import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import { Eye } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import Input from '../../Components/ui/Input.vue';
 import Button from '../../Components/ui/Button.vue';
 
-const form = ref({
+const form = useForm({
     identifier: '',
     password: '',
     remember: false,
 });
+
+function submit() {
+    form.post('/login');
+}
 </script>
 
 <template>
@@ -21,7 +24,10 @@ const form = ref({
             </div>
             <div class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('signIn.subtitle') }}</div>
 
-            <form class="mt-6 flex flex-col gap-4" @submit.prevent>
+            <form class="mt-6 flex flex-col gap-4" @submit.prevent="submit">
+                <p v-if="form.errors.identifier" class="text-xs font-semibold text-[var(--danger)]">
+                    {{ form.errors.identifier }}
+                </p>
                 <Input v-model="form.identifier" :label="$t('signIn.identifierLabel')" type="text" />
                 <label class="flex flex-col gap-2">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
@@ -57,7 +63,9 @@ const form = ref({
                         class="flex-1 rounded-xl border-[1.5px] border-[var(--border-strong)] py-3.5 text-center text-sm font-bold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
                         >{{ $t('common.cancel') }}</Link
                     >
-                    <Button variant="primary" type="submit" class="flex-1">{{ $t('menu.signIn') }}</Button>
+                    <Button variant="primary" type="submit" :disabled="form.processing" class="flex-1">{{
+                        $t('menu.signIn')
+                    }}</Button>
                 </div>
             </form>
 

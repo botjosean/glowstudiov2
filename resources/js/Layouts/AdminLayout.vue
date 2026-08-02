@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { CalendarDays, Scissors, Clock, User, Settings } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
+import FlashMessage from '../Components/ui/FlashMessage.vue';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
@@ -26,6 +27,8 @@ function isActive(href) {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)]">
+        <FlashMessage />
+
         <slot name="header">
             <header class="flex items-center justify-between border-b border-[var(--surface-mute)] bg-[var(--surface)] p-4">
                 <div class="flex items-center gap-2.5">

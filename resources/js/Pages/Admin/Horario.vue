@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import { Clock4, UtensilsCrossed, Timer, Info } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Select from '../../Components/ui/Select.vue';
@@ -21,7 +22,11 @@ const props = defineProps({
 
 const { formatTime, formatDuration } = useFormat();
 
-const form = ref({ ...props.schedule });
+const form = useForm({ ...props.schedule });
+
+function submit() {
+    form.put('/admin/horario', { preserveScroll: true, preserveState: true });
+}
 
 const timeOptions = computed(() =>
     Array.from({ length: 96 }, (_, i) => i * 15).map((minutes) => ({
@@ -37,10 +42,10 @@ const bufferOptions = computed(() =>
     })),
 );
 
-const workStartLabel = computed(() => formatTime(Math.floor(form.value.workStart / 60), form.value.workStart % 60));
-const workEndLabel = computed(() => formatTime(Math.floor(form.value.workEnd / 60), form.value.workEnd % 60));
-const lunchStartLabel = computed(() => formatTime(Math.floor(form.value.lunchStart / 60), form.value.lunchStart % 60));
-const lunchEndLabel = computed(() => formatTime(Math.floor(form.value.lunchEnd / 60), form.value.lunchEnd % 60));
+const workStartLabel = computed(() => formatTime(Math.floor(form.workStart / 60), form.workStart % 60));
+const workEndLabel = computed(() => formatTime(Math.floor(form.workEnd / 60), form.workEnd % 60));
+const lunchStartLabel = computed(() => formatTime(Math.floor(form.lunchStart / 60), form.lunchStart % 60));
+const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), form.lunchEnd % 60));
 </script>
 
 <template>
@@ -104,11 +109,20 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.value.lunchEnd /
                 </div>
             </div>
 
+            <p
+                v-if="form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes"
+                class="text-xs font-semibold text-[var(--danger)]"
+            >
+                {{ form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes }}
+            </p>
+
             <button
                 type="button"
-                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)]"
+                :disabled="form.processing"
+                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                @click="submit"
             >
-                {{ $t('admin.saveChanges') }}
+                {{ form.processing ? $t('common.saving') : $t('admin.saveChanges') }}
             </button>
         </div>
     </AdminLayout>

@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { Menu, X, Globe, Moon, UserPlus, LogIn } from '@lucide/vue';
 import { useTheme } from '../composables/useTheme';
 import { usePreferences } from '../composables/usePreferences';
+import FlashMessage from '../Components/ui/FlashMessage.vue';
 
 const menuOpen = ref(false);
 const { theme, toggleTheme } = useTheme();
@@ -19,6 +20,8 @@ function toggleLanguage() {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--surface)]">
+        <FlashMessage />
+
         <header class="relative border-b border-[var(--surface-mute)] bg-[var(--surface)] p-4">
             <div class="flex items-center justify-between">
                 <Link href="/" class="flex items-center gap-1.5">

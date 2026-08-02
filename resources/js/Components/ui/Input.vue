@@ -3,6 +3,7 @@ defineProps({
     label: { type: String, default: '' },
     type: { type: String, default: 'text' },
     placeholder: { type: String, default: '' },
+    disabled: { type: Boolean, default: false },
 });
 
 const model = defineModel({ type: [String, Number], default: '' });
@@ -17,7 +18,8 @@ const model = defineModel({ type: [String, Number], default: '' });
             v-model="model"
             :type="type"
             :placeholder="placeholder"
-            class="w-full rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 text-sm font-semibold text-[var(--text-strong)] placeholder:font-medium placeholder:text-[var(--text-faint)] focus:border-[var(--green-border)] focus:outline-none"
+            :disabled="disabled"
+            class="w-full rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 text-sm font-semibold text-[var(--text-strong)] placeholder:font-medium placeholder:text-[var(--text-faint)] focus:border-[var(--green-border)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
         />
     </label>
 </template>

@@ -15,11 +15,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Kept intentionally without a provider row: fixture for the
+        // "authenticated but not a provider -> 403" admin access path.
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        $this->call([
+            ServiceTypeSeeder::class,
+            ProviderSeeder::class,
+            AppointmentSeeder::class,
         ]);
     }
 }

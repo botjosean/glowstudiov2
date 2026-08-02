@@ -55,6 +55,8 @@ onBeforeUnmount(() => {
                     appear
                 >
                     <div
+                        role="dialog"
+                        aria-modal="true"
                         class="max-h-[92vh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl bg-[var(--surface)] p-6 shadow-[0_-10px_40px_rgba(15,23,42,0.2)]"
                     >
                         <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--border-strong)]" />

@@ -1,6 +1,9 @@
 <?php
 
+use App\Console\Commands\CloseFinishedAppointments;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SetLocaleFromCookie;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,9 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [
-            HandleInertiaRequests::class,
-        ]);
+        $middleware->web(
+            prepend: [SetLocaleFromCookie::class],
+            append: [HandleInertiaRequests::class],
+        );
+
+        $middleware->redirectGuestsTo('/iniciar-sesion');
+        $middleware->redirectUsersTo('/admin/citas');
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command(CloseFinishedAppointments::class)->hourly()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

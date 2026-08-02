@@ -70,7 +70,34 @@
         "light": "Light",
         "dark": "Dark",
         "settingsScope": "Changes apply to the whole panel: appointments, services and schedule.",
-        "logOut": "Log out"
+        "logOut": "Log out",
+        "serviceCreated": "Service created",
+        "serviceUpdated": "Service updated",
+        "serviceDeactivated": "Service deactivated",
+        "serviceActivated": "Service activated",
+        "scheduleUpdated": "Schedule updated",
+        "scheduleConflictWarning": "{count} upcoming appointment(s) fall outside your new schedule",
+        "profileUpdated": "Profile updated",
+        "profilePublished": "Your profile is now visible",
+        "profileUnpublished": "Your profile is hidden",
+        "appointmentConfirmed": "Appointment confirmed",
+        "appointmentCancelled": "Appointment cancelled",
+        "invalidTransition": "This appointment can no longer be changed",
+        "deactivateService": "Deactivate service",
+        "activateService": "Activate service",
+        "serviceInactive": "Inactive",
+        "confirmDeactivateTitle": "Deactivate this service?",
+        "confirmDeactivateBody": "It will stop appearing on your public profile. You can reactivate it any time.",
+        "confirmDeactivateUpcoming": "{count} already-booked appointment(s) keep their reservation.",
+        "confirmCancelTitle": "Cancel this appointment?",
+        "confirmCancelBody": "The slot will be freed for another client. This cannot be undone.",
+        "publishProfile": "Publish profile",
+        "publishProfileHint": "Controls whether you appear in the public provider list",
+        "publishStatePublic": "Published",
+        "publishStateHidden": "Hidden",
+        "publishBlockedNoServices": "Add at least one active service to publish your profile",
+        "publishedWithoutServices": "Your profile is published but has no active services",
+        "emailReadOnly": "Your email is your login credential and cannot be changed here"
     },
     "nav": {
         "appointments": "Appointments",
@@ -112,7 +139,10 @@
     },
     "common": {
         "cancel": "Cancel",
-        "or": "OR"
+        "or": "OR",
+        "confirm": "Confirm",
+        "close": "Close",
+        "saving": "Saving…"
     },
     "signIn": {
         "title": "Welcome back",
@@ -137,6 +167,14 @@
         "google": "Sign up with Google",
         "alreadyRegistered": "Already registered?"
     },
+    "verifyEmail": {
+        "title": "Verify your email",
+        "subtitle": "We sent a verification link to {email}",
+        "body": "Click the link to activate your account. If you don't see it, check your spam folder.",
+        "resend": "Resend link",
+        "linkSent": "Verification link resent",
+        "logOut": "Log out"
+    },
     "booking": {
         "stepOf": "Step {current} of {total}",
         "title": "Appointment Request",
@@ -156,12 +194,12 @@
         "summaryProvider": "Provider",
         "back": "Back",
         "submit": "Submit Request",
-        "submittedTitle": "Request Submitted",
-        "submittedBody": "Your request for",
+        "submittedTitle": "Appointment Scheduled",
+        "submittedBody": "Your appointment for",
         "submittedWith": "with",
-        "submittedPending": "is pending confirmation.",
+        "submittedPending": "was scheduled and is pending confirmation.",
         "nextTitle": "What happens next",
-        "nextBody": "The provider will review your request. No advance payment is required.",
+        "nextBody": "{provider} will notify you as soon as your appointment is confirmed. No advance payment is required.",
         "done": "Done, thank you"
     }
 }

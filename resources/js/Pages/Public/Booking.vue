@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import { X, ChevronLeft, ChevronRight, ChevronDown, Calendar, Check, Info } from '@lucide/vue';
 import { useFormat } from '../../composables/useFormat';
 import { useI18n } from 'vue-i18n';
@@ -8,6 +8,9 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps({
     provider: { type: Object, required: true }, // { slug, name }
     service: { type: Object, required: true }, // { id, name, price }
+    selectedDate: { type: String, required: true }, // 'YYYY-MM-DD', "today" in the provider's timezone
+    slots: { type: Array, required: true }, // [{ h, m }] free slots for selectedDate
+    monthAvailability: { type: Object, required: true }, // { 'YYYY-MM-DD': freeSlotCount }
 });
 
 const { t, locale } = useI18n();
@@ -15,22 +18,43 @@ const { formatTime } = useFormat();
 
 const step = ref('datetime'); // datetime | details | confirmation
 
-const today = new Date();
-const viewMonth = ref(today.getMonth());
-const viewYear = ref(today.getFullYear());
-const selectedDay = ref(today.getDate());
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
 
-const slots = [
-    { h: 10, m: 0 },
-    { h: 11, m: 15 },
-    { h: 13, m: 30 },
-    { h: 15, m: 0 },
-    { h: 16, m: 15 },
-    { h: 17, m: 30 },
-    { h: 18, m: 45 },
-    { h: 20, m: 0 },
-];
-const selectedSlotIndex = ref(2);
+// Anchored to the provider's "today" (from the server) rather than the
+// visitor's browser clock — the barber's local time is what determines
+// which slots are actually bookable.
+const [initialYear, initialMonth, initialDay] = props.selectedDate.split('-').map(Number);
+const today = new Date(initialYear, initialMonth - 1, initialDay);
+const viewMonth = ref(initialMonth - 1);
+const viewYear = ref(initialYear);
+const selectedDay = ref(initialDay);
+
+const selectedDateKey = computed(() => `${viewYear.value}-${pad2(viewMonth.value + 1)}-${pad2(selectedDay.value)}`);
+
+const slots = computed(() => props.slots);
+const selectedSlotIndex = ref(0);
+
+function selectDay(day) {
+    selectedDay.value = day;
+    selectedSlotIndex.value = 0;
+    router.reload({
+        only: ['slots', 'selectedDate'],
+        data: { date: `${viewYear.value}-${pad2(viewMonth.value + 1)}-${pad2(day)}` },
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
+
+function reloadMonthAvailability() {
+    router.reload({
+        only: ['monthAvailability'],
+        data: { month: `${viewYear.value}-${pad2(viewMonth.value + 1)}` },
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
 
 const monthLabel = computed(() =>
     new Date(viewYear.value, viewMonth.value, 1).toLocaleDateString(locale.value === 'es' ? 'es-ES' : 'en-US', {
@@ -62,7 +86,9 @@ const calendarCells = computed(() => {
             viewYear.value === today.getFullYear() && viewMonth.value === today.getMonth() && day < today.getDate();
         const isToday =
             viewYear.value === today.getFullYear() && viewMonth.value === today.getMonth() && day === today.getDate();
-        cells.push({ day, isPast, isToday });
+        const key = `${viewYear.value}-${pad2(viewMonth.value + 1)}-${pad2(day)}`;
+        const isUnavailable = !isPast && (props.monthAvailability[key] ?? 0) === 0;
+        cells.push({ day, isPast, isToday, isUnavailable });
     }
     return cells;
 });
@@ -74,6 +100,7 @@ function previousMonth() {
     } else {
         viewMonth.value -= 1;
     }
+    reloadMonthAvailability();
 }
 
 function nextMonth() {
@@ -83,6 +110,7 @@ function nextMonth() {
     } else {
         viewMonth.value += 1;
     }
+    reloadMonthAvailability();
 }
 
 const selectedDateLabel = computed(() =>
@@ -93,11 +121,16 @@ const selectedDateLabel = computed(() =>
 );
 
 const selectedTimeLabel = computed(() => {
-    const slot = slots[selectedSlotIndex.value];
-    return formatTime(slot.h, slot.m);
+    const slot = slots.value[selectedSlotIndex.value];
+    return slot ? formatTime(slot.h, slot.m) : '';
 });
 
-const details = ref({ fullName: '', phone: '' });
+const bookingForm = useForm({
+    date: '',
+    time: '',
+    fullName: '',
+    phone: '',
+});
 
 function closeToProfile() {
     router.visit(`/p/${props.provider.slug}`);
@@ -112,7 +145,22 @@ function formatUsPhone(value) {
 }
 
 function onPhoneInput(event) {
-    details.value.phone = formatUsPhone(event.target.value);
+    bookingForm.phone = formatUsPhone(event.target.value);
+}
+
+function submitBooking() {
+    const slot = slots.value[selectedSlotIndex.value];
+    if (!slot) return;
+
+    bookingForm.date = selectedDateKey.value;
+    bookingForm.time = `${pad2(slot.h)}:${pad2(slot.m)}`;
+
+    bookingForm.post(`/reservar/${props.provider.slug}/${props.service.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            step.value = 'confirmation';
+        },
+    });
 }
 </script>
 
@@ -192,16 +240,18 @@ function onPhoneInput(event) {
                             <button
                                 v-else
                                 type="button"
-                                :disabled="cell.isPast"
+                                :disabled="cell.isPast || cell.isUnavailable"
                                 class="flex h-8 items-center justify-center rounded-[10px] text-xs font-bold"
                                 :class="[
                                     cell.isPast && 'cursor-not-allowed font-semibold text-[var(--text-faint)]',
-                                    !cell.isPast && selectedDay !== cell.day && !cell.isToday && 'text-[var(--text-body)]',
-                                    !cell.isPast && cell.isToday && selectedDay !== cell.day &&
+                                    !cell.isPast && cell.isUnavailable && selectedDay !== cell.day &&
+                                        'cursor-not-allowed bg-[var(--surface-mute)] text-[var(--text-faint)]',
+                                    !cell.isPast && !cell.isUnavailable && selectedDay !== cell.day && !cell.isToday && 'text-[var(--text-body)]',
+                                    !cell.isPast && !cell.isUnavailable && cell.isToday && selectedDay !== cell.day &&
                                         'border border-[var(--green-border)] font-extrabold text-[var(--green-text)]',
                                     selectedDay === cell.day && 'bg-[var(--chip-bg)] font-extrabold text-[var(--chip-fg)]',
                                 ]"
-                                @click="selectedDay = cell.day"
+                                @click="selectDay(cell.day)"
                             >
                                 {{ cell.day }}
                             </button>
@@ -290,7 +340,7 @@ function onPhoneInput(event) {
                         {{ $t('booking.fullName') }}
                     </div>
                     <input
-                        v-model="details.fullName"
+                        v-model="bookingForm.fullName"
                         type="text"
                         :placeholder="$t('booking.fullNamePlaceholder')"
                         class="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 text-sm font-bold text-[var(--text-strong)] placeholder:font-medium placeholder:text-[var(--text-faint)] focus:outline-none"
@@ -310,7 +360,7 @@ function onPhoneInput(event) {
                             +1
                         </span>
                         <input
-                            :value="details.phone"
+                            :value="bookingForm.phone"
                             type="tel"
                             inputmode="numeric"
                             autocomplete="tel-national"
@@ -336,6 +386,13 @@ function onPhoneInput(event) {
                     >
                 </div>
 
+                <p
+                    v-if="bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone"
+                    class="mb-3 text-xs font-semibold text-[var(--danger)]"
+                >
+                    {{ bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone }}
+                </p>
+
                 <div class="flex gap-3">
                     <button
                         type="button"
@@ -346,8 +403,9 @@ function onPhoneInput(event) {
                     </button>
                     <button
                         type="button"
-                        class="flex w-2/3 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-green-hover)]"
-                        @click="step = 'confirmation'"
+                        :disabled="bookingForm.processing"
+                        class="flex w-2/3 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-green-hover)] disabled:opacity-60"
+                        @click="submitBooking"
                     >
                         <Check :size="16" />
                         {{ $t('booking.submit') }}
@@ -374,7 +432,9 @@ function onPhoneInput(event) {
                             <Info :size="16" class="mt-0.5 shrink-0 text-[var(--green-deep)]" />
                             <div class="text-xs leading-relaxed text-[var(--green-deep)]">
                                 <div class="font-extrabold">{{ $t('booking.nextTitle') }}</div>
-                                <div class="mt-0.5 font-medium opacity-90">{{ $t('booking.nextBody') }}</div>
+                                <div class="mt-0.5 font-medium opacity-90">
+                                    {{ $t('booking.nextBody', { provider: provider.name }) }}
+                                </div>
                             </div>
                         </div>
                     </div>

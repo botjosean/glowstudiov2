@@ -70,7 +70,34 @@
         "light": "Claro",
         "dark": "Oscuro",
         "settingsScope": "Los cambios se aplican a todo el panel: citas, servicios y horario.",
-        "logOut": "Cerrar sesión"
+        "logOut": "Cerrar sesión",
+        "serviceCreated": "Servicio creado",
+        "serviceUpdated": "Servicio actualizado",
+        "serviceDeactivated": "Servicio desactivado",
+        "serviceActivated": "Servicio reactivado",
+        "scheduleUpdated": "Horario actualizado",
+        "scheduleConflictWarning": "{count} cita(s) futura(s) quedan fuera de tu nuevo horario",
+        "profileUpdated": "Perfil actualizado",
+        "profilePublished": "Tu perfil ya es visible",
+        "profileUnpublished": "Tu perfil está oculto",
+        "appointmentConfirmed": "Cita confirmada",
+        "appointmentCancelled": "Cita cancelada",
+        "invalidTransition": "Esta cita ya no se puede modificar",
+        "deactivateService": "Desactivar servicio",
+        "activateService": "Reactivar servicio",
+        "serviceInactive": "Inactivo",
+        "confirmDeactivateTitle": "¿Desactivar este servicio?",
+        "confirmDeactivateBody": "Dejará de aparecer en tu perfil público. Puedes reactivarlo cuando quieras.",
+        "confirmDeactivateUpcoming": "{count} cita(s) ya reservada(s) mantienen su reserva.",
+        "confirmCancelTitle": "¿Cancelar esta cita?",
+        "confirmCancelBody": "El horario quedará libre para otro cliente. Esta acción no se puede deshacer.",
+        "publishProfile": "Publicar perfil",
+        "publishProfileHint": "Controla si apareces en la lista pública de proveedores",
+        "publishStatePublic": "Publicado",
+        "publishStateHidden": "Oculto",
+        "publishBlockedNoServices": "Añade al menos un servicio activo para publicar tu perfil",
+        "publishedWithoutServices": "Tu perfil está publicado pero no tiene servicios activos",
+        "emailReadOnly": "El email es tu credencial de acceso y no se puede cambiar aquí"
     },
     "nav": {
         "appointments": "Citas",
@@ -112,7 +139,10 @@
     },
     "common": {
         "cancel": "Cancelar",
-        "or": "O"
+        "or": "O",
+        "confirm": "Confirmar",
+        "close": "Cerrar",
+        "saving": "Guardando…"
     },
     "signIn": {
         "title": "Bienvenido de nuevo",
@@ -137,6 +167,14 @@
         "google": "Registrarse con Google",
         "alreadyRegistered": "¿Ya tienes cuenta?"
     },
+    "verifyEmail": {
+        "title": "Verifica tu correo",
+        "subtitle": "Enviamos un enlace de verificación a {email}",
+        "body": "Haz clic en el enlace para activar tu cuenta. Si no lo ves, revisa la carpeta de spam.",
+        "resend": "Reenviar enlace",
+        "linkSent": "Enlace de verificación reenviado",
+        "logOut": "Cerrar sesión"
+    },
     "booking": {
         "stepOf": "Paso {current} de {total}",
         "title": "Solicitud de cita",
@@ -156,12 +194,12 @@
         "summaryProvider": "Proveedor",
         "back": "Atrás",
         "submit": "Enviar solicitud",
-        "submittedTitle": "Solicitud enviada",
-        "submittedBody": "Tu solicitud de",
+        "submittedTitle": "Cita agendada",
+        "submittedBody": "Tu cita de",
         "submittedWith": "con",
-        "submittedPending": "está pendiente de confirmación.",
+        "submittedPending": "fue agendada y está pendiente de confirmación.",
         "nextTitle": "Qué sigue",
-        "nextBody": "El proveedor revisará tu solicitud. No se requiere pago por adelantado.",
+        "nextBody": "{provider} te notificará en cuanto confirme tu cita. No se requiere pago por adelantado.",
         "done": "Listo, gracias"
     }
 }

@@ -1,15 +1,22 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
 import AppointmentDetailSheet from '../../Components/admin/AppointmentDetailSheet.vue';
+import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
+import { useFormat } from '../../composables/useFormat';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
     appointments: { type: Array, required: true },
-    // [{ id, clientName, clientPhone, service, provider, duration, price, status,
-    //    isToday, dateLabel, dateGroupLabel, timeHour, timeMinute, timeLabel }]
+    // [{ id, clientName, clientPhone, service, provider, durationMinutes, price,
+    //    status, startsAt (UTC ISO string) }]
 });
+
+const { t } = useI18n();
+const { formatDuration, formatTime, formatDayLabel, formatDateTimeLabel } = useFormat();
 
 const tabs = [
     { value: 'today', key: 'admin.tabToday' },
@@ -20,16 +27,33 @@ const tabs = [
 
 const activeTab = ref('today');
 
+// startsAt is UTC; `new Date(...)` renders it in the viewer's local time,
+// which is what dateLabel/timeLabel/isToday should reflect.
+const enrichedAppointments = computed(() =>
+    props.appointments.map((appt) => {
+        const date = new Date(appt.startsAt);
+        return {
+            ...appt,
+            duration: formatDuration(appt.durationMinutes),
+            isToday: date.toDateString() === new Date().toDateString(),
+            dateLabel: formatDateTimeLabel(date),
+            timeLabel: formatTime(date.getHours(), date.getMinutes()),
+        };
+    }),
+);
+
+const todayGroupLabel = computed(() => `${t('booking.legendToday')} · ${formatDayLabel(new Date())}`);
+
 const counts = computed(() => ({
-    today: props.appointments.filter((a) => a.isToday).length,
-    pending: props.appointments.filter((a) => a.status === 'pending').length,
-    closed: props.appointments.filter((a) => a.status === 'closed').length,
-    cancelled: props.appointments.filter((a) => a.status === 'cancelled').length,
+    today: enrichedAppointments.value.filter((a) => a.isToday).length,
+    pending: enrichedAppointments.value.filter((a) => a.status === 'pending').length,
+    closed: enrichedAppointments.value.filter((a) => a.status === 'closed').length,
+    cancelled: enrichedAppointments.value.filter((a) => a.status === 'cancelled').length,
 }));
 
 const filtered = computed(() => {
-    if (activeTab.value === 'today') return props.appointments.filter((a) => a.isToday);
-    return props.appointments.filter((a) => a.status === activeTab.value);
+    if (activeTab.value === 'today') return enrichedAppointments.value.filter((a) => a.isToday);
+    return enrichedAppointments.value.filter((a) => a.status === activeTab.value);
 });
 
 const badgeVariant = { confirmed: 'confirmed', pending: 'pending', cancelled: 'cancelled', closed: 'closed' };
@@ -40,19 +64,57 @@ const statusKey = {
     closed: 'admin.statusClosed',
 };
 
-const selected = ref(null);
+const selectedId = ref(null);
 const sheetOpen = ref(false);
+const detailProcessing = ref(false);
+
+const selected = computed(() => enrichedAppointments.value.find((a) => a.id === selectedId.value) ?? null);
 
 function openDetail(appointment) {
-    selected.value = appointment;
+    selectedId.value = appointment.id;
     sheetOpen.value = true;
 }
 
-function updateStatus(status) {
-    if (!selected.value) return;
-    const target = props.appointments.find((a) => a.id === selected.value.id);
-    if (target) target.status = status;
+function confirmAppointment() {
+    if (!selectedId.value) return;
+    detailProcessing.value = true;
+    router.patch(`/admin/citas/${selectedId.value}/confirmar`, {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            sheetOpen.value = false;
+        },
+        onFinish: () => {
+            detailProcessing.value = false;
+        },
+    });
+}
+
+const cancelConfirmOpen = ref(false);
+const cancelProcessing = ref(false);
+const idToCancel = ref(null);
+
+// The detail sheet's `reject` (pending) and `cancel` (confirmed) both map to
+// the same server transition. Close the detail sheet first, then open the
+// confirmation dialog — stacking BottomSheets breaks their shared scroll lock.
+function askCancel() {
+    if (!selectedId.value) return;
+    idToCancel.value = selectedId.value;
     sheetOpen.value = false;
+    cancelConfirmOpen.value = true;
+}
+
+function confirmCancel() {
+    if (!idToCancel.value) return;
+    cancelProcessing.value = true;
+    router.patch(`/admin/citas/${idToCancel.value}/cancelar`, {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            cancelProcessing.value = false;
+            cancelConfirmOpen.value = false;
+        },
+    });
 }
 </script>
 
@@ -84,7 +146,7 @@ function updateStatus(status) {
 
         <div class="flex flex-col gap-3 p-4">
             <div v-if="activeTab === 'today' && filtered.length" class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
-                {{ filtered[0].dateGroupLabel }}
+                {{ todayGroupLabel }}
             </div>
 
             <template v-if="activeTab === 'today'">
@@ -140,9 +202,20 @@ function updateStatus(status) {
         <AppointmentDetailSheet
             v-model="sheetOpen"
             :appointment="selected"
-            @confirm="updateStatus('confirmed')"
-            @reject="updateStatus('cancelled')"
-            @cancel="updateStatus('cancelled')"
+            :processing="detailProcessing"
+            @confirm="confirmAppointment"
+            @reject="askCancel"
+            @cancel="askCancel"
+        />
+
+        <ConfirmDialog
+            v-model="cancelConfirmOpen"
+            :title="$t('admin.confirmCancelTitle')"
+            :body="$t('admin.confirmCancelBody')"
+            :confirm-label="$t('admin.cancelAppointment')"
+            :processing="cancelProcessing"
+            variant="danger"
+            @confirm="confirmCancel"
         />
     </AdminLayout>
 </template>

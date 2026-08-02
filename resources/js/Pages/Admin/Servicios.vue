@@ -1,48 +1,111 @@
 <script setup>
-import { ref } from 'vue';
-import { Pencil, Ban, Plus } from '@lucide/vue';
+import { ref, computed } from 'vue';
+import { useForm, router } from '@inertiajs/vue3';
+import { Pencil, Ban, Plus, RotateCcw } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
+import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
+import Badge from '../../Components/ui/Badge.vue';
 import { useFormat } from '../../composables/useFormat';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
     services: { type: Array, required: true },
-    // [{ id, name, durationMinutes, price, category }]
+    // [{ id, name, durationMinutes, price, category, isActive, upcomingCount }]
 });
 
+const { t } = useI18n();
 const { formatDuration } = useFormat();
 
 const sheetOpen = ref(false);
 const sheetMode = ref('create');
 const editingService = ref(null);
 
+// The submission vehicle — ServiceFormSheet manages its own draft state
+// internally and emits the final values on @save; this form just posts
+// whatever it emits, keeping the sheet's existing @save-with-values
+// contract unchanged.
+const form = useForm({
+    name: '',
+    durationMinutes: 45,
+    price: 35,
+    category: 'fade',
+});
+
 function openCreate() {
     sheetMode.value = 'create';
     editingService.value = { name: '', durationMinutes: 45, price: 35, category: 'fade' };
+    form.clearErrors();
     sheetOpen.value = true;
 }
 
 function openEdit(service) {
     sheetMode.value = 'edit';
     editingService.value = service;
+    form.clearErrors();
     sheetOpen.value = true;
 }
 
 function handleSave(values) {
+    form.name = values.name;
+    form.durationMinutes = values.durationMinutes;
+    form.price = values.price;
+    form.category = values.category;
+
+    const options = {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            sheetOpen.value = false;
+        },
+    };
+
     if (sheetMode.value === 'create') {
-        props.services.push({ id: Date.now(), ...values });
+        form.post('/admin/servicios', options);
     } else {
-        const target = props.services.find((s) => s.id === editingService.value.id);
-        if (target) Object.assign(target, values);
+        form.put(`/admin/servicios/${editingService.value.id}`, options);
     }
-    sheetOpen.value = false;
 }
 
-function handleDelete() {
-    const index = props.services.findIndex((s) => s.id === editingService.value.id);
-    if (index !== -1) props.services.splice(index, 1);
+const confirmOpen = ref(false);
+const confirmProcessing = ref(false);
+const serviceToDeactivate = ref(null);
+
+const deactivateDetail = computed(() => {
+    const count = serviceToDeactivate.value?.upcomingCount ?? 0;
+    return count > 0 ? t('admin.confirmDeactivateUpcoming', { count }) : '';
+});
+
+function askDeactivate(service) {
+    serviceToDeactivate.value = service;
+    confirmOpen.value = true;
+}
+
+// From ServiceFormSheet's @delete: close the form sheet first, then open
+// the confirmation dialog — stacking BottomSheets corrupts their shared
+// body-scroll-lock watcher.
+function requestDeactivateFromSheet() {
     sheetOpen.value = false;
+    askDeactivate(editingService.value);
+}
+
+function confirmDeactivate() {
+    if (!serviceToDeactivate.value) return;
+
+    confirmProcessing.value = true;
+    router.patch(`/admin/servicios/${serviceToDeactivate.value.id}/desactivar`, {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            confirmProcessing.value = false;
+            confirmOpen.value = false;
+        },
+    });
+}
+
+function activate(service) {
+    router.patch(`/admin/servicios/${service.id}/activar`, {}, { preserveScroll: true, preserveState: true });
 }
 </script>
 
@@ -53,9 +116,13 @@ function handleDelete() {
                 v-for="service in services"
                 :key="service.id"
                 class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                :class="!service.isActive && 'opacity-60'"
             >
                 <div>
-                    <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ service.name }}</div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-extrabold text-[var(--text-strong)]">{{ service.name }}</span>
+                        <Badge v-if="!service.isActive" variant="closed">{{ $t('admin.serviceInactive') }}</Badge>
+                    </div>
                     <div class="mt-1 text-xs font-semibold text-[var(--text-mute)]">
                         {{ formatDuration(service.durationMinutes) }} · ${{ service.price }}
                     </div>
@@ -69,14 +136,20 @@ function handleDelete() {
                         <Pencil :size="14" class="text-[var(--text-mute)]" />
                     </button>
                     <button
+                        v-if="service.isActive"
                         type="button"
                         class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--surface-mute)]"
-                        @click="
-                            editingService = service;
-                            handleDelete();
-                        "
+                        @click="askDeactivate(service)"
                     >
                         <Ban :size="14" class="text-[var(--danger)]" />
+                    </button>
+                    <button
+                        v-else
+                        type="button"
+                        class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--surface-mute)]"
+                        @click="activate(service)"
+                    >
+                        <RotateCcw :size="14" class="text-[var(--green-text)]" />
                     </button>
                 </div>
             </div>
@@ -90,6 +163,25 @@ function handleDelete() {
             <Plus :size="22" class="text-white" />
         </button>
 
-        <ServiceFormSheet v-model="sheetOpen" :mode="sheetMode" :service="editingService" @save="handleSave" @delete="handleDelete" />
+        <ServiceFormSheet
+            v-model="sheetOpen"
+            :mode="sheetMode"
+            :service="editingService"
+            :errors="form.errors"
+            :processing="form.processing"
+            @save="handleSave"
+            @delete="requestDeactivateFromSheet"
+        />
+
+        <ConfirmDialog
+            v-model="confirmOpen"
+            :title="$t('admin.confirmDeactivateTitle')"
+            :body="$t('admin.confirmDeactivateBody')"
+            :detail="deactivateDetail"
+            :confirm-label="$t('admin.deactivateService')"
+            :processing="confirmProcessing"
+            variant="danger"
+            @confirm="confirmDeactivate"
+        />
     </AdminLayout>
 </template>

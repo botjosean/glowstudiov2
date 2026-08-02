@@ -1,6 +1,7 @@
 <script setup>
 defineProps({
     options: { type: Array, required: true }, // [{ value, label, hint }]
+    disabled: { type: Boolean, default: false },
 });
 
 const model = defineModel({ type: [String, Number], required: true });
@@ -15,7 +16,8 @@ const model = defineModel({ type: [String, Number], required: true });
             v-for="opt in options"
             :key="opt.value"
             type="button"
-            class="flex flex-col items-center gap-0.5 rounded-lg px-0 py-2.5"
+            :disabled="disabled"
+            class="flex flex-col items-center gap-0.5 rounded-lg px-0 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
             :class="
                 model === opt.value
                     ? 'bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]'

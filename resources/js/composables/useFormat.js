@@ -1,7 +1,7 @@
 import { usePreferences } from './usePreferences';
 
 export function useFormat() {
-    const { timeFormat } = usePreferences();
+    const { timeFormat, locale } = usePreferences();
 
     function formatPrice(amount) {
         return `$${Number(amount).toFixed(0)}`;
@@ -23,5 +23,20 @@ export function useFormat() {
         return `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
     }
 
-    return { formatPrice, formatDuration, formatTime };
+    // The backend always sends raw UTC timestamps (dates stay UTC in the
+    // database); these format them for display using the viewer's language
+    // and time-format preferences, which only exist client-side.
+    function formatDayLabel(date) {
+        return date.toLocaleDateString(locale.value === 'es' ? 'es-ES' : 'en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+    }
+
+    function formatDateTimeLabel(date) {
+        return `${formatDayLabel(date)} · ${formatTime(date.getHours(), date.getMinutes())}`;
+    }
+
+    return { formatPrice, formatDuration, formatTime, formatDayLabel, formatDateTimeLabel };
 }

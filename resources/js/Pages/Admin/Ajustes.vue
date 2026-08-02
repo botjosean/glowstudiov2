@@ -126,7 +126,7 @@ const timeFormatOptions = computed(() => [
             <button
                 type="button"
                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] py-3.5 text-sm font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)]"
-                @click="router.visit('/')"
+                @click="router.post('/logout')"
             >
                 <LogOut :size="16" />
                 {{ $t('admin.logOut') }}

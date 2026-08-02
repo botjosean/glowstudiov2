@@ -9,6 +9,8 @@ import { useFormat } from '../../composables/useFormat';
 const props = defineProps({
     mode: { type: String, default: 'create' }, // create | edit
     service: { type: Object, default: () => ({ name: '', durationMinutes: 45, price: 35, category: 'fade' }) },
+    errors: { type: Object, default: () => ({}) },
+    processing: { type: Boolean, default: false },
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -58,12 +60,14 @@ const categoryOptions = [
 
         <div class="mb-4">
             <Input v-model="form.name" :label="$t('admin.serviceName')" :placeholder="$t('admin.serviceNamePlaceholder')" />
+            <p v-if="errors.name" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.name }}</p>
         </div>
 
         <div class="mb-4 grid grid-cols-2 gap-3">
             <div>
                 <Select v-model="form.durationMinutes" :label="$t('admin.duration')" :options="durationOptions" />
                 <div class="mt-1.5 text-[10px] font-semibold text-[var(--text-faint)]">{{ $t('admin.durationHint') }}</div>
+                <p v-if="errors.durationMinutes" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.durationMinutes }}</p>
             </div>
             <label class="flex flex-col gap-2">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{ $t('admin.price') }}</span>
@@ -77,39 +81,44 @@ const categoryOptions = [
                         class="w-full bg-transparent text-sm font-bold text-[var(--text-strong)] focus:outline-none"
                     />
                 </div>
+                <p v-if="errors.price" class="text-xs font-semibold text-[var(--danger)]">{{ errors.price }}</p>
             </label>
         </div>
 
         <div class="mb-6">
             <Select v-model="form.category" :label="$t('admin.category')" :options="categoryOptions" />
+            <p v-if="errors.category" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.category }}</p>
         </div>
 
         <div class="flex gap-3" :class="mode === 'edit' && 'mb-3'">
             <button
                 type="button"
-                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-sm font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)]"
+                :disabled="processing"
+                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-sm font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="open = false"
             >
                 {{ $t('common.cancel') }}
             </button>
             <button
                 type="button"
-                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-green-hover)]"
+                :disabled="processing"
+                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="emit('save', { ...form })"
             >
                 <Check :size="15" />
-                {{ mode === 'create' ? $t('admin.saveService') : $t('admin.saveChanges') }}
+                {{ processing ? $t('common.saving') : mode === 'create' ? $t('admin.saveService') : $t('admin.saveChanges') }}
             </button>
         </div>
 
         <button
             v-if="mode === 'edit'"
             type="button"
-            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)]"
+            :disabled="processing"
+            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             @click="emit('delete')"
         >
             <Ban :size="15" />
-            {{ $t('admin.deleteService') }}
+            {{ $t('admin.deactivateService') }}
         </button>
     </BottomSheet>
 </template>

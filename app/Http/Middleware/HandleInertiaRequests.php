@@ -35,9 +35,39 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
+        // Inertia's share() runs before route middleware (including
+        // EnsureUserHasProvider), so the relation can't rely on anything
+        // downstream having loaded it — load it explicitly here instead.
+        // This is one extra indexed query per authenticated request, never
+        // for guests, and it's an explicit load so preventLazyLoading
+        // (enabled outside production) doesn't treat it as an N+1.
+        $user?->loadMissing('provider');
+
         return [
             ...parent::share($request),
-            //
+            // Explicit whitelist, never the raw model — spreading it would
+            // leak password/remember_token the moment someone edits #[Hidden].
+            'auth' => [
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'provider' => $user->provider ? [
+                        'slug' => $user->provider->slug,
+                        'publicName' => $user->provider->public_name,
+                        'avatarPhoto' => $user->provider->avatar_photo_url,
+                    ] : null,
+                ] : null,
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'booking' => fn () => $request->session()->get('booking'),
+            ],
         ];
     }
 }

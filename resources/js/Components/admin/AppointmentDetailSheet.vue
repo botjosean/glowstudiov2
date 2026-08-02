@@ -5,6 +5,7 @@ import Badge from '../ui/Badge.vue';
 
 const props = defineProps({
     appointment: { type: Object, default: null },
+    processing: { type: Boolean, default: false },
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -79,7 +80,8 @@ const statusKey = {
                 <div v-if="appointment.status === 'pending'" class="flex gap-2.5">
                     <button
                         type="button"
-                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[13px] font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)]"
+                        :disabled="processing"
+                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[13px] font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="emit('reject')"
                     >
                         <X :size="15" />
@@ -87,7 +89,8 @@ const statusKey = {
                     </button>
                     <button
                         type="button"
-                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[13px] font-bold text-white hover:bg-[var(--btn-green-hover)]"
+                        :disabled="processing"
+                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[13px] font-bold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="emit('confirm')"
                     >
                         <Check :size="15" />
@@ -95,9 +98,10 @@ const statusKey = {
                     </button>
                 </div>
                 <button
-                    v-if="appointment.status !== 'cancelled'"
+                    v-if="!['cancelled', 'closed'].includes(appointment.status)"
                     type="button"
-                    class="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)]"
+                    :disabled="processing"
+                    class="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                     @click="emit('cancel')"
                 >
                     <Ban :size="15" />

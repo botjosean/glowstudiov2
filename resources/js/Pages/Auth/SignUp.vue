@@ -1,12 +1,12 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, useForm } from '@inertiajs/vue3';
 import { Eye, Check } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import Input from '../../Components/ui/Input.vue';
 import Button from '../../Components/ui/Button.vue';
 
-const form = ref({
+const form = useForm({
     username: '',
     fullName: '',
     phone: '',
@@ -16,8 +16,10 @@ const form = ref({
 });
 
 const passwordsMatch = computed(
-    () => form.value.confirmPassword.length > 0 && form.value.confirmPassword === form.value.password,
+    () => form.confirmPassword.length > 0 && form.confirmPassword === form.password,
 );
+
+const firstError = computed(() => Object.values(form.errors)[0] ?? null);
 
 function formatUsPhone(value) {
     const digits = value.replace(/\D/g, '').slice(0, 10);
@@ -28,7 +30,11 @@ function formatUsPhone(value) {
 }
 
 function onPhoneInput(event) {
-    form.value.phone = formatUsPhone(event.target.value);
+    form.phone = formatUsPhone(event.target.value);
+}
+
+function submit() {
+    form.post('/register');
 }
 </script>
 
@@ -40,7 +46,8 @@ function onPhoneInput(event) {
             </div>
             <div class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('signUp.subtitle') }}</div>
 
-            <form class="mt-5 flex flex-col gap-3.5" @submit.prevent>
+            <form class="mt-5 flex flex-col gap-3.5" @submit.prevent="submit">
+                <p v-if="firstError" class="text-xs font-semibold text-[var(--danger)]">{{ firstError }}</p>
                 <Input v-model="form.username" :label="$t('signUp.usernameLabel')" type="text" />
                 <Input v-model="form.fullName" :label="$t('signUp.fullNameLabel')" type="text" />
                 <label class="flex flex-col gap-2">
@@ -149,7 +156,9 @@ function onPhoneInput(event) {
                     class="flex-1 rounded-xl border-[1.5px] border-[var(--border-strong)] py-3.5 text-center text-sm font-bold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
                     >{{ $t('common.cancel') }}</Link
                 >
-                <Button variant="primary" class="flex-1">{{ $t('menu.createAccount') }}</Button>
+                <Button variant="primary" :disabled="form.processing" class="flex-1" @click="submit">{{
+                    $t('menu.createAccount')
+                }}</Button>
             </div>
 
             <div class="mt-4 text-center text-xs font-semibold text-[var(--text-mute)]">
