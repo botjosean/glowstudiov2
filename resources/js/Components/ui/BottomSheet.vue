@@ -1,7 +1,8 @@
 <script setup>
 import { watch, onBeforeUnmount } from 'vue';
+import { acquireBodyLock, releaseBodyLock } from '../../composables/useBodyScrollLock';
 
-const props = defineProps({
+defineProps({
     closeOnBackdrop: { type: Boolean, default: true },
 });
 
@@ -11,26 +12,29 @@ function close() {
     open.value = false;
 }
 
-function onKeydown(event) {
-    if (event.key === 'Escape') close();
-}
+// The lock is a shared, reference-counted resource (see the composable) —
+// this instance must only release what it itself acquired.
+let holdsLock = false;
 
 watch(
     open,
     (isOpen) => {
-        document.body.style.overflow = isOpen ? 'hidden' : '';
-        if (isOpen) {
-            window.addEventListener('keydown', onKeydown);
-        } else {
-            window.removeEventListener('keydown', onKeydown);
+        if (isOpen && !holdsLock) {
+            acquireBodyLock(close);
+            holdsLock = true;
+        } else if (!isOpen && holdsLock) {
+            releaseBodyLock(close);
+            holdsLock = false;
         }
     },
     { immediate: true },
 );
 
 onBeforeUnmount(() => {
-    document.body.style.overflow = '';
-    window.removeEventListener('keydown', onKeydown);
+    if (holdsLock) {
+        releaseBodyLock(close);
+        holdsLock = false;
+    }
 });
 </script>
 

@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, Globe, Clock4, Sun, Moon, Check, LogOut, Info } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
+import { ArrowLeft, Globe, Clock4, Sun, Moon, Check, LogOut, Info, MessageCircle } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import { useTheme } from '../../composables/useTheme';
@@ -11,8 +12,9 @@ defineProps({
     providerName: { type: String, default: 'Pati' },
 });
 
+const { t } = useI18n();
 const { theme, setTheme } = useTheme();
-const { locale, setLanguage, timeFormat, setTimeFormat } = usePreferences();
+const { locale, setLanguage, timeFormat, setTimeFormat, whatsappPrompt, setWhatsappPrompt } = usePreferences();
 
 const languageOptions = computed(() => [
     { value: 'es', label: 'Español' },
@@ -22,6 +24,11 @@ const languageOptions = computed(() => [
 const timeFormatOptions = computed(() => [
     { value: '12', label: '12 horas', hint: '4:00 PM' },
     { value: '24', label: '24 horas', hint: '16:00' },
+]);
+
+const whatsappPromptOptions = computed(() => [
+    { value: 'ask', label: t('admin.waPromptStateAsk') },
+    { value: 'never', label: t('admin.waPromptStateNever') },
 ]);
 </script>
 
@@ -64,6 +71,19 @@ const timeFormatOptions = computed(() => [
                     </div>
                 </div>
                 <ToggleGroup :model-value="timeFormat" :options="timeFormatOptions" @update:model-value="setTimeFormat" />
+            </div>
+
+            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
+                <div class="mb-3 flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
+                        <MessageCircle :size="16" class="text-[var(--chip-fg)]" />
+                    </div>
+                    <div>
+                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.waPromptSetting') }}</div>
+                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.waPromptSettingHint') }}</div>
+                    </div>
+                </div>
+                <ToggleGroup :model-value="whatsappPrompt" :options="whatsappPromptOptions" @update:model-value="setWhatsappPrompt" />
             </div>
 
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">

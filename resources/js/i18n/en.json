@@ -97,7 +97,22 @@
         "publishStateHidden": "Hidden",
         "publishBlockedNoServices": "Add at least one active service to publish your profile",
         "publishedWithoutServices": "Your profile is published but has no active services",
-        "emailReadOnly": "Your email is your login credential and cannot be changed here"
+        "emailReadOnly": "Your email is your login credential and cannot be changed here",
+        "waPromptTitle": "Notify the client?",
+        "waPromptBody": "WhatsApp will open with a ready-made message for {name}. Nothing is sent until you confirm it in WhatsApp.",
+        "waPromptPreviewLabel": "Message",
+        "waSend": "Open WhatsApp",
+        "waSkip": "Not now",
+        "waDontAskAgain": "Don't ask again",
+        "waMessageConfirmed": "Hi {client}! This is {provider}. Your {service} appointment on {date} is confirmed. See you then!",
+        "waMessageRejected": "Hi {client}! This is {provider}. I can't take your {service} request for {date}. Message me and we'll find another time.",
+        "waMessageCancelled": "Hi {client}! This is {provider}. I had to cancel your {service} appointment on {date}. Sorry about that, message me and we'll reschedule.",
+        "waPromptSetting": "WhatsApp notice",
+        "waPromptSettingHint": "Offer to notify the client after confirming, rejecting, or cancelling",
+        "waPromptStateAsk": "Ask",
+        "waPromptStateNever": "Never",
+        "confirmRejectTitle": "Decline this request?",
+        "confirmRejectBody": "The client is left without an appointment at that time. This action cannot be undone."
     },
     "nav": {
         "appointments": "Appointments",

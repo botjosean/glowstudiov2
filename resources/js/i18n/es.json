@@ -97,7 +97,22 @@
         "publishStateHidden": "Oculto",
         "publishBlockedNoServices": "Añade al menos un servicio activo para publicar tu perfil",
         "publishedWithoutServices": "Tu perfil está publicado pero no tiene servicios activos",
-        "emailReadOnly": "El email es tu credencial de acceso y no se puede cambiar aquí"
+        "emailReadOnly": "El email es tu credencial de acceso y no se puede cambiar aquí",
+        "waPromptTitle": "¿Avisar al cliente?",
+        "waPromptBody": "Se abrirá WhatsApp con un mensaje listo para {name}. No se envía nada hasta que lo confirmes en WhatsApp.",
+        "waPromptPreviewLabel": "Mensaje",
+        "waSend": "Abrir WhatsApp",
+        "waSkip": "Ahora no",
+        "waDontAskAgain": "No volver a preguntar",
+        "waMessageConfirmed": "¡Hola {client}! Soy {provider}. Tu cita para {service} el {date} quedó confirmada. ¡Nos vemos!",
+        "waMessageRejected": "¡Hola {client}! Soy {provider}. No podré atender tu solicitud de {service} para el {date}. Escríbeme y buscamos otro horario.",
+        "waMessageCancelled": "¡Hola {client}! Soy {provider}. Tuve que cancelar tu cita de {service} del {date}. Lamento el inconveniente, escríbeme y la reprogramamos.",
+        "waPromptSetting": "Aviso por WhatsApp",
+        "waPromptSettingHint": "Ofrecer avisar al cliente tras confirmar, rechazar o cancelar",
+        "waPromptStateAsk": "Preguntar",
+        "waPromptStateNever": "Nunca",
+        "confirmRejectTitle": "¿Rechazar esta solicitud?",
+        "confirmRejectBody": "El cliente queda sin cita en ese horario. Esta acción no se puede deshacer."
     },
     "nav": {
         "appointments": "Citas",

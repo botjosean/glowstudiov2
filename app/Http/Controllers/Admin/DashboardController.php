@@ -36,6 +36,9 @@ class DashboardController extends Controller
                 'id' => $appointment->id,
                 'clientName' => $appointment->client_name,
                 'clientPhone' => Format::usPhone($appointment->client_phone),
+                // Raw digits for the click-to-chat link; clientPhone above
+                // stays display-formatted (a test pins that exact format).
+                'clientPhoneDigits' => Format::digitsOnly($appointment->client_phone),
                 'service' => $appointment->service_name,
                 'provider' => $provider->public_name,
                 'durationMinutes' => $appointment->duration_minutes,

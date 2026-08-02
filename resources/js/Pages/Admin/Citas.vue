@@ -6,17 +6,20 @@ import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
 import AppointmentDetailSheet from '../../Components/admin/AppointmentDetailSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
+import WhatsAppPromptSheet from '../../Components/admin/WhatsAppPromptSheet.vue';
 import { useFormat } from '../../composables/useFormat';
+import { usePreferences } from '../../composables/usePreferences';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
     appointments: { type: Array, required: true },
-    // [{ id, clientName, clientPhone, service, provider, durationMinutes, price,
-    //    status, startsAt (UTC ISO string) }]
+    // [{ id, clientName, clientPhone, clientPhoneDigits, service, provider,
+    //    durationMinutes, price, status, startsAt (UTC ISO string) }]
 });
 
 const { t } = useI18n();
 const { formatDuration, formatTime, formatDayLabel, formatDateTimeLabel } = useFormat();
+const { whatsappPrompt } = usePreferences();
 
 const tabs = [
     { value: 'today', key: 'admin.tabToday' },
@@ -64,6 +67,17 @@ const statusKey = {
     closed: 'admin.statusClosed',
 };
 
+const waMessageKey = {
+    confirmed: 'admin.waMessageConfirmed',
+    rejected: 'admin.waMessageRejected',
+    cancelled: 'admin.waMessageCancelled',
+};
+
+const cancelDialogCopy = {
+    rejected: { title: 'admin.confirmRejectTitle', body: 'admin.confirmRejectBody' },
+    cancelled: { title: 'admin.confirmCancelTitle', body: 'admin.confirmCancelBody' },
+};
+
 const selectedId = ref(null);
 const sheetOpen = ref(false);
 const detailProcessing = ref(false);
@@ -75,14 +89,54 @@ function openDetail(appointment) {
     sheetOpen.value = true;
 }
 
+// The prior status is what distinguishes a rejection from a cancellation,
+// and the action about to run destroys it — so this must be captured before
+// dispatch, never read back from the (by-then-mutated) props afterward.
+function buildWaPrompt(appointment, variant) {
+    return {
+        clientName: appointment.clientName,
+        clientPhone: appointment.clientPhone,
+        phoneDigits: appointment.clientPhoneDigits,
+        service: appointment.service,
+        provider: appointment.provider,
+        startsAt: appointment.startsAt,
+        variant,
+    };
+}
+
+const waPrompt = ref(null);
+const waPromptOpen = ref(false);
+
+function openWaPrompt(prompt) {
+    if (whatsappPrompt.value === 'never') return;
+    if (!prompt || !/^\d{10}$/.test(prompt.phoneDigits ?? '')) return;
+    waPrompt.value = prompt;
+    waPromptOpen.value = true;
+}
+
+const waMessage = computed(() => {
+    const p = waPrompt.value;
+    if (!p) return '';
+    return t(waMessageKey[p.variant], {
+        client: p.clientName,
+        provider: p.provider,
+        service: p.service,
+        date: formatDateTimeLabel(new Date(p.startsAt)),
+    });
+});
+
 function confirmAppointment() {
     if (!selectedId.value) return;
+    const prompt = buildWaPrompt(selected.value, 'confirmed');
     detailProcessing.value = true;
+    // preserveState: true is now structural, not just a nicety — it's what
+    // keeps `prompt` (captured above) meaningful once onSuccess fires.
     router.patch(`/admin/citas/${selectedId.value}/confirmar`, {}, {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
             sheetOpen.value = false;
+            openWaPrompt(prompt);
         },
         onFinish: () => {
             detailProcessing.value = false;
@@ -92,27 +146,40 @@ function confirmAppointment() {
 
 const cancelConfirmOpen = ref(false);
 const cancelProcessing = ref(false);
-const idToCancel = ref(null);
+const pendingCancel = ref(null);
 
 // The detail sheet's `reject` (pending) and `cancel` (confirmed) both map to
 // the same server transition. Close the detail sheet first, then open the
 // confirmation dialog — stacking BottomSheets breaks their shared scroll lock.
 function askCancel() {
     if (!selectedId.value) return;
-    idToCancel.value = selectedId.value;
+    const variant = selected.value.status === 'pending' ? 'rejected' : 'cancelled';
+    pendingCancel.value = { id: selectedId.value, prompt: buildWaPrompt(selected.value, variant) };
     sheetOpen.value = false;
     cancelConfirmOpen.value = true;
 }
 
+const cancelDialogTitle = computed(() =>
+    t(cancelDialogCopy[pendingCancel.value?.prompt.variant ?? 'cancelled'].title),
+);
+const cancelDialogBody = computed(() =>
+    t(cancelDialogCopy[pendingCancel.value?.prompt.variant ?? 'cancelled'].body),
+);
+
 function confirmCancel() {
-    if (!idToCancel.value) return;
+    if (!pendingCancel.value) return;
+    const pending = pendingCancel.value;
     cancelProcessing.value = true;
-    router.patch(`/admin/citas/${idToCancel.value}/cancelar`, {}, {
+    router.patch(`/admin/citas/${pending.id}/cancelar`, {}, {
         preserveScroll: true,
         preserveState: true,
+        onSuccess: () => {
+            openWaPrompt(pending.prompt);
+        },
         onFinish: () => {
             cancelProcessing.value = false;
             cancelConfirmOpen.value = false;
+            pendingCancel.value = null;
         },
     });
 }
@@ -210,12 +277,20 @@ function confirmCancel() {
 
         <ConfirmDialog
             v-model="cancelConfirmOpen"
-            :title="$t('admin.confirmCancelTitle')"
-            :body="$t('admin.confirmCancelBody')"
+            :title="cancelDialogTitle"
+            :body="cancelDialogBody"
             :confirm-label="$t('admin.cancelAppointment')"
             :processing="cancelProcessing"
             variant="danger"
             @confirm="confirmCancel"
+        />
+
+        <WhatsAppPromptSheet
+            v-model="waPromptOpen"
+            :client-name="waPrompt?.clientName"
+            :client-phone="waPrompt?.clientPhone"
+            :phone-digits="waPrompt?.phoneDigits"
+            :message="waMessage"
         />
     </AdminLayout>
 </template>

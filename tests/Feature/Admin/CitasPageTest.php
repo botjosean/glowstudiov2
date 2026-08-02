@@ -34,12 +34,26 @@ class CitasPageTest extends TestCase
             ->where('appointments.0.id', $appointment->id)
             ->where('appointments.0.clientName', 'John Smith')
             ->where('appointments.0.clientPhone', '(305) 555-0199')
+            ->where('appointments.0.clientPhoneDigits', '3055550199')
             ->where('appointments.0.durationMinutes', 40)
             ->where('appointments.0.price', 30)
             ->where('appointments.0.status', 'confirmed')
             ->where('appointments.0.startsAt', '2026-08-02T15:00:00+00:00')
             ->missing('appointments.0.dateLabel')
             ->missing('appointments.0.timeLabel')
+        );
+    }
+
+    public function test_client_phone_digits_are_normalized_for_click_to_chat(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        Appointment::factory()->for($provider)->create([
+            'client_phone' => '(305) 555-0199',
+        ]);
+
+        $this->actingAs($provider->user)->get('/admin/citas')->assertInertia(fn (Assert $page) => $page
+            ->where('appointments.0.clientPhone', '(305) 555-0199')
+            ->where('appointments.0.clientPhoneDigits', '3055550199')
         );
     }
 
