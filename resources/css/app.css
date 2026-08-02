@@ -4,6 +4,95 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    --bg-canvas: #eef1f5;
+    --surface: #ffffff;
+    --surface-alt: #f8fafc;
+    --surface-mute: #f1f5f9;
+    --border-strong: #e2e8f0;
+    --text-strong: #0f172a;
+    --text-heading: #1e293b;
+    --text-body: #475569;
+    --text-mute: #64748b;
+    --text-faint: #94a3b8;
+    --btn-bg: #1e2330;
+    --btn-hover: #0f172a;
+    --btn-green: #059669;
+    --btn-green-hover: #047857;
+    --chip-bg: #0f172a;
+    --chip-fg: #ffffff;
+    --green-soft: #ecfdf5;
+    --green-border: #a7f3d0;
+    --green-text: #059669;
+    --green-text-strong: #047857;
+    --green-deep: #065f46;
+    --loc-bg: #f0fdf4;
+    --loc-border: #bbf7d0;
+    --loc-chip: #dcfce7;
+    --loc-text: #166534;
+    --loc-title: #15803d;
+    --blue-soft: #eff6ff;
+    --blue-text: #2563eb;
+    --purple-soft: #faf5ff;
+    --purple-text: #9333ea;
+    --backdrop: #3a4557;
+    --danger: #dc2626;
+    --danger-border: #fca5a5;
+    --danger-hover: rgba(220, 38, 38, 0.08);
+    --amber-soft: #fef3c7;
+    --amber-border: #f5d28a;
+    --amber-text: #92400e;
+}
+
+[data-theme='dark'] {
+    --bg-canvas: #0a0e16;
+    --surface: #161c29;
+    --surface-alt: #10151f;
+    --surface-mute: #232b3b;
+    --border-strong: #334155;
+    --text-strong: #f1f5f9;
+    --text-heading: #e2e8f0;
+    --text-body: #b6c2d4;
+    --text-mute: #8b99ad;
+    --text-faint: #64748b;
+    --btn-bg: #2e3a52;
+    --btn-hover: #3b4a68;
+    --btn-green: #059669;
+    --btn-green-hover: #10b981;
+    --chip-bg: #e2e8f0;
+    --chip-fg: #0f172a;
+    --green-soft: #0d2b21;
+    --green-border: #1c4c3b;
+    --green-text: #34d399;
+    --green-text-strong: #6ee7b7;
+    --green-deep: #a7f3d0;
+    --loc-bg: #0d2b21;
+    --loc-border: #1c4c3b;
+    --loc-chip: #14532d;
+    --loc-text: #86efac;
+    --loc-title: #4ade80;
+    --blue-soft: #1b2a4a;
+    --blue-text: #60a5fa;
+    --purple-soft: #2b1e42;
+    --purple-text: #c084fc;
+    --backdrop: #04060b;
+    --danger: #f87171;
+    --danger-border: #7f1d1d;
+    --danger-hover: rgba(248, 113, 113, 0.12);
+    --amber-soft: #422f0d;
+    --amber-border: #92400e;
+    --amber-text: #fbbf24;
+}
+
+html {
+    background: var(--bg-canvas);
+}
+
+body {
+    background: var(--bg-canvas);
+    color: var(--text-body);
 }
