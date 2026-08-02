@@ -37,6 +37,8 @@ function toggleLanguage() {
                 </button>
             </div>
 
+            <div v-if="menuOpen" class="fixed inset-0 z-30" @click="menuOpen = false" />
+
             <div
                 v-if="menuOpen"
                 class="absolute right-4 top-[66px] z-40 w-[230px] overflow-hidden rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
@@ -62,7 +64,7 @@ function toggleLanguage() {
                         <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('menu.darkTheme') }}</span>
                     </span>
                     <span
-                        class="relative h-5 w-9 rounded-full transition-colors"
+                        class="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors"
                         :class="isDark ? 'bg-[var(--btn-green)]' : 'bg-[var(--border-strong)]'"
                     >
                         <span
