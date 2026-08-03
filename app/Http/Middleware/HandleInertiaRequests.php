@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -58,7 +59,7 @@ class HandleInertiaRequests extends Middleware
                     'provider' => $user->provider ? [
                         'slug' => $user->provider->slug,
                         'publicName' => $user->provider->public_name,
-                        'avatarPhoto' => $user->provider->avatar_photo_url,
+                        'avatarPhoto' => MediaUrl::resolve($user->provider->avatar_photo_url),
                     ] : null,
                 ] : null,
             ],

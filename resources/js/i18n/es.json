@@ -112,7 +112,14 @@
         "waPromptStateAsk": "Preguntar",
         "waPromptStateNever": "Nunca",
         "confirmRejectTitle": "¿Rechazar esta solicitud?",
-        "confirmRejectBody": "El cliente queda sin cita en ese horario. Esta acción no se puede deshacer."
+        "confirmRejectBody": "El cliente queda sin cita en ese horario. Esta acción no se puede deshacer.",
+        "photoUpdated": "Foto actualizada",
+        "photoDeleted": "Foto eliminada",
+        "galleryFull": "Ya tienes el máximo de fotos en la galería",
+        "photoTooLarge": "La imagen no puede pesar más de 8 MB",
+        "deletePhoto": "Eliminar foto",
+        "confirmDeletePhotoTitle": "¿Eliminar esta foto?",
+        "confirmDeletePhotoBody": "Dejará de aparecer en tu perfil público. Esta acción no se puede deshacer."
     },
     "nav": {
         "appointments": "Citas",

@@ -7,6 +7,7 @@ use App\Models\Provider;
 use App\Models\Service;
 use App\Models\ServiceType;
 use App\Support\Format;
+use App\Support\MediaUrl;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +69,7 @@ class PublicController extends Controller
                 'slug' => $provider->slug,
                 'name' => $provider->public_name,
                 'bio' => $provider->bio,
-                'photo' => $provider->avatar_photo_url,
+                'photo' => MediaUrl::resolve($provider->avatar_photo_url),
                 'servicesCount' => $provider->services_count,
                 'availableNow' => $provider->is_available_now,
                 'mobile' => $provider->is_mobile,
@@ -94,8 +95,8 @@ class PublicController extends Controller
                 'name' => $provider->public_name,
                 'bio' => $provider->bio,
                 'availableNow' => $provider->is_available_now,
-                'bannerPhoto' => $provider->banner_photo_url,
-                'avatarPhoto' => $provider->avatar_photo_url,
+                'bannerPhoto' => MediaUrl::resolve($provider->banner_photo_url),
+                'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
                 'location' => $this->locationFor($provider),
                 'social' => array_filter([
                     'whatsapp' => $provider->whatsapp_url,
@@ -103,7 +104,7 @@ class PublicController extends Controller
                     'tiktok' => $provider->tiktok_url,
                     'facebook' => $provider->facebook_url,
                 ]),
-                'gallery' => $provider->photos->pluck('url')->values()->all(),
+                'gallery' => $provider->photos->pluck('url')->map(fn (string $url) => MediaUrl::resolve($url))->values()->all(),
                 'services' => $provider->services->map(fn (Service $service) => [
                     'id' => $service->id,
                     'icon' => $service->icon->value,

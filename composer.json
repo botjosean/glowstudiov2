@@ -8,9 +8,11 @@
     "require": {
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.2",
+        "intervention/image": "^3.0",
         "laravel/fortify": "~1.36.2",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "resend/resend-php": "^1.7"
     },
     "require-dev": {

@@ -35,5 +35,11 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perDay(20)->by($request->ip()),
             ];
         });
+
+        // Decoding + re-encoding an image is CPU-expensive; unlimited
+        // uploads is a resource-exhaustion vector even from an authed user.
+        RateLimiter::for('uploads', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

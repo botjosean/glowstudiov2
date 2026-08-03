@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AppointmentStatusController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\ProfilePhotoController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\AppointmentController;
@@ -63,6 +64,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     Route::get('/perfil', [DashboardController::class, 'perfil'])->name('perfil');
     Route::put('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
     Route::patch('/perfil/publicacion', [ProfileController::class, 'updatePublication'])->name('perfil.publication');
+
+    // POST, not PUT/PATCH: Inertia can't send files over PUT/PATCH — it
+    // converts them to FormData and PHP won't parse the body. A transport
+    // constraint, not a style choice.
+    Route::middleware('throttle:uploads')->group(function () {
+        Route::post('/perfil/avatar', [ProfilePhotoController::class, 'storeAvatar'])->name('perfil.avatar');
+        Route::post('/perfil/portada', [ProfilePhotoController::class, 'storeBanner'])->name('perfil.banner');
+        Route::post('/perfil/galeria', [ProfilePhotoController::class, 'storeGalleryPhoto'])->name('perfil.gallery.store');
+        Route::delete('/perfil/galeria/{photo}', [ProfilePhotoController::class, 'destroyGalleryPhoto'])
+            ->can('delete', 'photo')->name('perfil.gallery.destroy');
+    });
 
     Route::get('/ajustes', [DashboardController::class, 'ajustes'])->name('ajustes');
 });

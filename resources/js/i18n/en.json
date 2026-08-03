@@ -112,7 +112,14 @@
         "waPromptStateAsk": "Ask",
         "waPromptStateNever": "Never",
         "confirmRejectTitle": "Decline this request?",
-        "confirmRejectBody": "The client is left without an appointment at that time. This action cannot be undone."
+        "confirmRejectBody": "The client is left without an appointment at that time. This action cannot be undone.",
+        "photoUpdated": "Photo updated",
+        "photoDeleted": "Photo deleted",
+        "galleryFull": "You already have the maximum number of gallery photos",
+        "photoTooLarge": "The image can't be larger than 8 MB",
+        "deletePhoto": "Delete photo",
+        "confirmDeletePhotoTitle": "Delete this photo?",
+        "confirmDeletePhotoBody": "It will no longer appear on your public profile. This action cannot be undone."
     },
     "nav": {
         "appointments": "Appointments",

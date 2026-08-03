@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Support\Format;
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -101,9 +102,12 @@ class DashboardController extends Controller
                 'phone' => Format::usPhone((string) $request->user()->phone),
                 'email' => $request->user()->email,
                 'bio' => $provider->bio,
-                'bannerPhoto' => $provider->banner_photo_url,
-                'avatarPhoto' => $provider->avatar_photo_url,
-                'gallery' => $provider->photos->pluck('url')->values()->all(),
+                'bannerPhoto' => MediaUrl::resolve($provider->banner_photo_url),
+                'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
+                'gallery' => $provider->photos->map(fn ($photo) => [
+                    'id' => $photo->id,
+                    'url' => MediaUrl::resolve($photo->url),
+                ])->values()->all(),
                 'maxGallery' => Provider::MAX_GALLERY_PHOTOS,
                 'published' => $provider->published_at !== null,
                 'activeServicesCount' => $provider->services()->active()->count(),

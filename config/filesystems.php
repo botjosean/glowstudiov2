@@ -60,6 +60,22 @@ return [
             'report' => false,
         ],
 
+        // Cloudflare R2 — provider profile photos. R2 has no ACL concept
+        // (never set 'visibility' here or on a put() — the request fails);
+        // public read comes from the custom domain in 'url', not the disk.
+        // 'region' must be the literal string 'auto', not an AWS region.
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_URL'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => false,
+            'throw' => true,
+        ],
+
     ],
 
     /*
