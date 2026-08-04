@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->redirectGuestsTo('/iniciar-sesion');
         $middleware->redirectUsersTo('/admin/citas');
+
+        $middleware->trustProxies(at: '*');
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command(CloseFinishedAppointments::class)->hourly()->withoutOverlapping();

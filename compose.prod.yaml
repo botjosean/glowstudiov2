@@ -1,0 +1,69 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: glowstudiov2-app
+        restart: unless-stopped
+        ports:
+            - '80:80'
+            - '443:443'
+        env_file:
+            - .env
+        volumes:
+            - storage:/var/www/html/storage
+            - ./certs:/etc/nginx/certs:ro
+        healthcheck:
+            test: ['CMD', 'wget', '-qO-', 'https://127.0.0.1/up', '--no-check-certificate']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+        depends_on:
+            pgsql:
+                condition: service_healthy
+
+    worker:
+        image: glowstudiov2-app
+        restart: unless-stopped
+        command: ['php', 'artisan', 'queue:work', '--tries=3', '--max-time=3600']
+        env_file:
+            - .env
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            app:
+                condition: service_healthy
+
+    scheduler:
+        image: glowstudiov2-app
+        restart: unless-stopped
+        command: ['php', 'artisan', 'schedule:work']
+        env_file:
+            - .env
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            app:
+                condition: service_healthy
+
+    pgsql:
+        image: 'postgres:18-alpine'
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD}'
+        volumes:
+            - pgsql-data:/var/lib/postgresql
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-q', '-d', '${DB_DATABASE}', '-U', '${DB_USERNAME}']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    storage:
+        driver: local
+    pgsql-data:
+        driver: local
