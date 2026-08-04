@@ -36,6 +36,8 @@ RUN apk add --no-cache \
         libzip \
         libexif \
         icu \
+        imagemagick \
+        libwebp-tools \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         g++ \
@@ -46,6 +48,7 @@ RUN apk add --no-cache \
         libzip-dev \
         libexif-dev \
         icu-dev \
+        imagemagick-dev \
     && docker-php-ext-configure gd --with-jpeg --with-freetype \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_pgsql \
@@ -54,6 +57,8 @@ RUN apk add --no-cache \
         zip \
         intl \
         pcntl \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick \
     && apk del .build-deps
 
 WORKDIR /var/www/html
