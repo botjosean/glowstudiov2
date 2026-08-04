@@ -135,8 +135,8 @@ function confirmDeletePhoto() {
             </button>
         </div>
 
-        <div class="relative -mt-12 flex justify-center">
-            <div class="relative h-24 w-24">
+        <div class="relative -mt-12 flex justify-center pointer-events-none">
+            <div class="relative h-24 w-24 pointer-events-auto">
                 <div class="box-border h-24 w-24 rounded-full bg-[var(--surface)] p-[3px] shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
                     <div class="box-border h-full w-full overflow-hidden rounded-full border-[3px] border-[var(--green-text)] bg-[var(--surface-mute)]">
                         <img :src="profile.avatarPhoto" :alt="profile.publicName" class="h-full w-full object-cover" />
