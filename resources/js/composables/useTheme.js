@@ -5,7 +5,7 @@ const STORAGE_KEY = 'glowstudio.theme';
 function initialTheme() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
 }
 
 const theme = ref(initialTheme());
