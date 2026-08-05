@@ -9,6 +9,8 @@ use App\Support\Kapso\ReplyPolicy;
 use App\Support\Kapso\WebhookDeduplicator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Receives Kapso's WhatsApp webhook deliveries.
@@ -31,6 +33,21 @@ class KapsoWebhookController extends Controller
      */
     private const HANDLED_EVENT = 'whatsapp.message.received';
 
+    /**
+     * Messages answered per conversation per hour.
+     *
+     * A real booking conversation is under a dozen turns, so this is far above
+     * anyone genuine and still bounds what one sender can cost. Every answered
+     * message spends model tokens, and the sender chooses how many to send —
+     * without a ceiling, a single person hammering the number is an unbounded
+     * bill.
+     *
+     * Deliberately silent when exceeded rather than replying "slow down":
+     * answering an abuser is what they wanted, and a real client is never going
+     * to reach this.
+     */
+    private const MAX_PER_CONVERSATION_HOURLY = 30;
+
     public function store(
         Request $request,
         WebhookDeduplicator $deduplicator,
@@ -50,6 +67,7 @@ class KapsoWebhookController extends Controller
 
         $queued = 0;
         $notAllowed = 0;
+        $throttled = 0;
 
         foreach (InboundMessage::deliveriesFrom($request->json()->all(), $this->isBatch($request)) as $delivery) {
             $message = InboundMessage::fromDelivery($delivery);
@@ -63,6 +81,12 @@ class KapsoWebhookController extends Controller
             // claim and no trace beyond the count reported here.
             if (! $policy->allows($message->fromPhone)) {
                 $notAllowed++;
+
+                continue;
+            }
+
+            if ($this->overTheLimit($message)) {
+                $throttled++;
 
                 continue;
             }
@@ -82,7 +106,33 @@ class KapsoWebhookController extends Controller
             'status' => 'accepted',
             'queued' => $queued,
             'not_allowed' => $notAllowed,
+            'throttled' => $throttled,
         ]);
+    }
+
+    /**
+     * Counts this message against the conversation's hourly allowance.
+     *
+     * Keyed on the conversation rather than the phone number so that the same
+     * person writing to both salon numbers gets an allowance for each — they are
+     * two different businesses as far as the client is concerned.
+     */
+    private function overTheLimit(InboundMessage $message): bool
+    {
+        $key = 'whatsapp-assistant:'.$message->conversationKey();
+
+        if (RateLimiter::tooManyAttempts($key, self::MAX_PER_CONVERSATION_HOURLY)) {
+            Log::warning('Conversation is over its hourly message allowance; not answering.', [
+                'phone_number_id' => $message->phoneNumberId,
+                'limit' => self::MAX_PER_CONVERSATION_HOURLY,
+            ]);
+
+            return true;
+        }
+
+        RateLimiter::hit($key, 3600);
+
+        return false;
     }
 
     /**

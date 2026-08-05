@@ -289,6 +289,29 @@ class KapsoWebhookTest extends TestCase
     }
 
     /**
+     * Every answered message spends model tokens and the sender chooses how many
+     * to send, so without a ceiling one person hammering the number is an
+     * unbounded bill.
+     */
+    public function test_a_conversation_past_its_hourly_allowance_is_not_answered(): void
+    {
+        // One under the limit, so the next message is the one that trips it.
+        for ($i = 0; $i < 30; $i++) {
+            $this->deliver($this->payload(wamid: "wamid.flood.{$i}"))->assertOk();
+        }
+
+        Queue::assertPushed(RespondToWhatsAppMessage::class, 30);
+
+        $response = $this->deliver($this->payload(wamid: 'wamid.flood.over'));
+
+        $response->assertOk();
+        $response->assertJson(['throttled' => 1, 'queued' => 0]);
+
+        // Still 30: the message over the line produced no job at all.
+        Queue::assertPushed(RespondToWhatsAppMessage::class, 30);
+    }
+
+    /**
      * @param  array<mixed>  $payload
      */
     private function deliver(

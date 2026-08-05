@@ -264,6 +264,74 @@ class AssistantToolsTest extends TestCase
         Notification::assertSentTo($provider->user, HumanHandoffRequested::class);
     }
 
+    /**
+     * The requirement the whole booking design exists for: two clients wanting
+     * the same slot, only one gets it.
+     *
+     * Sequential here because PHPUnit cannot really run two requests at once,
+     * but the guarantee does not rest on ordering: CreateAppointment revalidates
+     * inside a row lock on the provider, and the appointments table carries a
+     * Postgres exclusion constraint that makes an overlap structurally
+     * impossible whatever order the writes arrive in.
+     *
+     * This was also seen for real in production, when two models under test
+     * raced for the same 14:00 slot and the second was correctly refused and
+     * offered the remaining hours instead.
+     */
+    public function test_two_clients_cannot_take_the_same_slot(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['duration_minutes' => 45]);
+
+        $arguments = [
+            'servicio_id' => $service->id,
+            'fecha' => '2026-08-11',
+            'hora' => '11:00',
+            'nombre_completo' => 'Quien Llegue Primero',
+        ];
+
+        $first = $this->tools()->run('crear_cita', $arguments, $this->context($provider));
+
+        // A different WhatsApp identity asking for the very same slot.
+        $second = $this->tools()->run(
+            'crear_cita',
+            [...$arguments, 'nombre_completo' => 'Quien Llegue Segundo'],
+            ToolContext::for($provider, '14045551234', 'Otra Clienta'),
+        );
+
+        $this->assertArrayHasKey('cita_id', $first);
+        $this->assertArrayHasKey('error', $second);
+        $this->assertStringContainsString('ya se ocupó', $second['error']);
+        $this->assertSame(1, Appointment::count());
+    }
+
+    /**
+     * And the same slot on a *different* provider is a different resource, so
+     * both must succeed — otherwise the two professionals would be sharing one
+     * calendar.
+     */
+    public function test_the_same_hour_with_a_different_professional_is_still_free(): void
+    {
+        $pati = $this->provider();
+        $vane = $this->provider();
+        $hair = Service::factory()->for($pati)->create(['duration_minutes' => 45]);
+        $nails = Service::factory()->for($vane)->create(['duration_minutes' => 45]);
+
+        $first = $this->tools()->run('crear_cita', [
+            'servicio_id' => $hair->id, 'fecha' => '2026-08-11',
+            'hora' => '11:00', 'nombre_completo' => 'Una Clienta',
+        ], $this->context($pati));
+
+        $second = $this->tools()->run('crear_cita', [
+            'servicio_id' => $nails->id, 'fecha' => '2026-08-11',
+            'hora' => '11:00', 'nombre_completo' => 'Una Clienta',
+        ], $this->context($vane));
+
+        $this->assertArrayHasKey('cita_id', $first);
+        $this->assertArrayHasKey('cita_id', $second);
+        $this->assertSame(2, Appointment::count());
+    }
+
     private function tools(): AssistantTools
     {
         return app(AssistantTools::class);
