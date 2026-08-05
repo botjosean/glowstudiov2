@@ -41,10 +41,15 @@ class AssistantTools
     /**
      * The tool schemas sent to Groq.
      *
-     * Descriptions are in Spanish because the whole conversation is, and the
-     * model picks tools more reliably when the schema speaks the same language
-     * as the client. `additionalProperties: false` keeps invented arguments out
-     * before validation has to reject them.
+     * Descriptions are terse on purpose. They are resent on every round of the
+     * loop, so every word here is paid for repeatedly — and the model picks
+     * correctly from a short description as long as it is unambiguous.
+     *
+     * `listar_servicios` ya no se declara aquí: el catálogo va dentro del
+     * prompt (ver SystemPrompt), que es contenido cacheado. Pedirlo como
+     * herramienta costaba una vuelta entera del modelo para leer dos filas, y
+     * fue diez de las trece primeras llamadas en producción. El handler sigue
+     * existiendo en run() por si el modelo lo llama de memoria.
      *
      * @return list<array<string, mixed>>
      */
@@ -52,43 +57,39 @@ class AssistantTools
     {
         return [
             $this->definition(
-                'listar_servicios',
-                'Lista los servicios que ofrece esta profesional, con precio en dólares y duración en minutos. Úsala siempre antes de hablar de precios: nunca los inventes.',
-            ),
-            $this->definition(
                 'buscar_disponibilidad',
-                'Devuelve las horas libres reales de un día concreto para un servicio. Úsala siempre antes de ofrecer una hora: nunca inventes disponibilidad.',
+                'Horas libres reales de un día para un servicio. Úsala siempre antes de ofrecer una hora.',
                 [
-                    'servicio_id' => ['type' => 'integer', 'description' => 'El id del servicio, tal como lo devolvió listar_servicios.'],
-                    'fecha' => ['type' => 'string', 'description' => 'La fecha en formato AAAA-MM-DD.'],
+                    'servicio_id' => ['type' => 'integer', 'description' => 'El servicio_id de la lista de servicios.'],
+                    'fecha' => ['type' => 'string', 'description' => 'Fecha AAAA-MM-DD.'],
                 ],
                 ['servicio_id', 'fecha'],
             ),
             $this->definition(
                 'crear_cita',
-                'Reserva la cita. Llámala SOLO después de haberle repetido a la clienta el servicio, la fecha completa, la hora y el precio, y de que ella haya dicho que sí explícitamente.',
+                'Reserva la cita. Solo cuando la clienta ya confirmó servicio, día, hora y su nombre.',
                 [
-                    'servicio_id' => ['type' => 'integer', 'description' => 'El id del servicio.'],
-                    'fecha' => ['type' => 'string', 'description' => 'La fecha en formato AAAA-MM-DD.'],
-                    'hora' => ['type' => 'string', 'description' => 'La hora en formato HH:MM de 24 horas, tomada de buscar_disponibilidad.'],
-                    'nombre_completo' => ['type' => 'string', 'description' => 'El nombre y apellido de la clienta. Pregúntaselo si no lo sabes.'],
+                    'servicio_id' => ['type' => 'integer', 'description' => 'El servicio_id.'],
+                    'fecha' => ['type' => 'string', 'description' => 'Fecha AAAA-MM-DD.'],
+                    'hora' => ['type' => 'string', 'description' => 'Hora HH:MM de 24 h, salida de buscar_disponibilidad.'],
+                    'nombre_completo' => ['type' => 'string', 'description' => 'Nombre y apellido de la clienta.'],
                 ],
                 ['servicio_id', 'fecha', 'hora', 'nombre_completo'],
             ),
             $this->definition(
                 'listar_mis_citas',
-                'Muestra las próximas citas de esta clienta. No necesita datos: el sistema ya sabe quién escribe.',
+                'Las próximas citas de esta clienta. No necesita datos: el sistema ya sabe quién escribe.',
             ),
             $this->definition(
                 'cancelar_cita',
                 'Cancela una cita de esta clienta. Confirma con ella cuál es antes de llamarla.',
-                ['cita_id' => ['type' => 'integer', 'description' => 'El id de la cita, tal como lo devolvió listar_mis_citas.']],
+                ['cita_id' => ['type' => 'integer', 'description' => 'El cita_id de listar_mis_citas.']],
                 ['cita_id'],
             ),
             $this->definition(
                 'solicitar_atencion_humana',
-                'Avisa a una persona del salón. Úsala cuando la clienta lo pida, se queje, o pregunte algo que no puedes resolver con las demás herramientas.',
-                ['motivo' => ['type' => 'string', 'description' => 'En una frase, qué necesita la clienta.']],
+                'Avisa a una persona del salón: la clienta lo pide, se queja, o preguntó algo que no puedes resolver.',
+                ['motivo' => ['type' => 'string', 'description' => 'En una frase, qué necesita.']],
                 ['motivo'],
             ),
         ];
