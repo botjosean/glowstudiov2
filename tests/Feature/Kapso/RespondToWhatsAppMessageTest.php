@@ -5,6 +5,7 @@ namespace Tests\Feature\Kapso;
 use App\Jobs\RespondToWhatsAppMessage;
 use App\Support\Kapso\InboundMessage;
 use App\Support\Kapso\KapsoClient;
+use App\Support\Kapso\ReplyPolicy;
 use App\Support\Kapso\WebhookDeduplicator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -24,6 +25,9 @@ class RespondToWhatsAppMessageTest extends TestCase
             'services.kapso.api_key' => 'test-api-key',
             'services.kapso.base_url' => 'https://api.kapso.ai',
             'services.kapso.graph_version' => 'v24.0',
+            // Who may be answered is ReplyPolicy's concern; these cases are
+            // about the send itself.
+            'services.kapso.reply_mode' => 'everyone',
         ]);
     }
 
@@ -33,7 +37,7 @@ class RespondToWhatsAppMessageTest extends TestCase
             '*' => Http::response(['messages' => [['id' => 'wamid.outbound']]]),
         ]);
 
-        $this->job()->handle(app(KapsoClient::class), app(WebhookDeduplicator::class));
+        $this->runJob($this->job());
 
         Http::assertSent(function (Request $request): bool {
             return $request->url() === 'https://api.kapso.ai/meta/whatsapp/v24.0/1280262548502304/messages'
@@ -56,8 +60,8 @@ class RespondToWhatsAppMessageTest extends TestCase
 
         $job = $this->job();
 
-        $job->handle(app(KapsoClient::class), app(WebhookDeduplicator::class));
-        $job->handle(app(KapsoClient::class), app(WebhookDeduplicator::class));
+        $this->runJob($job);
+        $this->runJob($job);
 
         Http::assertSentCount(1);
     }
@@ -77,8 +81,7 @@ class RespondToWhatsAppMessageTest extends TestCase
         $this->assertNull($message->fromPhone);
         $this->assertSame('US.13491208655302741918', $message->businessScopedUserId);
 
-        (new RespondToWhatsAppMessage($message))
-            ->handle(app(KapsoClient::class), app(WebhookDeduplicator::class));
+        $this->runJob(new RespondToWhatsAppMessage($message));
 
         Http::assertNothingSent();
     }
@@ -93,10 +96,8 @@ class RespondToWhatsAppMessageTest extends TestCase
             '*' => Http::response(['error' => 'boom'], 500),
         ]);
 
-        $job = $this->job();
-
         try {
-            $job->handle(app(KapsoClient::class), app(WebhookDeduplicator::class));
+            $this->runJob($this->job());
             $this->fail('Expected the send failure to surface so the queue can retry.');
         } catch (RuntimeException) {
             // expected
@@ -104,6 +105,52 @@ class RespondToWhatsAppMessageTest extends TestCase
 
         $this->assertFalse(
             app(WebhookDeduplicator::class)->claimed(WebhookDeduplicator::SCOPE_REPLY, 'wamid.111')
+        );
+    }
+
+    /**
+     * The job re-checks the policy even though the controller already did: a
+     * job queued before the allowlist was tightened must not still go out.
+     */
+    public function test_the_job_refuses_to_send_to_a_number_outside_the_allowlist(): void
+    {
+        Http::fake();
+
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            'services.kapso.test_recipients' => '12056455856',
+        ]);
+
+        $this->runJob($this->job());
+
+        Http::assertNothingSent();
+    }
+
+    /**
+     * The safety property that matters most: a missing or misspelled
+     * configuration must silence the assistant, never let it answer a real
+     * salon's entire client list.
+     */
+    public function test_an_unset_configuration_answers_nobody(): void
+    {
+        Http::fake();
+
+        config([
+            'services.kapso.reply_mode' => null,
+            'services.kapso.test_recipients' => null,
+        ]);
+
+        $this->runJob($this->job());
+
+        Http::assertNothingSent();
+    }
+
+    private function runJob(RespondToWhatsAppMessage $job): void
+    {
+        $job->handle(
+            app(KapsoClient::class),
+            app(WebhookDeduplicator::class),
+            app(ReplyPolicy::class),
         );
     }
 

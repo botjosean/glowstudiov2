@@ -21,9 +21,75 @@ class KapsoWebhookTest extends TestCase
     {
         parent::setUp();
 
-        config(['services.kapso.webhook_secret' => self::SECRET]);
+        config([
+            'services.kapso.webhook_secret' => self::SECRET,
+            // These cases are about the webhook contract, not about who may be
+            // answered; ReplyPolicyTest covers that. 'everyone' keeps the two
+            // concerns from tangling.
+            'services.kapso.reply_mode' => 'everyone',
+        ]);
 
         Queue::fake();
+    }
+
+    /**
+     * The connected numbers are real working business lines, so the endpoint
+     * must refuse to queue anything for a number outside the allowlist — no
+     * job, no claim, nothing to go wrong later.
+     */
+    public function test_a_number_outside_the_allowlist_is_never_queued(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            'services.kapso.test_recipients' => '12056455856',
+        ]);
+
+        $response = $this->deliver($this->payload());
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'accepted', 'queued' => 0, 'not_allowed' => 1]);
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_a_number_inside_the_allowlist_is_queued(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            // Written the way a human would, to prove formatting is normalised.
+            'services.kapso.test_recipients' => '+1 (631) 555-1181',
+        ]);
+
+        $response = $this->deliver($this->payload());
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'accepted', 'queued' => 1, 'not_allowed' => 0]);
+
+        Queue::assertPushed(RespondToWhatsAppMessage::class, 1);
+    }
+
+    /**
+     * A disallowed message must not consume the message claim either, or
+     * widening the allowlist later would leave that client permanently
+     * unanswerable.
+     */
+    public function test_a_disallowed_message_claims_nothing_so_it_can_be_answered_later(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            'services.kapso.test_recipients' => '12056455856',
+        ]);
+
+        $this->deliver($this->payload(), idempotencyKey: 'delivery-1')->assertOk();
+
+        $this->assertFalse(
+            app(WebhookDeduplicator::class)->claimed(WebhookDeduplicator::SCOPE_MESSAGE, 'wamid.111')
+        );
+
+        config(['services.kapso.test_recipients' => '16315551181']);
+
+        $this->deliver($this->payload(), idempotencyKey: 'delivery-2')
+            ->assertJson(['queued' => 1]);
     }
 
     public function test_a_correctly_signed_inbound_text_is_accepted_and_queued(): void

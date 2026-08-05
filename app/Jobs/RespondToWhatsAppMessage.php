@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Support\Kapso\InboundMessage;
 use App\Support\Kapso\KapsoClient;
+use App\Support\Kapso\ReplyPolicy;
 use App\Support\Kapso\WebhookDeduplicator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -50,8 +51,22 @@ class RespondToWhatsAppMessage implements ShouldQueue
         ];
     }
 
-    public function handle(KapsoClient $kapso, WebhookDeduplicator $deduplicator): void
+    public function handle(KapsoClient $kapso, WebhookDeduplicator $deduplicator, ReplyPolicy $policy): void
     {
+        // Checked again here even though the controller already refused to queue
+        // disallowed messages. The two checks guard different moments: a job
+        // sitting on the queue while the allowlist is being tightened would
+        // otherwise still go out. The cost is one config read; the cost of
+        // being wrong is a message on a real client's phone.
+        if (! $policy->allows($this->message->fromPhone)) {
+            Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
+                'phone_number_id' => $this->message->phoneNumberId,
+                'policy' => $policy->describe(),
+            ]);
+
+            return;
+        }
+
         if ($this->message->fromPhone === null) {
             // A Business-Scoped User ID conversation with no phone number.
             // Nothing to reply to over the Cloud API's `to` field, so this is

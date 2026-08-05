@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\RespondToWhatsAppMessage;
 use App\Support\Kapso\InboundMessage;
+use App\Support\Kapso\ReplyPolicy;
 use App\Support\Kapso\WebhookDeduplicator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,8 +31,11 @@ class KapsoWebhookController extends Controller
      */
     private const HANDLED_EVENT = 'whatsapp.message.received';
 
-    public function store(Request $request, WebhookDeduplicator $deduplicator): JsonResponse
-    {
+    public function store(
+        Request $request,
+        WebhookDeduplicator $deduplicator,
+        ReplyPolicy $policy,
+    ): JsonResponse {
         if ($request->header('X-Webhook-Event') !== self::HANDLED_EVENT) {
             return response()->json(['status' => 'ignored']);
         }
@@ -45,11 +49,21 @@ class KapsoWebhookController extends Controller
         }
 
         $queued = 0;
+        $notAllowed = 0;
 
         foreach (InboundMessage::deliveriesFrom($request->json()->all(), $this->isBatch($request)) as $delivery) {
             $message = InboundMessage::fromDelivery($delivery);
 
             if ($message === null) {
+                continue;
+            }
+
+            // Checked before queueing, not inside the job: a message from
+            // someone the assistant must not answer should leave no job, no
+            // claim and no trace beyond the count reported here.
+            if (! $policy->allows($message->fromPhone)) {
+                $notAllowed++;
+
                 continue;
             }
 
@@ -64,7 +78,11 @@ class KapsoWebhookController extends Controller
             $queued++;
         }
 
-        return response()->json(['status' => 'accepted', 'queued' => $queued]);
+        return response()->json([
+            'status' => 'accepted',
+            'queued' => $queued,
+            'not_allowed' => $notAllowed,
+        ]);
     }
 
     /**

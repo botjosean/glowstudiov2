@@ -17,6 +17,11 @@ return [
     'kapso' => [
         'api_key' => env('KAPSO_API_KEY'),
         'webhook_secret' => env('KAPSO_WEBHOOK_SECRET'),
+        // Fails closed: the default answers only the allowlist, so a
+        // missing or misspelled value silences the assistant instead of
+        // letting it text a real salon's whole client list.
+        'reply_mode' => env('KAPSO_REPLY_MODE', 'allowlist'),
+        'test_recipients' => env('KAPSO_TEST_RECIPIENTS'),
         'base_url' => env('KAPSO_BASE_URL', 'https://api.kapso.ai'),
         // Tracks Meta's Graph version, which Kapso proxies verbatim.
         'graph_version' => env('KAPSO_GRAPH_VERSION', 'v24.0'),
