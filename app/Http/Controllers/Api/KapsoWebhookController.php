@@ -65,9 +65,11 @@ class KapsoWebhookController extends Controller
             return response()->json(['status' => 'duplicate']);
         }
 
-        $queued = 0;
         $notAllowed = 0;
         $throttled = 0;
+
+        /** @var array<string, list<InboundMessage>> */
+        $byConversation = [];
 
         foreach (InboundMessage::deliveriesFrom($request->json()->all(), $this->isBatch($request)) as $delivery) {
             $message = InboundMessage::fromDelivery($delivery);
@@ -93,12 +95,24 @@ class KapsoWebhookController extends Controller
 
             // Per-message claim as well as per-delivery: after its retries are
             // exhausted Kapso re-sends a batch as individual deliveries, each
-            // with a fresh idempotency key but the same messages inside.
+            // with a fresh idempotency key but the same messages inside. Every
+            // message is claimed even though the batch is answered once, so no
+            // later delivery can resurrect one of them on its own.
             if (! $deduplicator->claim(WebhookDeduplicator::SCOPE_MESSAGE, $message->wamid)) {
                 continue;
             }
 
-            RespondToWhatsAppMessage::dispatch($message);
+            $byConversation[$message->conversationKey()][] = $message;
+        }
+
+        $queued = 0;
+
+        // One job per conversation, not per message. A client who fires off
+        // "hola", "quiero una cita", "para el jueves" in ten seconds was getting
+        // three separate replies that talked over each other; with Kapso's
+        // buffering on, those arrive as one batch and deserve one answer.
+        foreach ($byConversation as $messages) {
+            RespondToWhatsAppMessage::dispatch(InboundMessage::merged($messages));
             $queued++;
         }
 

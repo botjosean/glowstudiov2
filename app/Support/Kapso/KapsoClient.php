@@ -51,7 +51,7 @@ class KapsoClient
      * than mirrored into a local table — one copy of the transcript, no sync to
      * keep right.
      *
-     * @return list<array{id: string, direction: string, text: string, at: int}>
+     * @return list<array{id: string, direction: string, text: string, at: int, from: string}>
      *
      * @throws RuntimeException
      */
@@ -90,6 +90,11 @@ class KapsoClient
                 // Unix seconds, as Kapso sends it. Needed so a conversation can
                 // be given a clean slate without deleting the business's data.
                 'at' => (int) ($row['timestamp'] ?? 0),
+                // Empty on messages this app sent through the API, set to the
+                // salon's own number on messages somebody typed on their phone.
+                // That difference is how the assistant knows to stay out of a
+                // conversation a person has taken over.
+                'from' => (string) ($row['from'] ?? ''),
             ];
         }
 

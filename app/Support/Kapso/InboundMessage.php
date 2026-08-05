@@ -3,14 +3,18 @@
 namespace App\Support\Kapso;
 
 /**
- * One inbound WhatsApp text message, parsed out of a single Kapso v2 webhook
- * delivery.
+ * One inbound WhatsApp exchange to answer, parsed out of Kapso's v2 webhook
+ * payload.
  *
- * Constructed only through fromDelivery(), which returns null for anything
- * this app deliberately ignores (non-text, outbound, echoes, malformed).
- * "Ignore" and "fail" are different outcomes and the caller must not have to
- * tell them apart: a null here always means "nothing to answer", never "the
- * payload was broken".
+ * Usually one message, but with Kapso's buffering enabled a client who fires
+ * off several lines in a few seconds arrives as a batch — and deserves one
+ * answer, not one per line. merged() collapses those into a single subject.
+ *
+ * Constructed only through fromDelivery() or merged(). fromDelivery() returns
+ * null for anything this app deliberately ignores (non-text, outbound, echoes,
+ * malformed). "Ignore" and "fail" are different outcomes and the caller must
+ * not have to tell them apart: a null there always means "nothing to answer",
+ * never "the payload was broken".
  *
  * Field locations follow Kapso's payload v2, which mirrors Meta's shape — not
  * v1. Notably the sender lives in `message.from` and the display name in
@@ -18,8 +22,15 @@ namespace App\Support\Kapso;
  */
 final readonly class InboundMessage
 {
+    /**
+     * @param  list<string>  $wamids  every message this subject covers — one
+     *                                normally, several when a buffered batch was merged. Needed so the
+     *                                history loader can skip all of them: their text is already in
+     *                                $text, and replaying them as separate turns would say it twice.
+     */
     private function __construct(
         public string $wamid,
+        public array $wamids,
         public string $phoneNumberId,
         public ?string $conversationId,
         public ?string $fromPhone,
@@ -101,6 +112,7 @@ final readonly class InboundMessage
 
         return new self(
             wamid: $wamid,
+            wamids: [$wamid],
             phoneNumberId: $phoneNumberId,
             conversationId: self::stringOrNull($conversation['id'] ?? null),
             // A Business-Scoped User ID conversation carries no phone number at
@@ -112,6 +124,35 @@ final readonly class InboundMessage
             ),
             contactName: self::stringOrNull($conversation['kapso']['contact_name'] ?? null),
             text: trim($text),
+        );
+    }
+
+    /**
+     * Collapses several messages from one conversation into a single subject.
+     *
+     * The lines are joined in arrival order and the identity comes from the last
+     * one, so the reply claim and the outgoing message key on the most recent
+     * message — the one the client is waiting on an answer to.
+     *
+     * @param  non-empty-list<self>  $messages
+     */
+    public static function merged(array $messages): self
+    {
+        $last = $messages[array_key_last($messages)];
+
+        if (count($messages) === 1) {
+            return $last;
+        }
+
+        return new self(
+            wamid: $last->wamid,
+            wamids: array_merge(...array_map(static fn (self $m): array => $m->wamids, $messages)),
+            phoneNumberId: $last->phoneNumberId,
+            conversationId: $last->conversationId,
+            fromPhone: $last->fromPhone,
+            businessScopedUserId: $last->businessScopedUserId,
+            contactName: $last->contactName,
+            text: implode("\n", array_map(static fn (self $m): string => $m->text, $messages)),
         );
     }
 

@@ -136,6 +136,13 @@ class RespondToWhatsAppMessage implements ShouldQueue
             return;
         }
 
+        // null means somebody at the salon is already answering this client by
+        // hand. Nothing is sent and nothing is claimed: if they go quiet and the
+        // client writes again later, the assistant picks it up.
+        if ($reply === null) {
+            return;
+        }
+
         $this->send($kapso, $deduplicator, $reply);
     }
 

@@ -229,6 +229,56 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * The professional answers from her own phone; the client writes again. If
+     * the assistant also answers, the client is talking to two voices that may
+     * contradict each other.
+     */
+    public function test_it_stays_quiet_when_a_person_answered_by_hand(): void
+    {
+        $this->fakeWithHistory([
+            ['id' => 'wamid.manual', 'text' => ['body' => 'Buenas, dime'],
+                'timestamp' => (string) now()->subMinutes(5)->getTimestamp(),
+                'from' => '14044518022', 'kapso' => ['direction' => 'outbound']],
+        ]);
+
+        $this->assertNull($this->coordinator()->reply($this->message('hola'), $this->provider()));
+
+        // And it did not even ask the model, so it costs nothing either.
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'chat/completions'));
+    }
+
+    /**
+     * The distinguishing signal: messages this app sent carry no `from`, so the
+     * assistant must not mistake its own replies for a person taking over — that
+     * would silence it after its very first answer.
+     */
+    public function test_its_own_replies_do_not_look_like_a_person(): void
+    {
+        $this->fakeWithHistory([
+            ['id' => 'wamid.ours', 'text' => ['body' => 'Tenemos balayage por $200'],
+                'timestamp' => (string) now()->subMinutes(1)->getTimestamp(),
+                'from' => '', 'kapso' => ['direction' => 'outbound']],
+        ]);
+
+        $this->assertSame('Hola', $this->coordinator()->reply($this->message('hola'), $this->provider()));
+    }
+
+    /**
+     * And a hand-off is not forever: a manual reply from this morning must not
+     * keep the assistant out of tonight's conversation.
+     */
+    public function test_an_old_manual_reply_does_not_silence_it_forever(): void
+    {
+        $this->fakeWithHistory([
+            ['id' => 'wamid.manual', 'text' => ['body' => 'Buenas'],
+                'timestamp' => (string) now()->subHours(3)->getTimestamp(),
+                'from' => '14044518022', 'kapso' => ['direction' => 'outbound']],
+        ]);
+
+        $this->assertSame('Hola', $this->coordinator()->reply($this->message('hola'), $this->provider()));
+    }
+
+    /**
      * @param  list<array<mixed>>  $rows
      */
     private function fakeWithHistory(array $rows): void

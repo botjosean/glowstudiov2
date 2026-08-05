@@ -332,6 +332,62 @@ class AssistantToolsTest extends TestCase
         $this->assertSame(2, Appointment::count());
     }
 
+    /**
+     * The failure a real client hit: she booked a haircut, then said she meant a
+     * balayage at the same time. Keying idempotency on phone and hour alone
+     * handed the model back the haircut as if it were the new booking, and the
+     * client was told her balayage was registered when it was not.
+     *
+     * The right answer names the appointment in the way and says how to free it.
+     */
+    public function test_a_different_service_at_the_same_hour_points_at_her_own_other_appointment(): void
+    {
+        $provider = $this->provider();
+        $short = Service::factory()->for($provider)->create(['name' => 'Clasico', 'duration_minutes' => 45]);
+        $long = Service::factory()->for($provider)->create(['name' => 'Balayage', 'duration_minutes' => 180]);
+
+        $booked = $this->tools()->run('crear_cita', [
+            'servicio_id' => $short->id, 'fecha' => '2026-08-11',
+            'hora' => '11:00', 'nombre_completo' => 'Oriana Vegas',
+        ], $this->context($provider));
+
+        $result = $this->tools()->run('crear_cita', [
+            'servicio_id' => $long->id, 'fecha' => '2026-08-11',
+            'hora' => '11:00', 'nombre_completo' => 'Oriana Vegas',
+        ], $this->context($provider));
+
+        $this->assertArrayHasKey('error', $result);
+        // Names the appointment so the model can ask about *that* one...
+        $this->assertStringContainsString((string) $booked['cita_id'], $result['error']);
+        $this->assertStringContainsString('Clasico', $result['error']);
+        // ...tells it the way out...
+        $this->assertStringContainsString('cancelar_cita', $result['error']);
+        // ...and does not pretend the new one exists.
+        $this->assertArrayNotHasKey('cita_id', $result);
+        $this->assertSame(1, Appointment::count());
+    }
+
+    /**
+     * The idempotency it replaced still has to work: same client, same service,
+     * same hour is one booking however many times it is asked for.
+     */
+    public function test_the_identical_service_and_hour_is_still_treated_as_a_duplicate(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['duration_minutes' => 45]);
+        $arguments = [
+            'servicio_id' => $service->id, 'fecha' => '2026-08-11',
+            'hora' => '11:00', 'nombre_completo' => 'Oriana Vegas',
+        ];
+
+        $first = $this->tools()->run('crear_cita', $arguments, $this->context($provider));
+        $second = $this->tools()->run('crear_cita', $arguments, $this->context($provider));
+
+        $this->assertSame($first['cita_id'], $second['cita_id']);
+        $this->assertTrue($second['ya_estaba_reservada']);
+        $this->assertSame(1, Appointment::count());
+    }
+
     private function tools(): AssistantTools
     {
         return app(AssistantTools::class);

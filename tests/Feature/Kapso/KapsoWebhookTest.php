@@ -194,7 +194,12 @@ class KapsoWebhookTest extends TestCase
         Queue::assertPushed(RespondToWhatsAppMessage::class, 1);
     }
 
-    public function test_a_batch_delivery_queues_every_message_it_contains(): void
+    /**
+     * A client firing off three lines in ten seconds was getting three separate
+     * replies that talked over each other. Buffered together, they are one thing
+     * to answer.
+     */
+    public function test_a_batch_from_one_conversation_is_answered_once(): void
     {
         $payload = [
             'type' => 'whatsapp.message.received',
@@ -209,9 +214,69 @@ class KapsoWebhookTest extends TestCase
         $response = $this->deliver($payload, batch: true);
 
         $response->assertOk();
+        $response->assertJson(['status' => 'accepted', 'queued' => 1]);
+
+        Queue::assertPushed(RespondToWhatsAppMessage::class, 1);
+
+        Queue::assertPushed(RespondToWhatsAppMessage::class, function (RespondToWhatsAppMessage $job): bool {
+            return $job->message->text === "Primero\nSegundo"
+                // Keyed on the last message: that is the one the client is
+                // waiting on, and the one the reply claim must cover.
+                && $job->message->wamid === 'wamid.bbb'
+                // Both still listed, so neither is replayed as history whose
+                // text is already in the merged subject.
+                && $job->message->wamids === ['wamid.aaa', 'wamid.bbb'];
+        });
+    }
+
+    /**
+     * Merging is per conversation, not per delivery: two different people in one
+     * batch are two different problems.
+     */
+    public function test_a_batch_from_two_conversations_is_answered_once_each(): void
+    {
+        $payload = [
+            'type' => 'whatsapp.message.received',
+            'batch' => true,
+            'data' => [
+                $this->payload(wamid: 'wamid.aaa', text: 'Soy una'),
+                $this->payload(wamid: 'wamid.bbb', text: 'Soy otra', from: '14045550000', conversationId: 'conv_otra'),
+            ],
+            'batch_info' => ['size' => 2],
+        ];
+
+        $response = $this->deliver($payload, batch: true);
+
+        $response->assertOk();
         $response->assertJson(['status' => 'accepted', 'queued' => 2]);
 
         Queue::assertPushed(RespondToWhatsAppMessage::class, 2);
+    }
+
+    /**
+     * Every message of a batch is claimed even though one answer goes out, so a
+     * later individual re-delivery of one of them cannot resurrect it alone.
+     */
+    public function test_every_message_of_a_batch_is_claimed(): void
+    {
+        $payload = [
+            'type' => 'whatsapp.message.received',
+            'batch' => true,
+            'data' => [
+                $this->payload(wamid: 'wamid.aaa', text: 'Primero'),
+                $this->payload(wamid: 'wamid.bbb', text: 'Segundo'),
+            ],
+        ];
+
+        $this->deliver($payload, batch: true)->assertOk();
+
+        $deduplicator = app(WebhookDeduplicator::class);
+        $this->assertTrue($deduplicator->claimed(WebhookDeduplicator::SCOPE_MESSAGE, 'wamid.aaa'));
+        $this->assertTrue($deduplicator->claimed(WebhookDeduplicator::SCOPE_MESSAGE, 'wamid.bbb'));
+
+        // And the earlier one alone is not answered again.
+        $this->deliver($this->payload(wamid: 'wamid.aaa', text: 'Primero'))
+            ->assertJson(['queued' => 0]);
     }
 
     /**
@@ -358,14 +423,18 @@ class KapsoWebhookTest extends TestCase
      *
      * @return array<mixed>
      */
-    private function payload(string $wamid = 'wamid.111', string $text = 'Hola, quiero una cita'): array
-    {
+    private function payload(
+        string $wamid = 'wamid.111',
+        string $text = 'Hola, quiero una cita',
+        string $from = '16315551181',
+        string $conversationId = 'conv_123',
+    ): array {
         return [
             'message' => [
                 'id' => $wamid,
                 'timestamp' => '1730092801',
                 'type' => 'text',
-                'from' => '16315551181',
+                'from' => $from,
                 'text' => ['body' => $text],
                 'kapso' => [
                     'direction' => 'inbound',
@@ -374,8 +443,8 @@ class KapsoWebhookTest extends TestCase
                 ],
             ],
             'conversation' => [
-                'id' => 'conv_123',
-                'phone_number' => '16315551181',
+                'id' => $conversationId,
+                'phone_number' => $from,
                 'status' => 'active',
                 'phone_number_id' => '1280262548502304',
                 'kapso' => ['contact_name' => 'Jane Client'],

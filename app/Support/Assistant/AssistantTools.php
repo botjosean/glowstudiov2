@@ -223,22 +223,49 @@ class AssistantTools
         );
 
         // Idempotent by the appointment's own identity rather than by a stored
-        // key: if this exact slot is already booked for this client, the answer
-        // is that same appointment. A retried job (or a model that calls the
-        // tool twice) therefore cannot produce two bookings, and no extra
-        // bookkeeping table is needed to guarantee it.
-        $existing = Appointment::query()
+        // key: same client, same service, same instant is the same booking. A
+        // retried job (or a model that calls the tool twice) therefore cannot
+        // produce two bookings, and no extra bookkeeping table is needed.
+        //
+        // The service is part of that identity, and leaving it out caused a real
+        // failure: a client booked a haircut, then said she meant a balayage at
+        // the same time, and this check handed the model back the haircut as if
+        // it were the new booking.
+        $duplicate = Appointment::query()
             ->where('provider_id', $context->provider->id)
             ->where('client_phone', $context->storedPhone)
+            ->where('service_id', $service->id)
             ->where('starts_at', $localStart->utc())
             ->whereIn('status', AppointmentStatus::blocking())
             ->first();
 
-        if ($existing !== null) {
+        if ($duplicate !== null) {
             return [
-                'cita_id' => $existing->id,
+                'cita_id' => $duplicate->id,
                 'ya_estaba_reservada' => true,
-                'resumen' => $this->summarise($existing, $context),
+                'resumen' => $this->summarise($duplicate, $context),
+            ];
+        }
+
+        // A different appointment *of her own* standing in the way. Without
+        // naming it the model only learns "that hour is taken", which is both
+        // confusing and useless: the client cannot free it, but she can be asked
+        // whether she wants it cancelled.
+        $ownClash = Appointment::query()
+            ->where('provider_id', $context->provider->id)
+            ->where('client_phone', $context->storedPhone)
+            ->whereIn('status', AppointmentStatus::blocking())
+            ->where('starts_at', '<', $localStart->addMinutes($service->duration_minutes)->utc())
+            ->where('ends_at', '>', $localStart->utc())
+            ->first();
+
+        if ($ownClash !== null) {
+            return [
+                'error' => sprintf(
+                    'Esta clienta ya tiene otra cita que ocupa esa franja: %s (cita_id %d). Si quiere cambiarla, cancela esa primero con cancelar_cita y despues vuelve a reservar. Preguntale antes de cancelar nada.',
+                    $this->summarise($ownClash, $context),
+                    $ownClash->id,
+                ),
             ];
         }
 
