@@ -14,6 +14,14 @@ return [
     |
     */
 
+    'kapso' => [
+        'api_key' => env('KAPSO_API_KEY'),
+        'webhook_secret' => env('KAPSO_WEBHOOK_SECRET'),
+        'base_url' => env('KAPSO_BASE_URL', 'https://api.kapso.ai'),
+        // Tracks Meta's Graph version, which Kapso proxies verbatim.
+        'graph_version' => env('KAPSO_GRAPH_VERSION', 'v24.0'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
