@@ -35,21 +35,32 @@ class GroqClient
             throw AssistantUnavailable::permanent('Groq API key is not configured.');
         }
 
+        $payload = [
+            'model' => $config['model'],
+            'messages' => $messages,
+            'tools' => $tools,
+            'tool_choice' => 'auto',
+            'temperature' => (float) ($config['temperature'] ?? 0.3),
+            'max_completion_tokens' => (int) ($config['max_completion_tokens'] ?? 1024),
+        ];
+
+        // reasoning_effort is a gpt-oss extension, only sent when configured.
+        // Everything else in this payload is plain OpenAI-compatible, so the
+        // provider is a base_url away -- and sending an unknown field to a
+        // provider that validates strictly would be a 400 on every message.
+        $effort = $config['reasoning_effort'] ?? null;
+
+        if (is_string($effort) && $effort !== '') {
+            $payload['reasoning_effort'] = $effort;
+        }
+
         try {
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->asJson()
                 ->timeout((int) ($config['timeout'] ?? 30))
                 ->connectTimeout(5)
-                ->post(rtrim((string) $config['base_url'], '/').'/chat/completions', [
-                    'model' => $config['model'],
-                    'messages' => $messages,
-                    'tools' => $tools,
-                    'tool_choice' => 'auto',
-                    'temperature' => (float) ($config['temperature'] ?? 0.3),
-                    'max_completion_tokens' => (int) ($config['max_completion_tokens'] ?? 1024),
-                    'reasoning_effort' => $config['reasoning_effort'] ?? 'medium',
-                ]);
+                ->post(rtrim((string) $config['base_url'], '/').'/chat/completions', $payload);
         } catch (ConnectionException $exception) {
             // A timeout says nothing about whether the request was bad, so it
             // is worth one more attempt.
