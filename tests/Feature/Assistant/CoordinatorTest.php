@@ -23,10 +23,10 @@ class CoordinatorTest extends TestCase
         config([
             'services.kapso.api_key' => 'test-api-key',
             'services.kapso.base_url' => 'https://api.kapso.ai',
-            'services.groq.api_key' => 'test-groq-key',
-            'services.groq.base_url' => 'https://api.groq.com/openai/v1',
-            'services.groq.model' => 'openai/gpt-oss-120b',
-            'services.groq.max_iterations' => 3,
+            'services.assistant.api_key' => 'test-groq-key',
+            'services.assistant.base_url' => 'https://openrouter.ai/api/v1',
+            'services.assistant.model' => 'openai/gpt-oss-120b',
+            'services.assistant.max_iterations' => 3,
         ]);
     }
 
@@ -114,7 +114,7 @@ class CoordinatorTest extends TestCase
     {
         Http::fake([
             'api.kapso.ai/*' => Http::response(['data' => []]),
-            'api.groq.com/*' => Http::response(['error' => ['message' => 'rate limited']], 429, ['retry-after' => '17']),
+            'openrouter.ai/*' => Http::response(['error' => ['message' => 'rate limited']], 429, ['retry-after' => '17']),
         ]);
 
         try {
@@ -134,7 +134,7 @@ class CoordinatorTest extends TestCase
     {
         Http::fake([
             'api.kapso.ai/*' => Http::response(['data' => []]),
-            'api.groq.com/*' => Http::response(['error' => ['message' => 'failed_generation']], 400),
+            'openrouter.ai/*' => Http::response(['error' => ['message' => 'failed_generation']], 400),
         ]);
 
         try {
@@ -153,7 +153,7 @@ class CoordinatorTest extends TestCase
     {
         Http::fake([
             'api.kapso.ai/*' => Http::response('boom', 500),
-            'api.groq.com/*' => Http::response($this->text('Hola')),
+            'openrouter.ai/*' => Http::response($this->text('Hola')),
         ]);
 
         $this->assertSame('Hola', $this->coordinator()->reply($this->message('hola'), $this->provider()));
@@ -172,7 +172,7 @@ class CoordinatorTest extends TestCase
 
         Http::fake([
             'api.kapso.ai/*' => Http::response(['data' => []]),
-            'api.groq.com/*' => $sequence,
+            'openrouter.ai/*' => $sequence,
         ]);
     }
 

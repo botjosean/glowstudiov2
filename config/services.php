@@ -14,20 +14,22 @@ return [
     |
     */
 
-    'groq' => [
-        'api_key' => env('GROQ_API_KEY'),
-        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
-        'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
-        'timeout' => env('GROQ_TIMEOUT', 30),
-        'temperature' => env('GROQ_TEMPERATURE', 0.3),
-        'max_completion_tokens' => env('GROQ_MAX_COMPLETION_TOKENS', 1024),
-        'reasoning_effort' => env('GROQ_REASONING_EFFORT', 'medium'),
+    'assistant' => [
+        'api_key' => env('ASSISTANT_API_KEY'),
+        'base_url' => env('ASSISTANT_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'model' => env('ASSISTANT_MODEL', 'openai/gpt-oss-120b'),
+        'timeout' => env('ASSISTANT_TIMEOUT', 30),
+        'temperature' => env('ASSISTANT_TEMPERATURE', 0.3),
+        'max_completion_tokens' => env('ASSISTANT_MAX_COMPLETION_TOKENS', 1024),
+        // Only sent when non-empty: it is a gpt-oss extension, and other
+        // models reject unknown fields.
+        'reasoning_effort' => env('ASSISTANT_REASONING_EFFORT'),
         // Bounds the tool-calling loop: a model that keeps calling tools would
         // otherwise hold a worker and spend tokens with nothing to show.
-        'max_iterations' => env('GROQ_MAX_ITERATIONS', 6),
+        'max_iterations' => env('ASSISTANT_MAX_ITERATIONS', 6),
         // The biggest lever on tokens per minute: the history is resent on
         // every round of the tool-calling loop.
-        'history_messages' => env('GROQ_HISTORY_MESSAGES', 8),
+        'history_messages' => env('ASSISTANT_HISTORY_MESSAGES', 8),
     ],
 
     'kapso' => [

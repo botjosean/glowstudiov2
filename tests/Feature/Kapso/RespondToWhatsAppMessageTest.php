@@ -32,10 +32,10 @@ class RespondToWhatsAppMessageTest extends TestCase
             // Who may be answered is ReplyPolicy's concern; most cases here are
             // about what happens once someone may be.
             'services.kapso.reply_mode' => 'everyone',
-            'services.groq.api_key' => 'test-groq-key',
-            'services.groq.base_url' => 'https://api.groq.com/openai/v1',
-            'services.groq.model' => 'openai/gpt-oss-120b',
-            'services.groq.max_iterations' => 3,
+            'services.assistant.api_key' => 'test-groq-key',
+            'services.assistant.base_url' => 'https://openrouter.ai/api/v1',
+            'services.assistant.model' => 'openai/gpt-oss-120b',
+            'services.assistant.max_iterations' => 3,
         ]);
     }
 
@@ -195,7 +195,7 @@ class RespondToWhatsAppMessageTest extends TestCase
             'api.kapso.ai/platform/*' => Http::response(['data' => []]),
             'api.kapso.ai/meta/*' => Http::response(['messages' => [['id' => 'wamid.out']]]),
             // A 400 is terminal, so the job must not sit on retries.
-            'api.groq.com/*' => Http::response(['error' => ['message' => 'failed_generation']], 400),
+            'openrouter.ai/*' => Http::response(['error' => ['message' => 'failed_generation']], 400),
         ]);
 
         $provider = $this->provider();
@@ -219,7 +219,7 @@ class RespondToWhatsAppMessageTest extends TestCase
         Http::fake([
             'api.kapso.ai/platform/*' => Http::response(['data' => []]),
             'api.kapso.ai/meta/*' => Http::response(['messages' => [['id' => 'wamid.out']]]),
-            'api.groq.com/*' => Http::response(['error' => ['message' => 'slow down']], 429, ['retry-after' => '12']),
+            'openrouter.ai/*' => Http::response(['error' => ['message' => 'slow down']], 429, ['retry-after' => '12']),
         ]);
 
         $this->provider();
@@ -278,7 +278,7 @@ class RespondToWhatsAppMessageTest extends TestCase
         Http::fake([
             'api.kapso.ai/platform/*' => Http::response(['data' => []]),
             'api.kapso.ai/meta/*' => Http::response(['messages' => [['id' => 'wamid.out']]]),
-            'api.groq.com/*' => Http::response($groqResponse),
+            'openrouter.ai/*' => Http::response($groqResponse),
         ]);
     }
 

@@ -28,7 +28,7 @@ class Coordinator
     private const DEFAULT_HISTORY_LIMIT = 8;
 
     public function __construct(
-        private readonly GroqClient $groq,
+        private readonly ChatModel $model,
         private readonly AssistantTools $tools,
         private readonly SystemPrompt $prompt,
         private readonly KapsoClient $kapso,
@@ -48,10 +48,10 @@ class Coordinator
         ];
 
         $definitions = $this->tools->definitions();
-        $maxIterations = (int) (config('services.groq.max_iterations') ?: 6);
+        $maxIterations = (int) (config('services.assistant.max_iterations') ?: 6);
 
         for ($iteration = 1; $iteration <= $maxIterations; $iteration++) {
-            $assistant = $this->groq->chat($messages, $definitions);
+            $assistant = $this->model->chat($messages, $definitions);
 
             $toolCalls = $assistant['tool_calls'] ?? null;
 
@@ -129,7 +129,7 @@ class Coordinator
         try {
             $turns = $this->kapso->recentMessages(
                 $message->conversationId,
-                (int) (config('services.groq.history_messages') ?: self::DEFAULT_HISTORY_LIMIT),
+                (int) (config('services.assistant.history_messages') ?: self::DEFAULT_HISTORY_LIMIT),
             );
         } catch (\Throwable $exception) {
             // A conversation without its history is worse than none, but far
