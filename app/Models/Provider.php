@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[RouteKey('slug')]
 #[Fillable([
-    'user_id', 'slug', 'public_name', 'bio', 'banner_photo_url', 'avatar_photo_url',
+    'user_id', 'slug', 'whatsapp_phone_number_id', 'public_name', 'bio', 'banner_photo_url', 'avatar_photo_url',
     'is_mobile', 'is_available_now', 'published_at', 'service_area', 'address_line',
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',

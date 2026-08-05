@@ -2,8 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Models\Provider;
+use App\Notifications\HumanHandoffRequested;
+use App\Support\Assistant\AssistantUnavailable;
+use App\Support\Assistant\Coordinator;
 use App\Support\Kapso\InboundMessage;
 use App\Support\Kapso\KapsoClient;
+use App\Support\Kapso\OptOutRegistry;
 use App\Support\Kapso\ReplyPolicy;
 use App\Support\Kapso\WebhookDeduplicator;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,6 +20,11 @@ use Illuminate\Support\Facades\Log;
  * Answers one inbound WhatsApp message.
  *
  * Runs off the request so the webhook can ACK inside Kapso's 10 second window.
+ *
+ * The order of the checks below is the safety design, not an accident: who may
+ * be answered, then whether they asked to be left alone, then whether we
+ * already answered — each one is cheaper and more absolute than the next, and
+ * none of them depends on the assistant working.
  */
 class RespondToWhatsAppMessage implements ShouldQueue
 {
@@ -22,16 +32,20 @@ class RespondToWhatsAppMessage implements ShouldQueue
 
     /**
      * Two, not the default three: every attempt is a real message to a real
-     * person's phone. Retrying once covers a transient network blip; retrying
-     * repeatedly risks texting a client the same thing several times, which is
-     * worse than staying quiet.
+     * person's phone. Retrying once covers a transient blip or a rate limit;
+     * retrying repeatedly risks texting a client twice, which is worse than
+     * staying quiet.
      */
     public int $tries = 2;
 
-    public int $timeout = 40;
+    /**
+     * Room for a bounded tool-calling loop against Groq, still well under the
+     * queue's own patience.
+     */
+    public int $timeout = 120;
 
     /** @var list<int> */
-    public array $backoff = [10, 30];
+    public array $backoff = [15, 45];
 
     public function __construct(public readonly InboundMessage $message) {}
 
@@ -46,18 +60,23 @@ class RespondToWhatsAppMessage implements ShouldQueue
     {
         return [
             (new WithoutOverlapping($this->message->conversationKey()))
-                ->releaseAfter(5)
-                ->expireAfter(120),
+                ->releaseAfter(10)
+                ->expireAfter(300),
         ];
     }
 
-    public function handle(KapsoClient $kapso, WebhookDeduplicator $deduplicator, ReplyPolicy $policy): void
-    {
+    public function handle(
+        KapsoClient $kapso,
+        WebhookDeduplicator $deduplicator,
+        ReplyPolicy $policy,
+        OptOutRegistry $optOuts,
+        Coordinator $coordinator,
+    ): void {
         // Checked again here even though the controller already refused to queue
         // disallowed messages. The two checks guard different moments: a job
         // sitting on the queue while the allowlist is being tightened would
-        // otherwise still go out. The cost is one config read; the cost of
-        // being wrong is a message on a real client's phone.
+        // otherwise still go out. The cost is one config read; the cost of being
+        // wrong is a message on a real client's phone.
         if (! $policy->allows($this->message->fromPhone)) {
             Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
                 'phone_number_id' => $this->message->phoneNumberId,
@@ -87,22 +106,122 @@ class RespondToWhatsAppMessage implements ShouldQueue
             return;
         }
 
+        if ($this->handleOptOut($kapso, $deduplicator, $optOuts)) {
+            return;
+        }
+
+        $provider = Provider::query()
+            ->where('whatsapp_phone_number_id', $this->message->phoneNumberId)
+            ->first();
+
+        if ($provider === null) {
+            // The number reached us but nobody in the database owns it, so there
+            // is no catalogue, no schedule and nobody to hand off to. Answering
+            // anything about appointments would be invention.
+            Log::error('No provider is mapped to this WhatsApp number.', [
+                'phone_number_id' => $this->message->phoneNumberId,
+            ]);
+
+            $this->send($kapso, $deduplicator, $this->waitMessage());
+
+            return;
+        }
+
+        try {
+            $reply = $coordinator->reply($this->message, $provider);
+        } catch (AssistantUnavailable $exception) {
+            $this->handleFailure($kapso, $deduplicator, $provider, $exception);
+
+            return;
+        }
+
+        $this->send($kapso, $deduplicator, $reply);
+    }
+
+    /**
+     * @return bool true when the message was an opt-out/opt-in and is fully handled
+     */
+    private function handleOptOut(KapsoClient $kapso, WebhookDeduplicator $deduplicator, OptOutRegistry $optOuts): bool
+    {
+        $phoneNumberId = $this->message->phoneNumberId;
+        $phone = (string) $this->message->fromPhone;
+
+        if (OptOutRegistry::isOptOutRequest($this->message->text)) {
+            $optOuts->optOut($phoneNumberId, $phone);
+
+            // One last message, then silence. Confirming is what makes the
+            // opt-out trustworthy, and it also tells them how to come back.
+            $this->send($kapso, $deduplicator, 'Listo, no volveremos a escribirte por aquí. Si algún día quieres retomar, escribe START. 💛');
+
+            return true;
+        }
+
+        if (! $optOuts->optedOut($phoneNumberId, $phone)) {
+            return false;
+        }
+
+        if (OptOutRegistry::isOptInRequest($this->message->text)) {
+            $optOuts->optIn($phoneNumberId, $phone);
+
+            $this->send($kapso, $deduplicator, '¡Qué bueno tenerte de vuelta! ¿En qué te puedo ayudar? 💛');
+
+            return true;
+        }
+
+        // Opted out and not asking to come back: nothing is sent. The salon can
+        // still reply by hand from their own phone, which is a person's choice
+        // rather than automation.
+        Log::info('Message from an opted-out number; not answering.', [
+            'phone_number_id' => $phoneNumberId,
+        ]);
+
+        return true;
+    }
+
+    private function handleFailure(
+        KapsoClient $kapso,
+        WebhookDeduplicator $deduplicator,
+        Provider $provider,
+        AssistantUnavailable $exception,
+    ): void {
+        if ($exception->retryable && $this->attempts() < $this->tries) {
+            // Honour Groq's own retry-after when it gave one; guessing shorter
+            // just gets throttled again.
+            $this->release($exception->retryAfterSeconds ?? $this->backoff[0]);
+
+            return;
+        }
+
+        Log::error('WhatsApp assistant could not answer; handing off to a person.', [
+            'phone_number_id' => $this->message->phoneNumberId,
+            'provider' => $provider->slug,
+            'reason' => $exception->getMessage(),
+        ]);
+
+        // The client gets a human, not an error. Silence would leave someone
+        // waiting for a salon that never answers.
+        $provider->loadMissing('user')->user?->notify(new HumanHandoffRequested(
+            clientPhone: (string) $this->message->fromPhone,
+            clientName: $this->message->contactName ?? 'Cliente de WhatsApp',
+            reason: 'El asistente no pudo responder automáticamente.',
+        ));
+
+        $this->send($kapso, $deduplicator, $this->waitMessage());
+    }
+
+    private function send(KapsoClient $kapso, WebhookDeduplicator $deduplicator, string $body): void
+    {
         $kapso->sendText(
             phoneNumberId: $this->message->phoneNumberId,
-            to: $this->message->fromPhone,
-            body: $this->reply(),
+            to: (string) $this->message->fromPhone,
+            body: $body,
         );
 
         $deduplicator->claim(WebhookDeduplicator::SCOPE_REPLY, $this->message->wamid);
     }
 
-    /**
-     * Gate 2 is a plain echo: it proves the whole path (signature, dedup,
-     * queue, outbound send) end to end without an LLM or the appointment
-     * domain in the picture yet.
-     */
-    private function reply(): string
+    private function waitMessage(): string
     {
-        return 'Recibí: '.$this->message->text;
+        return 'Gracias por escribirnos. Ahora mismo no puedo responderte yo, pero ya avisé al salón y una persona te contesta en breve. 💛';
     }
 }

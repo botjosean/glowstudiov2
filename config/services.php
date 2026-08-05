@@ -14,6 +14,19 @@ return [
     |
     */
 
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
+        'timeout' => env('GROQ_TIMEOUT', 30),
+        'temperature' => env('GROQ_TEMPERATURE', 0.3),
+        'max_completion_tokens' => env('GROQ_MAX_COMPLETION_TOKENS', 1024),
+        'reasoning_effort' => env('GROQ_REASONING_EFFORT', 'medium'),
+        // Bounds the tool-calling loop: a model that keeps calling tools would
+        // otherwise hold a worker and spend tokens with nothing to show.
+        'max_iterations' => env('GROQ_MAX_ITERATIONS', 6),
+    ],
+
     'kapso' => [
         'api_key' => env('KAPSO_API_KEY'),
         'webhook_secret' => env('KAPSO_WEBHOOK_SECRET'),

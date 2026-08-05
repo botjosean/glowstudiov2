@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * Outbound WhatsApp sending through Kapso's Meta-compatible proxy.
+ * Outbound WhatsApp sending, and reading conversation history, through Kapso.
  *
- * Kapso mirrors the Cloud API's request and response shapes, so the body here
+ * Sending goes through Kapso's Meta-compatible proxy, so the request body here
  * is Meta's, not Kapso's own — which is why the version segment (v24.0) is
  * configurable: it tracks Meta's Graph version, and pinning it in code would
- * mean a deploy every time that moves.
+ * mean a deploy every time that moves. Reading history goes through Kapso's own
+ * platform API, which is a different base path.
  */
 class KapsoClient
 {
@@ -29,7 +30,10 @@ class KapsoClient
      */
     public function sendText(string $phoneNumberId, string $to, string $body): string
     {
-        $response = $this->request()->post($this->messagesUrl($phoneNumberId), [
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+        $version = config('services.kapso.graph_version');
+
+        $response = $this->request()->post("{$base}/meta/whatsapp/{$version}/{$phoneNumberId}/messages", [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
             'to' => $to,
@@ -38,6 +42,56 @@ class KapsoClient
         ]);
 
         return $this->wamidFrom($response);
+    }
+
+    /**
+     * The most recent turns of one conversation, oldest first.
+     *
+     * Kapso stores and backs up every message already, so this is read rather
+     * than mirrored into a local table — one copy of the transcript, no sync to
+     * keep right.
+     *
+     * @return list<array{id: string, direction: string, text: string}>
+     *
+     * @throws RuntimeException
+     */
+    public function recentMessages(string $conversationId, int $limit): array
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->get("{$base}/platform/v1/whatsapp/messages", [
+            'whatsapp_conversation_id' => $conversationId,
+            'per_page' => $limit,
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso returned HTTP {$response->status()} for conversation history.");
+        }
+
+        $rows = $response->json('data');
+
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $turns = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $text = $row['text']['body'] ?? null;
+
+            $turns[] = [
+                'id' => (string) ($row['id'] ?? ''),
+                'direction' => (string) ($row['kapso']['direction'] ?? 'inbound'),
+                'text' => is_string($text) ? $text : '',
+            ];
+        }
+
+        // Kapso answers newest first; a conversation reads the other way round.
+        return array_reverse($turns);
     }
 
     private function request(): PendingRequest
@@ -51,18 +105,10 @@ class KapsoClient
         return Http::withHeaders(['X-API-Key' => $apiKey])
             ->acceptJson()
             ->asJson()
-            // Short on purpose: this runs on a queue worker, and a hung send
+            // Short on purpose: this runs on a queue worker, and a hung call
             // holding a worker slot delays every other client's reply.
             ->timeout(15)
             ->connectTimeout(5);
-    }
-
-    private function messagesUrl(string $phoneNumberId): string
-    {
-        $base = rtrim((string) config('services.kapso.base_url'), '/');
-        $version = config('services.kapso.graph_version');
-
-        return "{$base}/meta/whatsapp/{$version}/{$phoneNumberId}/messages";
     }
 
     /**
