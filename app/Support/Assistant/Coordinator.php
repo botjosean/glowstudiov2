@@ -18,10 +18,14 @@ use Illuminate\Support\Facades\Log;
 class Coordinator
 {
     /**
-     * Enough for a booking to be discussed properly without re-reading a whole
-     * relationship's history on every message.
+     * How many past turns to replay, when nothing is configured.
+     *
+     * Small on purpose. Every round of the tool-calling loop resends the whole
+     * conversation, so history is multiplied by the number of rounds, and it is
+     * the single biggest lever on tokens-per-minute — the limit that actually
+     * bites in practice.
      */
-    private const HISTORY_LIMIT = 20;
+    private const DEFAULT_HISTORY_LIMIT = 8;
 
     public function __construct(
         private readonly GroqClient $groq,
@@ -123,7 +127,10 @@ class Coordinator
         }
 
         try {
-            $turns = $this->kapso->recentMessages($message->conversationId, self::HISTORY_LIMIT);
+            $turns = $this->kapso->recentMessages(
+                $message->conversationId,
+                (int) (config('services.groq.history_messages') ?: self::DEFAULT_HISTORY_LIMIT),
+            );
         } catch (\Throwable $exception) {
             // A conversation without its history is worse than none, but far
             // better than no reply at all.

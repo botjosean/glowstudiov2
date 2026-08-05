@@ -25,6 +25,9 @@ return [
         // Bounds the tool-calling loop: a model that keeps calling tools would
         // otherwise hold a worker and spend tokens with nothing to show.
         'max_iterations' => env('GROQ_MAX_ITERATIONS', 6),
+        // The biggest lever on tokens per minute: the history is resent on
+        // every round of the tool-calling loop.
+        'history_messages' => env('GROQ_HISTORY_MESSAGES', 8),
     ],
 
     'kapso' => [

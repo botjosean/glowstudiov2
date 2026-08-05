@@ -31,12 +31,13 @@ class RespondToWhatsAppMessage implements ShouldQueue
     use Queueable;
 
     /**
-     * Two, not the default three: every attempt is a real message to a real
-     * person's phone. Retrying once covers a transient blip or a rate limit;
-     * retrying repeatedly risks texting a client twice, which is worse than
-     * staying quiet.
+     * Three attempts, but only ever for a *retryable* failure: a permanent one
+     * goes straight to a human regardless (see handleFailure). Rate limits are
+     * the common case here and they clear on their own within the minute, so
+     * giving up after one retry hands off conversations that would have worked.
+     * Nothing has been sent when a retry happens, so this cannot double-text.
      */
-    public int $tries = 2;
+    public int $tries = 3;
 
     /**
      * Room for a bounded tool-calling loop against Groq, still well under the
@@ -45,7 +46,7 @@ class RespondToWhatsAppMessage implements ShouldQueue
     public int $timeout = 120;
 
     /** @var list<int> */
-    public array $backoff = [15, 45];
+    public array $backoff = [20, 45];
 
     public function __construct(public readonly InboundMessage $message) {}
 
