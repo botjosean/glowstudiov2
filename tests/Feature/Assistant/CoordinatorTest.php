@@ -160,6 +160,86 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * Kapso keeps every message a business ever exchanged and offers no way to
+     * delete one, so a polluted test conversation would otherwise stay in the
+     * model's context forever. The cutoff is how a conversation gets a clean
+     * slate without destroying the business's data.
+     */
+    public function test_history_before_the_cutoff_is_ignored(): void
+    {
+        config(['services.assistant.history_since' => '2026-08-05T21:00:00Z']);
+
+        $this->fakeWithHistory([
+            ['id' => 'wamid.old', 'text' => ['body' => 'mensaje viejo de una prueba'],
+                'timestamp' => '1785900000', 'kapso' => ['direction' => 'inbound']],
+            ['id' => 'wamid.new', 'text' => ['body' => 'mensaje nuevo de verdad'],
+                'timestamp' => '1785970000', 'kapso' => ['direction' => 'inbound']],
+        ]);
+
+        $this->coordinator()->reply($this->message('hola'), $this->provider());
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $sent = json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '';
+
+            return ! str_contains($sent, 'mensaje viejo')
+                && str_contains($sent, 'mensaje nuevo');
+        });
+    }
+
+    public function test_without_a_cutoff_the_whole_history_is_replayed(): void
+    {
+        config(['services.assistant.history_since' => null]);
+
+        $this->fakeWithHistory([
+            ['id' => 'wamid.old', 'text' => ['body' => 'mensaje viejo de una prueba'],
+                'timestamp' => '1785970000', 'kapso' => ['direction' => 'inbound']],
+        ]);
+
+        $this->coordinator()->reply($this->message('hola'), $this->provider());
+
+        Http::assertSent(function (Request $request): bool {
+            return str_contains($request->url(), 'chat/completions')
+                && str_contains(json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '', 'mensaje viejo');
+        });
+    }
+
+    /**
+     * A malformed date must not silently drop everything: too quiet is still
+     * wrong when the cause is a typo.
+     */
+    public function test_an_unparseable_cutoff_is_ignored_rather_than_dropping_everything(): void
+    {
+        config(['services.assistant.history_since' => 'el martes pasado']);
+
+        $this->fakeWithHistory([
+            ['id' => 'wamid.old', 'text' => ['body' => 'mensaje viejo de una prueba'],
+                'timestamp' => '1785970000', 'kapso' => ['direction' => 'inbound']],
+        ]);
+
+        $this->coordinator()->reply($this->message('hola'), $this->provider());
+
+        Http::assertSent(function (Request $request): bool {
+            return str_contains($request->url(), 'chat/completions')
+                && str_contains(json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '', 'mensaje viejo');
+        });
+    }
+
+    /**
+     * @param  list<array<mixed>>  $rows
+     */
+    private function fakeWithHistory(array $rows): void
+    {
+        Http::fake([
+            'api.kapso.ai/*' => Http::response(['data' => $rows]),
+            'openrouter.ai/*' => Http::response($this->text('Hola')),
+        ]);
+    }
+
+    /**
      * @param  list<array<mixed>>  $responses
      */
     private function fakeGroq(array $responses): void

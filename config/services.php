@@ -30,6 +30,9 @@ return [
         // The biggest lever on tokens per minute: the history is resent on
         // every round of the tool-calling loop.
         'history_messages' => env('ASSISTANT_HISTORY_MESSAGES', 8),
+        // Set to a date to give every conversation a clean slate from that
+        // moment on, without deleting anything at Kapso.
+        'history_since' => env('ASSISTANT_HISTORY_SINCE'),
     ],
 
     'kapso' => [

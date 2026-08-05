@@ -51,7 +51,7 @@ class KapsoClient
      * than mirrored into a local table — one copy of the transcript, no sync to
      * keep right.
      *
-     * @return list<array{id: string, direction: string, text: string}>
+     * @return list<array{id: string, direction: string, text: string, at: int}>
      *
      * @throws RuntimeException
      */
@@ -87,6 +87,9 @@ class KapsoClient
                 'id' => (string) ($row['id'] ?? ''),
                 'direction' => (string) ($row['kapso']['direction'] ?? 'inbound'),
                 'text' => is_string($text) ? $text : '',
+                // Unix seconds, as Kapso sends it. Needed so a conversation can
+                // be given a clean slate without deleting the business's data.
+                'at' => (int) ($row['timestamp'] ?? 0),
             ];
         }
 

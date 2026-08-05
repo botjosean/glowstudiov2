@@ -5,6 +5,7 @@ namespace App\Support\Assistant;
 use App\Models\Provider;
 use App\Support\Kapso\InboundMessage;
 use App\Support\Kapso\KapsoClient;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -86,6 +87,27 @@ class Coordinator
      * @param  array<mixed>  $call
      * @return array<string, mixed> the `tool` message to feed back
      */
+    /**
+     * @return int|null unix seconds, or null when no cutoff is configured
+     */
+    private function historyCutoff(): ?int
+    {
+        $since = config('services.assistant.history_since');
+
+        if (! is_string($since) || trim($since) === '') {
+            return null;
+        }
+
+        try {
+            return (int) CarbonImmutable::parse($since)->getTimestamp();
+        } catch (\Throwable) {
+            // A malformed date must not silently drop the whole history.
+            Log::warning('ASSISTANT_HISTORY_SINCE is not a valid date; ignoring it.');
+
+            return null;
+        }
+    }
+
     private function execute(array $call, ToolContext $context): array
     {
         $name = (string) ($call['function']['name'] ?? '');
@@ -141,9 +163,21 @@ class Coordinator
             return [];
         }
 
+        // An explicit line in the sand. Kapso stores every message a business
+        // ever exchanged and offers no way to delete one, which is right for the
+        // business but leaves a test conversation polluting the model's context
+        // forever. Setting this to a timestamp makes the assistant treat
+        // everything before it as if it had not happened, without destroying
+        // anybody's data.
+        $since = $this->historyCutoff();
+
         $history = [];
 
         foreach ($turns as $turn) {
+            if ($since !== null && ($turn['at'] ?? 0) < $since) {
+                continue;
+            }
+
             // Kapso has already stored the message that triggered this webhook,
             // so it comes back in the history too; it is appended as the final
             // user turn instead, where the model expects it.
