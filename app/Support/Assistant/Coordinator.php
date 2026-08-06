@@ -30,15 +30,19 @@ class Coordinator
 
     /**
      * How long the assistant stays out of a conversation after a person from the
-     * salon has answered by hand.
+     * salon has answered by hand, when nothing is configured.
      *
-     * Without this the two talk over each other: the professional replies from
-     * her own phone, the client writes again, and the assistant answers too —
-     * two voices, possibly contradicting each other, in front of a client. An
-     * hour is long enough to cover a real back-and-forth and short enough that
-     * the assistant picks up tomorrow's messages again on its own.
+     * Without any pause the two talk over each other: the professional replies
+     * from her own phone, the client writes again, and the assistant answers too
+     * — two voices, possibly contradicting each other, in front of a client.
+     *
+     * Fifteen minutes, not an hour. An hour was tried and was clearly wrong: the
+     * professional sent a single curious message into a conversation and that
+     * silenced the assistant while a real client asked four questions about a
+     * $200 service and got nothing. The pause has to cover an active
+     * back-and-forth, not punish one stray message.
      */
-    private const HUMAN_HANDOVER_MINUTES = 60;
+    private const DEFAULT_HANDOVER_MINUTES = 15;
 
     public function __construct(
         private readonly ChatModel $model,
@@ -153,7 +157,9 @@ class Coordinator
      */
     private function humanTookOver(array $turns): bool
     {
-        $cutoff = CarbonImmutable::now()->subMinutes(self::HUMAN_HANDOVER_MINUTES)->getTimestamp();
+        $minutes = (int) (config('services.assistant.human_handover_minutes') ?: self::DEFAULT_HANDOVER_MINUTES);
+
+        $cutoff = CarbonImmutable::now()->subMinutes($minutes)->getTimestamp();
 
         foreach ($turns as $turn) {
             if ($turn['direction'] === 'outbound' && $turn['from'] !== '' && $turn['at'] >= $cutoff) {

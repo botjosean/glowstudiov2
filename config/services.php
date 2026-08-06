@@ -33,6 +33,10 @@ return [
         // Set to a date to give every conversation a clean slate from that
         // moment on, without deleting anything at Kapso.
         'history_since' => env('ASSISTANT_HISTORY_SINCE'),
+        // How long to stay out of a conversation somebody at the salon
+        // answered by hand. Long enough for a real back-and-forth,
+        // short enough that one stray message does not strand a client.
+        'human_handover_minutes' => env('ASSISTANT_HUMAN_HANDOVER_MINUTES', 15),
     ],
 
     'kapso' => [
