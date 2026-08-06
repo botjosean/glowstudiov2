@@ -131,6 +131,12 @@ function activate(service) {
         </div>
 
         <div v-else class="relative flex flex-col gap-3 p-4">
+            <div class="px-1 pb-1 pt-2">
+                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                    {{ $t('admin.servicesTitle') }}
+                </h1>
+                <p class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.servicesSubtitle') }}</p>
+            </div>
             <div
                 v-for="service in services"
                 :key="service.id"

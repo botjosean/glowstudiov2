@@ -132,7 +132,11 @@
         "servicesEmptyBody": "Tus clientas reservan eligiendo un servicio. Añade el primero con su nombre, precio y duración.",
         "servicesEmptyCta": "Crear servicio",
         "noAppointmentsToday": "No tienes citas hoy",
-        "noAppointmentsTodayHint": "Cuando una clienta reserve, aparecerá aquí."
+        "noAppointmentsTodayHint": "Cuando una clienta reserve, aparecerá aquí.",
+        "scheduleTitle": "¿Cuándo pueden reservar tus clientas?",
+        "scheduleSubtitle": "Tu jornada, tu almuerzo y el descanso entre citas. Aplica a todos los días.",
+        "servicesTitle": "Tus servicios",
+        "servicesSubtitle": "Lo que tus clientas pueden reservar."
     },
     "nav": {
         "appointments": "Citas",

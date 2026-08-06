@@ -57,6 +57,15 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
 <template>
     <AdminLayout :provider-name="providerName">
         <div class="flex flex-col gap-4 p-4 pb-6">
+            <div class="px-1 pt-2">
+                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                    {{ $t('admin.scheduleTitle') }}
+                </h1>
+                <p class="mt-1 text-[13px] font-medium leading-relaxed text-[var(--text-mute)]">
+                    {{ $t('admin.scheduleSubtitle') }}
+                </p>
+            </div>
+
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
                 <div class="mb-3 flex items-center gap-2.5">
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">

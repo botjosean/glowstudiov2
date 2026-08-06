@@ -132,7 +132,11 @@
         "servicesEmptyBody": "Clients book by picking a service. Add your first one with its name, price and duration.",
         "servicesEmptyCta": "Create service",
         "noAppointmentsToday": "No appointments today",
-        "noAppointmentsTodayHint": "When a client books, it will show up here."
+        "noAppointmentsTodayHint": "When a client books, it will show up here.",
+        "scheduleTitle": "When can clients book you?",
+        "scheduleSubtitle": "Your workday, your lunch and the gap between appointments. Applies to every day.",
+        "servicesTitle": "Your services",
+        "servicesSubtitle": "What your clients can book."
     },
     "nav": {
         "appointments": "Appointments",
