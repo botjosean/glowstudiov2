@@ -133,7 +133,8 @@
         "appointments": "Appointments",
         "services": "Services",
         "schedule": "Schedule",
-        "profile": "Profile"
+        "profile": "Profile",
+        "home": "Home"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",
@@ -242,5 +243,39 @@
         "nextTitle": "What happens next",
         "nextBody": "{provider} will notify you as soon as your appointment is confirmed. No advance payment is required.",
         "done": "Done, thank you"
+    },
+    "inicio": {
+        "welcomeTitle": "Set up your business",
+        "welcomeSubtitle": "Follow these steps and your page will be ready to take bookings.",
+        "readyTitle": "Your business is up and running",
+        "readySubtitle": "All set. Your clients can now book with you.",
+        "progress": "{done} of {total} completed",
+        "stepAccount": "Account created",
+        "stepProfile": "Complete your profile",
+        "stepProfileHint": "Your photo, your bio and where you work",
+        "stepServices": "Create your first service",
+        "stepServicesHint": "Name, price and duration",
+        "stepSchedule": "Review your schedule",
+        "stepScheduleHint": "Workday, lunch and gap between appointments",
+        "stepWhatsapp": "Connect your WhatsApp",
+        "stepWhatsappHint": "We activate it for you — message us",
+        "stepPublish": "Publish your page",
+        "stepPublishHint": "Make it visible to your clients",
+        "stepBooking": "Get your first booking",
+        "stepBookingHint": "Try your page as if you were a client",
+        "botTitle": "Your WhatsApp assistant",
+        "botActive": "Answering for you",
+        "botActiveHint": "Replies to messages and books appointments 24/7.",
+        "botBlocked": "Connected, but your page isn't ready yet",
+        "botBlockedHint": "Publish your page and create at least one service so it can book.",
+        "botOffline": "Not connected yet",
+        "botOfflineHint": "Message us and we'll activate your number. Meanwhile, clients can book from your page.",
+        "todayTitle": "Today",
+        "todayAppointments": "no appointments | 1 appointment | {count} appointments",
+        "todayPending": "none pending | 1 to confirm | {count} to confirm",
+        "viewAppointments": "View appointments",
+        "publicPageTitle": "Your public page",
+        "publicPageView": "View",
+        "publicPageHidden": "Hidden for now — publish it from your profile"
     }
 }

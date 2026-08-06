@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Provider;
@@ -20,6 +21,39 @@ class DashboardController extends Controller
      * defensive bound rather than real pagination.
      */
     private const APPOINTMENTS_WINDOW_DAYS = 60;
+
+    /**
+     * The activation panel: a checklist of everything a provider needs before
+     * their page can take real bookings. Every signal is derived from data
+     * that already exists — no onboarding state is stored anywhere.
+     */
+    public function inicio(Request $request): Response
+    {
+        $provider = $request->user()->provider;
+        $today = $provider->currentTime();
+
+        return Inertia::render('Admin/Inicio', [
+            'providerName' => $provider->public_name,
+            'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
+            'publicUrl' => route('providers.show', $provider),
+            'checklist' => [
+                'profileComplete' => filled($provider->bio)
+                    && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line)),
+                'hasActiveServices' => $provider->services()->active()->exists(),
+                'whatsappConnected' => $provider->whatsapp_phone_number_id !== null,
+                'published' => $provider->published_at !== null,
+                'hasAppointments' => $provider->appointments()->exists(),
+            ],
+            'summary' => [
+                'todayCount' => $provider->appointments()->blocking()
+                    ->whereBetween('starts_at', [$today->startOfDay(), $today->endOfDay()])
+                    ->count(),
+                'pendingCount' => $provider->appointments()
+                    ->where('status', AppointmentStatus::Pending)
+                    ->count(),
+            ],
+        ]);
+    }
 
     public function citas(Request $request): Response
     {

@@ -56,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // user is redirected to the notice page before anything provider-specific
 // even runs.
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUserHasPassword::class, EnsureUserHasProvider::class])->group(function () {
+    Route::get('/inicio', [DashboardController::class, 'inicio'])->name('inicio');
+
     Route::get('/citas', [DashboardController::class, 'citas'])->name('citas');
     Route::patch('/citas/{appointment}/confirmar', [AppointmentStatusController::class, 'confirm'])
         ->can('update', 'appointment')->name('citas.confirm');

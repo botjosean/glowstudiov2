@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { CalendarDays, Scissors, Clock, User, Settings } from '@lucide/vue';
+import { House, CalendarDays, Scissors, Clock, User, Settings } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -14,6 +14,7 @@ const page = usePage();
 const currentPath = computed(() => page.url.split('?')[0]);
 
 const navItems = [
+    { href: '/admin/inicio', icon: House, key: 'nav.home' },
     { href: '/admin/citas', icon: CalendarDays, key: 'nav.appointments' },
     { href: '/admin/servicios', icon: Scissors, key: 'nav.services' },
     { href: '/admin/horario', icon: Clock, key: 'nav.schedule' },
@@ -55,7 +56,7 @@ function isActive(href) {
             <slot />
         </main>
 
-        <nav class="grid grid-cols-4 border-t border-[var(--surface-mute)] bg-[var(--surface-alt)] px-2 pb-3.5 pt-2.5">
+        <nav class="grid grid-cols-5 border-t border-[var(--surface-mute)] bg-[var(--surface-alt)] px-2 pb-3.5 pt-2.5">
             <Link
                 v-for="item in navItems"
                 :key="item.href"

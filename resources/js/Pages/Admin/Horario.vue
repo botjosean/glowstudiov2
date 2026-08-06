@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Clock4, UtensilsCrossed, Timer, Info } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -21,6 +21,12 @@ const props = defineProps({
 });
 
 const { formatTime, formatDuration } = useFormat();
+
+// The Inicio checklist's "review your schedule" step has no server-side
+// signal (defaults always exist), so opening this page is what completes it.
+onMounted(() => {
+    localStorage.setItem('glow:scheduleReviewed', '1');
+});
 
 const form = useForm({ ...props.schedule });
 

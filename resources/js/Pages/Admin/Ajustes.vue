@@ -37,7 +37,7 @@ const whatsappPromptOptions = computed(() => [
         <template #header>
             <header class="flex items-center gap-3 border-b border-[var(--surface-mute)] bg-[var(--surface)] p-4">
                 <Link
-                    href="/admin/citas"
+                    href="/admin/inicio"
                     class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)] hover:bg-[var(--border-strong)]"
                 >
                     <ArrowLeft :size="16" class="text-[var(--text-mute)]" />

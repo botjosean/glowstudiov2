@@ -133,7 +133,8 @@
         "appointments": "Citas",
         "services": "Servicios",
         "schedule": "Horario",
-        "profile": "Perfil"
+        "profile": "Perfil",
+        "home": "Inicio"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",
@@ -242,5 +243,39 @@
         "nextTitle": "Qué sigue",
         "nextBody": "{provider} te notificará en cuanto confirme tu cita. No se requiere pago por adelantado.",
         "done": "Listo, gracias"
+    },
+    "inicio": {
+        "welcomeTitle": "Configura tu negocio",
+        "welcomeSubtitle": "Sigue estos pasos y tu página quedará lista para recibir reservas.",
+        "readyTitle": "Tu negocio está en marcha",
+        "readySubtitle": "Todo listo. Tus clientas ya pueden reservar contigo.",
+        "progress": "{done} de {total} completados",
+        "stepAccount": "Cuenta creada",
+        "stepProfile": "Completa tu perfil",
+        "stepProfileHint": "Tu foto, tu bio y dónde atiendes",
+        "stepServices": "Crea tu primer servicio",
+        "stepServicesHint": "Nombre, precio y duración",
+        "stepSchedule": "Revisa tu horario",
+        "stepScheduleHint": "Jornada, almuerzo y descanso entre citas",
+        "stepWhatsapp": "Conecta tu WhatsApp",
+        "stepWhatsappHint": "Nosotros lo activamos por ti — escríbenos",
+        "stepPublish": "Publica tu página",
+        "stepPublishHint": "Hazla visible para tus clientas",
+        "stepBooking": "Recibe tu primera reserva",
+        "stepBookingHint": "Prueba tu página como si fueras una clienta",
+        "botTitle": "Tu asistente de WhatsApp",
+        "botActive": "Atendiendo por ti",
+        "botActiveHint": "Responde mensajes y agenda citas las 24 horas.",
+        "botBlocked": "Conectado, pero tu página aún no está lista",
+        "botBlockedHint": "Publica tu página y crea al menos un servicio para que pueda agendar.",
+        "botOffline": "Aún no está conectado",
+        "botOfflineHint": "Escríbenos y activamos tu número. Mientras tanto, tus clientas pueden reservar desde tu página.",
+        "todayTitle": "Hoy",
+        "todayAppointments": "sin citas | 1 cita | {count} citas",
+        "todayPending": "sin pendientes | 1 por confirmar | {count} por confirmar",
+        "viewAppointments": "Ver citas",
+        "publicPageTitle": "Tu página pública",
+        "publicPageView": "Ver",
+        "publicPageHidden": "Oculta por ahora — publícala desde tu perfil"
     }
 }
