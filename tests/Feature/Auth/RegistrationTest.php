@@ -65,6 +65,32 @@ class RegistrationTest extends TestCase
         $this->assertSame(1, User::count());
     }
 
+    public function test_duplicate_email_with_different_case_is_rejected_not_a_500(): void
+    {
+        User::factory()->create(['email' => 'newbarber@example.com']);
+
+        $response = $this->post('/register', $this->validPayload([
+            'username' => 'otheruser',
+            'email' => 'NewBarber@Example.com',
+        ]));
+
+        $response->assertSessionHasErrors('email');
+        $this->assertSame(1, User::count());
+    }
+
+    public function test_duplicate_phone_is_rejected(): void
+    {
+        User::factory()->create(['phone' => '3055551234']);
+
+        $response = $this->post('/register', $this->validPayload([
+            'username' => 'otheruser',
+            'email' => 'other@example.com',
+        ]));
+
+        $response->assertSessionHasErrors('phone');
+        $this->assertSame(1, User::count());
+    }
+
     public function test_password_confirmation_mismatch_is_rejected(): void
     {
         $response = $this->post('/register', $this->validPayload(['confirmPassword' => 'SomethingElse456']));

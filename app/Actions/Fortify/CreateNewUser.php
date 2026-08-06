@@ -40,12 +40,17 @@ class CreateNewUser implements CreatesNewUsers
         // stripped before validating, not just before saving.
         $input['phone'] = Format::digitsOnly((string) ($input['phone'] ?? ''));
 
+        // Same normalize-before-validate reasoning as username: the email is
+        // saved lowercased, so unique must compare the lowercased value or
+        // "Correo@x.com" sails past validation and dies on the unique index.
+        $input['email'] = Str::lower(trim((string) ($input['email'] ?? '')));
+
         // Field names are camelCase because that's what SignUp.vue sends;
         // error bags land on errors.fullName / errors.confirmPassword etc.
         Validator::make($input, [
             'username' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[A-Za-z0-9._]+$/', Rule::unique(User::class)],
             'fullName' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'digits:10'],
+            'phone' => ['required', 'digits:10', Rule::unique(User::class)],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)],
             'password' => [
                 // array_filter, not array_diff: passwordRules() contains a
@@ -54,6 +59,10 @@ class CreateNewUser implements CreatesNewUsers
                 ...array_filter($this->passwordRules(), fn ($rule) => $rule !== 'confirmed'),
                 'confirmed:confirmPassword',
             ],
+        ], [
+            'username.unique' => 'Ese nombre de usuario ya está en uso.',
+            'phone.unique' => 'Ese número de teléfono ya tiene una cuenta. Inicia sesión o usa otro número.',
+            'email.unique' => 'Ese correo ya tiene una cuenta. Inicia sesión o usa otro correo.',
         ])->validate();
 
         return DB::transaction(function () use ($input): User {

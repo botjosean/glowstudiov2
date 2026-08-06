@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Superadmins
+    |--------------------------------------------------------------------------
+    |
+    | Usernames (comma-separated in SUPERADMIN_USERNAMES) that can open the
+    | general administration panel at /admin-general. Empty by default: with
+    | no configured usernames the panel simply does not exist (404).
+    |
+    */
+
+    'superadmins' => array_values(array_filter(explode(',', (string) env('SUPERADMIN_USERNAMES', '')))),
+
 ];

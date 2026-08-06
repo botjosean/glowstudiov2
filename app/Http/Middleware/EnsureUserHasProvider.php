@@ -20,7 +20,15 @@ class EnsureUserHasProvider
     {
         $request->user()->loadMissing('provider');
 
-        abort_unless($request->user()->provider !== null, 403);
+        if ($request->user()->provider === null) {
+            // The general-admin account has no provider on purpose — its
+            // home is the superadmin panel, not a 403.
+            if (in_array($request->user()->username, config('app.superadmins'), true)) {
+                return redirect()->route('superadmin.index');
+            }
+
+            abort(403);
+        }
 
         return $next($request);
     }

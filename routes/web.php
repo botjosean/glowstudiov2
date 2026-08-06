@@ -10,8 +10,10 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\InitialPasswordController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\SuperadminController;
 use App\Http\Middleware\EnsureUserHasPassword;
 use App\Http\Middleware\EnsureUserHasProvider;
+use App\Http\Middleware\EnsureUserIsSuperadmin;
 use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
@@ -95,4 +97,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     });
 
     Route::get('/ajustes', [DashboardController::class, 'ajustes'])->name('ajustes');
+});
+
+// General administration (the owner's panel, not a provider's): guarded by
+// the SUPERADMIN_USERNAMES allowlist — for everyone else these routes 404.
+Route::prefix('admin-general')->middleware(['auth', 'verified', EnsureUserIsSuperadmin::class])->group(function () {
+    Route::get('/', [SuperadminController::class, 'index'])->name('superadmin.index');
+    Route::post('/limpiar', [SuperadminController::class, 'wipe'])->name('superadmin.wipe');
+    Route::delete('/citas/{appointment}', [SuperadminController::class, 'destroyAppointment'])
+        ->name('superadmin.appointments.destroy');
 });

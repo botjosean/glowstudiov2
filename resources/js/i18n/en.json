@@ -310,5 +310,26 @@
     "legal": {
         "termsTitle": "Terms of use",
         "privacyTitle": "Privacy policy"
+    },
+    "superadmin": {
+        "title": "General administration",
+        "subtitle": "Owner's panel. From here you can wipe test data (accounts, appointments, phones and emails) to test again from scratch. Professionals with WhatsApp connected to the assistant are protected and never deleted from here.",
+        "protectedTitle": "Protected (never deleted)",
+        "protectedWhatsapp": "WhatsApp connected to the assistant",
+        "protectedSuperadmin": "Administration account",
+        "deletableTitle": "Test accounts (deleted by the button)",
+        "deletableEmpty": "No test accounts right now. Register as many as you want and come back here to clean up.",
+        "wipeCta": "Delete 1 test account | Delete {count} test accounts",
+        "wipeConfirmTitle": "Delete the test data?",
+        "wipeConfirmBody": "1 account will be removed with everything it owns: profile, services, photos and appointments. | {count} accounts will be removed with everything they own: profiles, services, photos and appointments.",
+        "wipeConfirmDetail": "Protected accounts (connected WhatsApp and administration) are untouched. This cannot be undone.",
+        "wipeConfirmCta": "Yes, delete everything",
+        "wiped": "Test data deleted. You can register accounts again.",
+        "appointmentsTitle": "Appointments (latest {count}) — delete test ones individually",
+        "appointmentsEmpty": "No appointments registered.",
+        "deleteAppointment": "Delete appointment",
+        "confirmDeleteApptTitle": "Delete this appointment?",
+        "appointmentDeleted": "Appointment deleted.",
+        "refresh": "Refresh data"
     }
 }

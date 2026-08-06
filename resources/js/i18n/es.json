@@ -310,5 +310,26 @@
     "legal": {
         "termsTitle": "Condiciones de uso",
         "privacyTitle": "Política de privacidad"
+    },
+    "superadmin": {
+        "title": "Administración general",
+        "subtitle": "Panel del dueño. Desde aquí puedes borrar los datos de prueba (cuentas, citas, teléfonos y correos) para volver a probar desde cero. Las profesionales con WhatsApp conectado al asistente están protegidas y nunca se borran desde aquí.",
+        "protectedTitle": "Protegidas (nunca se borran)",
+        "protectedWhatsapp": "WhatsApp conectado al asistente",
+        "protectedSuperadmin": "Cuenta de administración",
+        "deletableTitle": "Cuentas de prueba (se borran con el botón)",
+        "deletableEmpty": "No hay cuentas de prueba ahora mismo. Registra las que quieras y vuelve aquí para limpiarlas.",
+        "wipeCta": "Borrar 1 cuenta de prueba | Borrar {count} cuentas de prueba",
+        "wipeConfirmTitle": "¿Borrar los datos de prueba?",
+        "wipeConfirmBody": "Se eliminará 1 cuenta con todo lo suyo: perfil, servicios, fotos y citas. | Se eliminarán {count} cuentas con todo lo suyo: perfiles, servicios, fotos y citas.",
+        "wipeConfirmDetail": "Las cuentas protegidas (WhatsApp conectado y administración) no se tocan. Esto no se puede deshacer.",
+        "wipeConfirmCta": "Sí, borrar todo",
+        "wiped": "Datos de prueba eliminados. Puedes volver a registrar cuentas.",
+        "appointmentsTitle": "Citas (las {count} más recientes) — borra las de prueba una a una",
+        "appointmentsEmpty": "No hay citas registradas.",
+        "deleteAppointment": "Borrar cita",
+        "confirmDeleteApptTitle": "¿Borrar esta cita?",
+        "appointmentDeleted": "Cita eliminada.",
+        "refresh": "Actualizar datos"
     }
 }
