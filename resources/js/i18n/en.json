@@ -247,7 +247,8 @@
         "submittedPending": "was scheduled and is pending confirmation.",
         "nextTitle": "What happens next",
         "nextBody": "{provider} will notify you as soon as your appointment is confirmed. No advance payment is required.",
-        "done": "Done, thank you"
+        "done": "Done, thank you",
+        "noSlots": "No free times on this day. Pick another date."
     },
     "inicio": {
         "welcomeTitle": "Set up your business",

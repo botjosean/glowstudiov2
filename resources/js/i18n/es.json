@@ -247,7 +247,8 @@
         "submittedPending": "fue agendada y está pendiente de confirmación.",
         "nextTitle": "Qué sigue",
         "nextBody": "{provider} te notificará en cuanto confirme tu cita. No se requiere pago por adelantado.",
-        "done": "Listo, gracias"
+        "done": "Listo, gracias",
+        "noSlots": "No hay horas libres este día. Elige otra fecha."
     },
     "inicio": {
         "welcomeTitle": "Configura tu negocio",

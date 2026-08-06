@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { X, ChevronLeft, ChevronRight, ChevronDown, Calendar, Check, Info } from '@lucide/vue';
+import { X, ChevronLeft, ChevronRight, Calendar, Check, Info } from '@lucide/vue';
 import { useFormat } from '../../composables/useFormat';
 import { useI18n } from 'vue-i18n';
 
@@ -277,24 +277,35 @@ function submitBooking() {
                 <div class="mb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
                     {{ $t('booking.selectTime') }}
                 </div>
-                <div class="relative mb-6">
-                    <select
-                        v-model="selectedSlotIndex"
-                        class="w-full appearance-none rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 pr-10 text-sm font-bold text-[var(--text-strong)] focus:border-[var(--green-border)] focus:outline-none"
+                <div class="mb-6">
+                    <p
+                        v-if="slots.length === 0"
+                        class="rounded-xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] px-4 py-5 text-center text-xs font-semibold text-[var(--text-mute)]"
                     >
-                        <option v-for="(slot, index) in slots" :key="index" :value="index">
+                        {{ $t('booking.noSlots') }}
+                    </p>
+                    <div v-else class="scrollbar-thin grid max-h-[176px] grid-cols-4 gap-2 overflow-y-auto pr-1">
+                        <button
+                            v-for="(slot, index) in slots"
+                            :key="index"
+                            type="button"
+                            class="rounded-xl border-[1.5px] py-2.5 text-[13px] font-bold transition-colors"
+                            :class="
+                                selectedSlotIndex === index
+                                    ? 'border-[var(--chip-bg)] bg-[var(--chip-bg)] text-[var(--chip-fg)]'
+                                    : 'border-[var(--border-strong)] bg-[var(--surface-alt)] text-[var(--text-body)] hover:border-[var(--text-faint)]'
+                            "
+                            @click="selectedSlotIndex = index"
+                        >
                             {{ formatTime(slot.h, slot.m) }}
-                        </option>
-                    </select>
-                    <ChevronDown
-                        :size="16"
-                        class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]"
-                    />
+                        </button>
+                    </div>
                 </div>
 
                 <button
                     type="button"
-                    class="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--btn-bg)] py-4 text-sm font-bold text-white hover:bg-[var(--btn-hover)]"
+                    :disabled="slots.length === 0"
+                    class="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--btn-bg)] py-4 text-sm font-bold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                     @click="step = 'details'"
                 >
                     {{ $t('booking.continue') }}
