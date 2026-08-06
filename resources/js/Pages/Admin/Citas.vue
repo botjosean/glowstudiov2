@@ -188,7 +188,10 @@ function confirmCancel() {
 
 <template>
     <AdminLayout :provider-name="providerName">
-        <div class="px-4 pt-3">
+        <div class="px-4 pt-4">
+            <h1 class="px-1 pb-3 text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                {{ $t('admin.appointmentsTitle') }}
+            </h1>
             <div class="grid grid-cols-4 gap-1 rounded-xl bg-[var(--surface-mute)] p-1">
                 <button
                     v-for="tab in tabs"

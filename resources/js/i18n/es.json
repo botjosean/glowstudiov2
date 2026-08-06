@@ -136,7 +136,10 @@
         "scheduleTitle": "¿Cuándo pueden reservar tus clientas?",
         "scheduleSubtitle": "Tu jornada, tu almuerzo y el descanso entre citas. Aplica a todos los días.",
         "servicesTitle": "Tus servicios",
-        "servicesSubtitle": "Lo que tus clientas pueden reservar."
+        "servicesSubtitle": "Lo que tus clientas pueden reservar.",
+        "profileTitle": "Tu perfil público",
+        "profileSubtitle": "Lo que ven tus clientas en tu página.",
+        "appointmentsTitle": "Tus citas"
     },
     "nav": {
         "appointments": "Citas",

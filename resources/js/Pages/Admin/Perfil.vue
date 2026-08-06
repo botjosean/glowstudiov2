@@ -186,6 +186,12 @@ function confirmDeletePhoto() {
         </p>
 
         <div class="flex flex-col gap-4 p-6 pb-8">
+            <div class="pb-1 text-center">
+                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                    {{ $t('admin.profileTitle') }}
+                </h1>
+                <p class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
+            </div>
             <div>
                 <Input v-model="form.username" :label="$t('admin.username')" />
                 <p v-if="form.errors.username" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.username }}</p>

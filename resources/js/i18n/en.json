@@ -136,7 +136,10 @@
         "scheduleTitle": "When can clients book you?",
         "scheduleSubtitle": "Your workday, your lunch and the gap between appointments. Applies to every day.",
         "servicesTitle": "Your services",
-        "servicesSubtitle": "What your clients can book."
+        "servicesSubtitle": "What your clients can book.",
+        "profileTitle": "Your public profile",
+        "profileSubtitle": "What clients see on your page.",
+        "appointmentsTitle": "Your appointments"
     },
     "nav": {
         "appointments": "Appointments",
