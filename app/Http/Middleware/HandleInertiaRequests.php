@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Provider;
 use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -79,7 +80,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * @return array{pending: int}|null
      */
-    private function onboardingFor(?\App\Models\Provider $provider): ?array
+    private function onboardingFor(?Provider $provider): ?array
     {
         if ($provider === null) {
             return null;
