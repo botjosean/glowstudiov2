@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Pencil, Ban, Plus, RotateCcw } from '@lucide/vue';
+import { Pencil, Ban, Plus, RotateCcw, Scissors } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
@@ -111,7 +111,26 @@ function activate(service) {
 
 <template>
     <AdminLayout :provider-name="providerName">
-        <div class="relative flex flex-col gap-3 p-4">
+        <div v-if="services.length === 0" class="flex flex-col items-center px-8 pb-10 pt-16 text-center">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-mute)]">
+                <Scissors :size="28" class="text-[var(--text-faint)]" />
+            </div>
+            <h1 class="mt-5 text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                {{ $t('admin.servicesEmptyTitle') }}
+            </h1>
+            <p class="mt-2 max-w-[280px] text-sm font-medium leading-relaxed text-[var(--text-mute)]">
+                {{ $t('admin.servicesEmptyBody') }}
+            </p>
+            <button
+                type="button"
+                class="mt-6 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)]"
+                @click="openCreate"
+            >
+                {{ $t('admin.servicesEmptyCta') }}
+            </button>
+        </div>
+
+        <div v-else class="relative flex flex-col gap-3 p-4">
             <div
                 v-for="service in services"
                 :key="service.id"
@@ -156,6 +175,7 @@ function activate(service) {
         </div>
 
         <button
+            v-if="services.length > 0"
             type="button"
             class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:absolute"
             @click="openCreate"

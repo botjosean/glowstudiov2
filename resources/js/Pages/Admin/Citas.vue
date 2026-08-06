@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { CalendarDays } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
@@ -217,6 +218,13 @@ function confirmCancel() {
             </div>
 
             <template v-if="activeTab === 'today'">
+                <div v-if="filtered.length === 0" class="flex flex-col items-center px-8 pb-6 pt-10 text-center">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--surface-mute)]">
+                        <CalendarDays :size="24" class="text-[var(--text-faint)]" />
+                    </div>
+                    <p class="mt-4 text-base font-extrabold text-[var(--text-strong)]">{{ $t('admin.noAppointmentsToday') }}</p>
+                    <p class="mt-1 text-xs font-semibold text-[var(--text-mute)]">{{ $t('admin.noAppointmentsTodayHint') }}</p>
+                </div>
                 <button
                     v-for="appt in filtered"
                     :key="appt.id"

@@ -127,7 +127,12 @@
         "photoTooLarge": "The image can't be larger than 8 MB",
         "deletePhoto": "Delete photo",
         "confirmDeletePhotoTitle": "Delete this photo?",
-        "confirmDeletePhotoBody": "It will no longer appear on your public profile. This action cannot be undone."
+        "confirmDeletePhotoBody": "It will no longer appear on your public profile. This action cannot be undone.",
+        "servicesEmptyTitle": "Create your first service",
+        "servicesEmptyBody": "Clients book by picking a service. Add your first one with its name, price and duration.",
+        "servicesEmptyCta": "Create service",
+        "noAppointmentsToday": "No appointments today",
+        "noAppointmentsTodayHint": "When a client books, it will show up here."
     },
     "nav": {
         "appointments": "Appointments",

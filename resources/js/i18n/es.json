@@ -127,7 +127,12 @@
         "photoTooLarge": "La imagen no puede pesar más de 8 MB",
         "deletePhoto": "Eliminar foto",
         "confirmDeletePhotoTitle": "¿Eliminar esta foto?",
-        "confirmDeletePhotoBody": "Dejará de aparecer en tu perfil público. Esta acción no se puede deshacer."
+        "confirmDeletePhotoBody": "Dejará de aparecer en tu perfil público. Esta acción no se puede deshacer.",
+        "servicesEmptyTitle": "Crea tu primer servicio",
+        "servicesEmptyBody": "Tus clientas reservan eligiendo un servicio. Añade el primero con su nombre, precio y duración.",
+        "servicesEmptyCta": "Crear servicio",
+        "noAppointmentsToday": "No tienes citas hoy",
+        "noAppointmentsTodayHint": "Cuando una clienta reserve, aparecerá aquí."
     },
     "nav": {
         "appointments": "Citas",
