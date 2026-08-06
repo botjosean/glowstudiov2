@@ -30,7 +30,7 @@ const statusKey = {
     <BottomSheet v-model="open">
         <template v-if="appointment">
             <div class="mb-4 flex items-center justify-between">
-                <div class="text-lg font-extrabold text-[var(--text-strong)]">{{ $t('admin.appointmentDetail') }}</div>
+                <div class="text-lg font-bold text-[var(--text-strong)]">{{ $t('admin.appointmentDetail') }}</div>
                 <button
                     type="button"
                     class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)]"
@@ -42,8 +42,8 @@ const statusKey = {
 
             <div class="mb-3 flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
                 <div>
-                    <div class="text-base font-extrabold text-[var(--text-strong)]">{{ appointment.clientName }}</div>
-                    <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-mute)]">
+                    <div class="text-base font-bold text-[var(--text-strong)]">{{ appointment.clientName }}</div>
+                    <div class="mt-1 flex items-center gap-1.5 text-[13px] font-normal text-[var(--text-mute)]">
                         <Phone :size="13" class="text-[var(--text-faint)]" />
                         {{ appointment.clientPhone }}
                     </div>
@@ -53,24 +53,24 @@ const statusKey = {
 
             <div class="mb-4 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] px-4">
                 <div class="flex items-center justify-between border-b border-[var(--surface-mute)] py-3">
-                    <span class="text-xs font-bold text-[var(--text-faint)]">{{ $t('admin.service') }}</span>
-                    <span class="text-[13px] font-extrabold text-[var(--text-strong)]">{{ appointment.service }}</span>
+                    <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.service') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ appointment.service }}</span>
                 </div>
                 <div class="flex items-center justify-between border-b border-[var(--surface-mute)] py-3">
-                    <span class="text-xs font-bold text-[var(--text-faint)]">{{ $t('admin.provider') }}</span>
-                    <span class="text-[13px] font-extrabold text-[var(--text-strong)]">{{ appointment.provider }}</span>
+                    <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.provider') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ appointment.provider }}</span>
                 </div>
                 <div class="flex items-center justify-between border-b border-[var(--surface-mute)] py-3">
-                    <span class="text-xs font-bold text-[var(--text-faint)]">{{ $t('admin.dateTime') }}</span>
-                    <span class="text-[13px] font-extrabold text-[var(--text-strong)]">{{ appointment.dateLabel }}</span>
+                    <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.dateTime') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ appointment.dateLabel }}</span>
                 </div>
                 <div class="flex items-center justify-between border-b border-[var(--surface-mute)] py-3">
-                    <span class="text-xs font-bold text-[var(--text-faint)]">{{ $t('admin.duration') }}</span>
-                    <span class="text-[13px] font-extrabold text-[var(--text-strong)]">{{ appointment.duration }}</span>
+                    <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.duration') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ appointment.duration }}</span>
                 </div>
                 <div class="flex items-center justify-between py-3">
-                    <span class="text-xs font-bold text-[var(--text-faint)]">{{ $t('admin.price') }}</span>
-                    <span class="text-[13px] font-extrabold text-[var(--green-text)]"
+                    <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.price') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--green-text)]"
                         >${{ appointment.price }} · {{ $t('booking.payInStore') }}</span
                     >
                 </div>
@@ -81,7 +81,7 @@ const statusKey = {
                     <button
                         type="button"
                         :disabled="processing"
-                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[13px] font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="emit('reject')"
                     >
                         <X :size="15" />
@@ -90,7 +90,7 @@ const statusKey = {
                     <button
                         type="button"
                         :disabled="processing"
-                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[13px] font-bold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[14px] font-semibold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="emit('confirm')"
                     >
                         <Check :size="15" />
@@ -101,7 +101,7 @@ const statusKey = {
                     v-if="!['cancelled', 'closed'].includes(appointment.status)"
                     type="button"
                     :disabled="processing"
-                    class="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[14px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                     @click="emit('cancel')"
                 >
                     <Ban :size="15" />

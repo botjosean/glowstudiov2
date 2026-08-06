@@ -24,16 +24,16 @@ function submit() {
 <template>
     <PublicLayout>
         <div class="p-6">
-            <div class="text-xl font-extrabold tracking-tight text-[var(--text-strong)]">
+            <div class="text-xl font-bold tracking-tight text-[var(--text-strong)]">
                 {{ $t('createPassword.title') }}
             </div>
             <div class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('createPassword.subtitle') }}</div>
 
             <form class="mt-5 flex flex-col gap-3.5" @submit.prevent="submit">
-                <p v-if="firstError" class="text-xs font-semibold text-[var(--danger)]">{{ firstError }}</p>
+                <p v-if="firstError" class="text-[13px] font-normal text-[var(--danger)]">{{ firstError }}</p>
 
                 <label class="flex flex-col gap-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                         $t('createPassword.passwordLabel')
                     }}</span>
                     <div
@@ -49,7 +49,7 @@ function submit() {
                 </label>
 
                 <label class="flex flex-col gap-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                         $t('createPassword.confirmPasswordLabel')
                     }}</span>
                     <div

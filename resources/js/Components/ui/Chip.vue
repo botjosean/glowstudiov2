@@ -9,7 +9,7 @@ defineEmits(['click']);
 <template>
     <button
         type="button"
-        class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-bold transition-colors"
+        class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-medium transition-colors"
         :class="
             active
                 ? 'border-transparent bg-[var(--chip-bg)] text-[var(--chip-fg)]'

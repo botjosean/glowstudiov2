@@ -8,6 +8,7 @@ import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import Badge from '../../Components/ui/Badge.vue';
 import { useFormat } from '../../composables/useFormat';
+import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
@@ -17,6 +18,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const { formatDuration } = useFormat();
+const { returnToInicio } = useOnboardingReturn();
 
 const sheetOpen = ref(false);
 const sheetMode = ref('create');
@@ -58,6 +60,9 @@ function handleSave(values) {
         preserveState: true,
         onSuccess: () => {
             sheetOpen.value = false;
+            if (sheetMode.value === 'create') {
+                returnToInicio();
+            }
         },
     };
 
@@ -115,7 +120,7 @@ function activate(service) {
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-mute)]">
                 <Scissors :size="28" class="text-[var(--text-faint)]" />
             </div>
-            <h1 class="mt-5 text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+            <h1 class="mt-5 text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('admin.servicesEmptyTitle') }}
             </h1>
             <p class="mt-2 max-w-[280px] text-sm font-medium leading-relaxed text-[var(--text-mute)]">
@@ -123,7 +128,7 @@ function activate(service) {
             </p>
             <button
                 type="button"
-                class="mt-6 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)]"
+                class="mt-6 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)]"
                 @click="openCreate"
             >
                 {{ $t('admin.servicesEmptyCta') }}
@@ -132,7 +137,7 @@ function activate(service) {
 
         <div v-else class="relative flex flex-col gap-3 p-4">
             <div class="px-1 pb-1 pt-2">
-                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                <h1 class="text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ $t('admin.servicesTitle') }}
                 </h1>
                 <p class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.servicesSubtitle') }}</p>
@@ -145,10 +150,10 @@ function activate(service) {
             >
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="text-sm font-extrabold text-[var(--text-strong)]">{{ service.name }}</span>
+                        <span class="text-[15px] font-semibold text-[var(--text-strong)]">{{ service.name }}</span>
                         <Badge v-if="!service.isActive" variant="closed">{{ $t('admin.serviceInactive') }}</Badge>
                     </div>
-                    <div class="mt-1 text-xs font-semibold text-[var(--text-mute)]">
+                    <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">
                         {{ formatDuration(service.durationMinutes) }} · ${{ service.price }}
                     </div>
                 </div>

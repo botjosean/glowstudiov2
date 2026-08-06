@@ -15,23 +15,24 @@ const props = defineProps({
     <PublicLayout>
         <div class="relative">
             <div class="relative h-48 w-full overflow-hidden bg-[#131a2a]">
-                <img :src="provider.bannerPhoto" :alt="`${provider.name} banner`" class="h-full w-full object-cover opacity-75" />
+                <img v-if="provider.bannerPhoto" :src="provider.bannerPhoto" :alt="`${provider.name} banner`" class="h-full w-full object-cover opacity-75" />
                 <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
             </div>
 
             <div class="relative z-10 -mt-16 flex justify-center">
                 <div class="h-32 w-32 rounded-full bg-[var(--surface)] p-1 shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
                     <div class="box-border h-full w-full overflow-hidden rounded-full border-4 border-[#10b981] bg-[var(--surface-mute)]">
-                        <img :src="provider.avatarPhoto" :alt="provider.name" class="h-full w-full object-cover" />
+                        <img v-if="provider.avatarPhoto" :src="provider.avatarPhoto" :alt="provider.name" class="h-full w-full object-cover" />
+                        <span v-else class="flex h-full w-full items-center justify-center text-3xl font-semibold text-[var(--text-faint)]">{{ provider.name?.charAt(0)?.toUpperCase() }}</span>
                     </div>
                 </div>
             </div>
 
             <div class="px-6 pt-3 text-center">
-                <div class="text-2xl font-extrabold tracking-tight text-[var(--text-strong)]">{{ provider.name }}</div>
+                <div class="text-2xl font-bold tracking-tight text-[var(--text-strong)]">{{ provider.name }}</div>
                 <div
                     v-if="provider.availableNow"
-                    class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--green-border)] bg-[var(--green-soft)] px-3 py-1 text-xs font-bold text-[var(--green-text)]"
+                    class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--green-border)] bg-[var(--green-soft)] px-3 py-1 text-[13px] font-medium text-[var(--green-text)]"
                 >
                     <span class="h-2 w-2 rounded-full bg-[#10b981]" />
                     {{ $t('profile.availableNow') }}
@@ -102,18 +103,18 @@ const props = defineProps({
                     <MapPin :size="20" class="text-[var(--loc-text)]" />
                 </div>
                 <div>
-                    <div class="text-sm font-extrabold text-[var(--loc-title)]">{{ provider.location.title }}</div>
-                    <div class="mt-0.5 text-xs font-medium text-[var(--loc-text)]">{{ provider.location.subtitle }}</div>
+                    <div class="text-[15px] font-semibold text-[var(--loc-title)]">{{ provider.location.title }}</div>
+                    <div class="mt-0.5 text-[13px] font-normal text-[var(--loc-text)]">{{ provider.location.subtitle }}</div>
                 </div>
             </div>
         </div>
 
         <div v-if="provider.gallery.length" class="px-6 pt-8">
             <div class="mb-3.5 flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                     $t('profile.ourWork')
                 }}</span>
-                <span class="rounded-full bg-[var(--surface-mute)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-mute)]">{{
+                <span class="rounded-full bg-[var(--surface-mute)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-mute)]">{{
                     $t('profile.tapToEnlarge')
                 }}</span>
             </div>
@@ -129,7 +130,7 @@ const props = defineProps({
         </div>
 
         <div class="px-6 pb-12 pt-8">
-            <div class="mb-3.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+            <div class="mb-3.5 text-[13px] font-medium text-[var(--text-mute)]">
                 {{ $t('profile.bookAppointment') }}
             </div>
             <div class="flex flex-col gap-3">
@@ -143,8 +144,8 @@ const props = defineProps({
                             <component :is="serviceIcons[service.icon]" :size="20" class="text-[var(--chip-fg)]" />
                         </div>
                         <div>
-                            <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ service.name }}</div>
-                            <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--text-mute)]">
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ service.name }}</div>
+                            <div class="mt-1 flex items-center gap-1.5 text-[13px] font-normal text-[var(--text-mute)]">
                                 {{ service.duration }}
                                 <span class="text-[var(--text-faint)]">•</span>
                                 <span class="font-bold text-[var(--text-strong)]">${{ service.price }}</span>
@@ -153,7 +154,7 @@ const props = defineProps({
                     </div>
                     <Link
                         :href="`/reservar/${provider.slug}/${service.id}`"
-                        class="rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-xs font-bold text-white hover:bg-[var(--btn-hover)]"
+                        class="rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-[13px] font-medium text-white hover:bg-[var(--btn-hover)]"
                         >{{ $t('profile.book') }}</Link
                     >
                 </div>
@@ -161,7 +162,7 @@ const props = defineProps({
         </div>
 
         <div class="border-t border-[var(--surface-mute)] bg-[var(--surface-alt)] px-4 py-6 text-center">
-            <span class="text-xs font-bold tracking-wide text-[var(--text-faint)]">
+            <span class="text-[13px] font-medium tracking-wide text-[var(--text-faint)]">
                 {{ $t('profile.footerCta') }}
                 <span class="text-[var(--text-heading)]">{{ $t('app.name') }} 💈</span>
             </span>

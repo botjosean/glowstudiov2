@@ -26,7 +26,7 @@ function toggleLanguage() {
             <div class="flex items-center justify-between">
                 <Link href="/" class="flex items-center gap-1.5">
                     <span class="text-lg">💈</span>
-                    <span class="text-sm font-extrabold tracking-tight text-[var(--text-strong)]">{{
+                    <span class="text-[15px] font-semibold tracking-tight text-[var(--text-strong)]">{{
                         $t('app.name')
                     }}</span>
                 </Link>
@@ -53,9 +53,9 @@ function toggleLanguage() {
                 >
                     <span class="flex items-center gap-2.5">
                         <Globe :size="16" class="text-[var(--text-mute)]" />
-                        <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('menu.language') }}</span>
+                        <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ $t('menu.language') }}</span>
                     </span>
-                    <span class="text-xs font-bold text-[var(--text-mute)]">{{ otherLocaleLabel }}</span>
+                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ otherLocaleLabel }}</span>
                 </button>
                 <button
                     type="button"
@@ -64,7 +64,7 @@ function toggleLanguage() {
                 >
                     <span class="flex items-center gap-2.5">
                         <Moon :size="16" class="text-[var(--text-mute)]" />
-                        <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('menu.darkTheme') }}</span>
+                        <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ $t('menu.darkTheme') }}</span>
                     </span>
                     <span
                         class="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors"
@@ -81,11 +81,11 @@ function toggleLanguage() {
                     class="flex items-center gap-2.5 border-b border-[var(--surface-mute)] px-4 py-3.5 hover:bg-[var(--surface-alt)]"
                 >
                     <UserPlus :size="16" class="text-[var(--text-mute)]" />
-                    <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('menu.createAccount') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ $t('menu.createAccount') }}</span>
                 </Link>
                 <Link href="/iniciar-sesion" class="flex items-center gap-2.5 px-4 py-3.5 hover:bg-[var(--surface-alt)]">
                     <LogIn :size="16" class="text-[var(--btn-bg)]" />
-                    <span class="text-[13px] font-extrabold text-[var(--btn-bg)]">{{ $t('menu.signIn') }}</span>
+                    <span class="text-[14px] font-semibold text-[var(--btn-bg)]">{{ $t('menu.signIn') }}</span>
                 </Link>
             </div>
         </header>

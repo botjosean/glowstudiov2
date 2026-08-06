@@ -5,6 +5,7 @@ import { Clock4, UtensilsCrossed, Timer, Info } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Select from '../../Components/ui/Select.vue';
 import { useFormat } from '../../composables/useFormat';
+import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
@@ -28,10 +29,12 @@ onMounted(() => {
     localStorage.setItem('glow:scheduleReviewed', '1');
 });
 
+const { returnToInicio } = useOnboardingReturn();
+
 const form = useForm({ ...props.schedule });
 
 function submit() {
-    form.put('/admin/horario', { preserveScroll: true, preserveState: true });
+    form.put('/admin/horario', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
 }
 
 const timeOptions = computed(() =>
@@ -58,7 +61,7 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
     <AdminLayout :provider-name="providerName">
         <div class="flex flex-col gap-4 p-4 pb-6">
             <div class="px-1 pt-2">
-                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                <h1 class="text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ $t('admin.scheduleTitle') }}
                 </h1>
                 <p class="mt-1 text-[13px] font-medium leading-relaxed text-[var(--text-mute)]">
@@ -72,8 +75,8 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
                         <Clock4 :size="16" class="text-[var(--chip-fg)]" />
                     </div>
                     <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.workday') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.workdayHint') }}</div>
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.workday') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.workdayHint') }}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -88,8 +91,8 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
                         <UtensilsCrossed :size="16" class="text-[var(--loc-text)]" />
                     </div>
                     <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.lunch') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.lunchHint') }}</div>
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.lunch') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.lunchHint') }}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -104,8 +107,8 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
                         <Timer :size="16" class="text-[var(--blue-text)]" />
                     </div>
                     <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.buffer') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.bufferHint') }}</div>
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.buffer') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.bufferHint') }}</div>
                     </div>
                 </div>
                 <Select v-model="form.bufferMinutes" :options="bufferOptions" />
@@ -113,20 +116,20 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
 
             <div class="flex items-start gap-2.5 rounded-2xl border border-[var(--green-border)] bg-[var(--green-soft)] p-4">
                 <Info :size="16" class="mt-0.5 shrink-0 text-[var(--green-text)]" />
-                <div class="text-xs font-semibold leading-relaxed text-[var(--green-deep)]">
+                <div class="text-[13px] font-normal leading-relaxed text-[var(--green-deep)]">
                     {{ $t('admin.scheduleSummaryPrefix') }}
-                    <span class="font-extrabold">{{ workStartLabel }} {{ $t('admin.to') }} {{ workEndLabel }}</span
+                    <span class="font-bold">{{ workStartLabel }} {{ $t('admin.to') }} {{ workEndLabel }}</span
                     >, {{ $t('admin.scheduleSummaryLunch') }}
-                    <span class="font-extrabold">{{ lunchStartLabel }} {{ $t('admin.to') }} {{ lunchEndLabel }}</span>
+                    <span class="font-bold">{{ lunchStartLabel }} {{ $t('admin.to') }} {{ lunchEndLabel }}</span>
                     {{ $t('admin.scheduleSummaryAnd') }}
-                    <span class="font-extrabold">{{ formatDuration(form.bufferMinutes) }}</span>
+                    <span class="font-bold">{{ formatDuration(form.bufferMinutes) }}</span>
                     {{ $t('admin.scheduleSummaryBetween') }}
                 </div>
             </div>
 
             <p
                 v-if="form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes"
-                class="text-xs font-semibold text-[var(--danger)]"
+                class="text-[13px] font-normal text-[var(--danger)]"
             >
                 {{ form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes }}
             </p>
@@ -134,7 +137,7 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
             <button
                 type="button"
                 :disabled="form.processing"
-                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="submit"
             >
                 {{ form.processing ? $t('common.saving') : $t('admin.saveChanges') }}

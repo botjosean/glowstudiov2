@@ -189,7 +189,7 @@ function confirmCancel() {
 <template>
     <AdminLayout :provider-name="providerName">
         <div class="px-4 pt-4">
-            <h1 class="px-1 pb-3 text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+            <h1 class="px-1 pb-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('admin.appointmentsTitle') }}
             </h1>
             <div class="grid grid-cols-4 gap-1 rounded-xl bg-[var(--surface-mute)] p-1">
@@ -202,12 +202,12 @@ function confirmCancel() {
                     @click="activeTab = tab.value"
                 >
                     <span
-                        class="text-[11px] font-bold"
-                        :class="activeTab === tab.value ? 'font-extrabold text-[var(--text-strong)]' : 'text-[var(--text-mute)]'"
+                        class="text-[12px] font-medium"
+                        :class="activeTab === tab.value ? 'font-bold text-[var(--text-strong)]' : 'text-[var(--text-mute)]'"
                         >{{ $t(tab.key) }}</span
                     >
                     <span
-                        class="text-[9px] font-extrabold"
+                        class="text-[9px] font-bold"
                         :class="tab.value === 'pending' ? 'text-[#d97706]' : tab.value === 'today' ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'"
                         >{{ counts[tab.value] }}</span
                     >
@@ -216,7 +216,7 @@ function confirmCancel() {
         </div>
 
         <div class="flex flex-col gap-3 p-4">
-            <div v-if="activeTab === 'today' && filtered.length" class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+            <div v-if="activeTab === 'today' && filtered.length" class="text-[13px] font-medium text-[var(--text-mute)]">
                 {{ todayGroupLabel }}
             </div>
 
@@ -225,8 +225,8 @@ function confirmCancel() {
                     <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--surface-mute)]">
                         <CalendarDays :size="24" class="text-[var(--text-faint)]" />
                     </div>
-                    <p class="mt-4 text-base font-extrabold text-[var(--text-strong)]">{{ $t('admin.noAppointmentsToday') }}</p>
-                    <p class="mt-1 text-xs font-semibold text-[var(--text-mute)]">{{ $t('admin.noAppointmentsTodayHint') }}</p>
+                    <p class="mt-4 text-base font-bold text-[var(--text-strong)]">{{ $t('admin.noAppointmentsToday') }}</p>
+                    <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.noAppointmentsTodayHint') }}</p>
                 </div>
                 <button
                     v-for="appt in filtered"
@@ -237,12 +237,12 @@ function confirmCancel() {
                 >
                     <div class="flex items-center gap-3">
                         <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--chip-bg)] text-[var(--chip-fg)]">
-                            <span class="text-[13px] font-extrabold leading-none">{{ appt.timeLabel.split(' ')[0] }}</span>
-                            <span class="text-[8px] font-extrabold opacity-70">{{ appt.timeLabel.split(' ')[1] || '' }}</span>
+                            <span class="text-[14px] font-semibold leading-none">{{ appt.timeLabel.split(' ')[0] }}</span>
+                            <span class="text-[8px] font-bold opacity-70">{{ appt.timeLabel.split(' ')[1] || '' }}</span>
                         </div>
                         <div>
-                            <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ appt.clientName }}</div>
-                            <div class="mt-0.5 text-xs font-semibold text-[var(--text-mute)]">
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ appt.clientName }}</div>
+                            <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">
                                 {{ appt.service }} · {{ appt.duration }} · ${{ appt.price }}
                             </div>
                         </div>
@@ -260,18 +260,18 @@ function confirmCancel() {
                     @click="openDetail(appt)"
                 >
                     <div class="flex items-start justify-between">
-                        <div class="text-[15px] font-extrabold text-[var(--text-strong)]">{{ appt.clientName }}</div>
+                        <div class="text-[15px] font-bold text-[var(--text-strong)]">{{ appt.clientName }}</div>
                         <Badge :variant="badgeVariant[appt.status]" uppercase>{{ $t(statusKey[appt.status]) }}</Badge>
                     </div>
-                    <div class="mt-1.5 text-xs font-semibold text-[var(--text-mute)]">{{ appt.service }} · {{ appt.provider }}</div>
-                    <div class="mt-0.5 text-xs font-semibold text-[var(--text-faint)]">
+                    <div class="mt-1.5 text-[13px] font-normal text-[var(--text-mute)]">{{ appt.service }} · {{ appt.provider }}</div>
+                    <div class="mt-0.5 text-[13px] font-normal text-[var(--text-faint)]">
                         {{ appt.dateLabel }} · {{ appt.duration }} · ${{ appt.price }}
                     </div>
                 </button>
                 <p v-if="filtered.length === 0" class="py-6 text-center text-sm font-medium text-[var(--text-mute)]">
                     {{ $t('admin.noAppointments') }}
                 </p>
-                <p v-else class="mt-1 text-center text-[11px] font-semibold text-[var(--text-faint)]">
+                <p v-else class="mt-1 text-center text-[12px] font-normal text-[var(--text-faint)]">
                     {{ $t('admin.tapForDetail') }}
                 </p>
             </template>

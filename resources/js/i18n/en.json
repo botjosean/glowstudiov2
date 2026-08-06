@@ -139,7 +139,20 @@
         "servicesSubtitle": "What your clients can book.",
         "profileTitle": "Your public profile",
         "profileSubtitle": "What clients see on your page.",
-        "appointmentsTitle": "Your appointments"
+        "appointmentsTitle": "Your appointments",
+        "sectionInfo": "Your information",
+        "sectionInfoHint": "Name, phone and your introduction",
+        "sectionLocation": "Where you work",
+        "sectionLocationHint": "Your address or service area",
+        "sectionPhotos": "Photos of your work",
+        "sectionPhotosHint": "Show your best results",
+        "settingsBusiness": "Your business",
+        "settingsBusinessInfo": "Business information",
+        "settingsBusinessInfoHint": "Profile, photos, address and publishing",
+        "settingsScheduleHint": "Workday, lunch and gap between appointments",
+        "settingsPreferences": "Preferences",
+        "settingsLegal": "Legal and privacy",
+        "settingsVersion": "version"
     },
     "nav": {
         "appointments": "Appointments",
@@ -227,7 +240,8 @@
         "body": "Click the link to activate your account. If you don't see it, check your spam folder.",
         "resend": "Resend link",
         "linkSent": "Verification link resent",
-        "logOut": "Log out"
+        "logOut": "Log out",
+        "waiting": "Waiting for your confirmation — this page will move on by itself"
     },
     "booking": {
         "stepOf": "Step {current} of {total}",
@@ -289,6 +303,12 @@
         "viewAppointments": "View appointments",
         "publicPageTitle": "Your public page",
         "publicPageView": "View",
-        "publicPageHidden": "Hidden for now — publish it from your profile"
+        "publicPageHidden": "Hidden for now — publish it from your profile",
+        "bannerText": "1 step left to finish your business | {count} steps left to finish your business",
+        "bannerCta": "Continue"
+    },
+    "legal": {
+        "termsTitle": "Terms of use",
+        "privacyTitle": "Privacy policy"
     }
 }

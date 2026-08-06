@@ -26,21 +26,21 @@ const steps = computed(() => [
         done: props.checklist.profileComplete,
         titleKey: 'inicio.stepProfile',
         hintKey: 'inicio.stepProfileHint',
-        href: '/admin/perfil',
+        href: '/admin/perfil?desde=inicio',
     },
     {
         key: 'services',
         done: props.checklist.hasActiveServices,
         titleKey: 'inicio.stepServices',
         hintKey: 'inicio.stepServicesHint',
-        href: '/admin/servicios',
+        href: '/admin/servicios?desde=inicio',
     },
     {
         key: 'schedule',
         done: scheduleReviewed.value,
         titleKey: 'inicio.stepSchedule',
         hintKey: 'inicio.stepScheduleHint',
-        href: '/admin/horario',
+        href: '/admin/horario?desde=inicio',
     },
     {
         key: 'whatsapp',
@@ -53,7 +53,7 @@ const steps = computed(() => [
         done: props.checklist.published,
         titleKey: 'inicio.stepPublish',
         hintKey: 'inicio.stepPublishHint',
-        href: '/admin/perfil',
+        href: '/admin/perfil?desde=inicio&abrir=publicacion',
     },
     {
         key: 'booking',
@@ -81,7 +81,7 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
     <AdminLayout :provider-name="providerName" :avatar-src="avatarPhoto">
         <div class="flex flex-col gap-4 p-5 pb-7">
             <div class="pt-1">
-                <h1 class="text-[26px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+                <h1 class="text-[26px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ allDone ? $t('inicio.readyTitle') : $t('inicio.welcomeTitle') }}
                 </h1>
                 <p class="mt-1.5 text-sm font-medium leading-relaxed text-[var(--text-mute)]">
@@ -96,7 +96,7 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                         :style="{ width: `${progressPercent}%` }"
                     />
                 </div>
-                <div class="mt-1.5 text-[11px] font-bold text-[var(--text-faint)]">
+                <div class="mt-1.5 text-[12px] font-medium text-[var(--text-faint)]">
                     {{ $t('inicio.progress', { done: doneCount, total: steps.length }) }}
                 </div>
             </div>
@@ -122,10 +122,10 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                     <span class="min-w-0 flex-1">
                         <span
                             class="block text-sm"
-                            :class="step.done ? 'font-semibold text-[var(--text-mute)]' : 'font-extrabold text-[var(--text-strong)]'"
+                            :class="step.done ? 'font-semibold text-[var(--text-mute)]' : 'font-bold text-[var(--text-strong)]'"
                             >{{ $t(step.titleKey) }}</span
                         >
-                        <span v-if="step.hintKey && !step.done" class="mt-0.5 block text-[11px] font-semibold text-[var(--text-faint)]">{{
+                        <span v-if="step.hintKey && !step.done" class="mt-0.5 block text-[12px] font-normal text-[var(--text-faint)]">{{
                             $t(step.hintKey)
                         }}</span>
                     </span>
@@ -154,19 +154,19 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-extrabold" :class="botState === 'blocked' ? 'text-[var(--amber-text)]' : 'text-[var(--text-strong)]'">
+                            <span class="text-[15px] font-semibold" :class="botState === 'blocked' ? 'text-[var(--amber-text)]' : 'text-[var(--text-strong)]'">
                                 {{ $t('inicio.botTitle') }}
                             </span>
                             <span
                                 v-if="botState === 'active'"
-                                class="inline-flex items-center gap-1 rounded-full bg-[var(--green-border)] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[var(--green-deep)]"
+                                class="inline-flex items-center gap-1 rounded-full bg-[var(--green-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--green-deep)]"
                             >
                                 <span class="h-1.5 w-1.5 rounded-full bg-[var(--green-text)]" />
                                 {{ $t('inicio.botActive') }}
                             </span>
                         </div>
                         <p
-                            class="mt-0.5 text-[11px] font-semibold leading-relaxed"
+                            class="mt-0.5 text-[12px] font-normal leading-relaxed"
                             :class="{
                                 'text-[var(--green-deep)]': botState === 'active',
                                 'text-[var(--amber-text)]': botState === 'blocked',
@@ -190,8 +190,8 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                         <CalendarDays :size="19" class="text-[var(--chip-fg)]" />
                     </div>
                     <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('inicio.todayTitle') }}</div>
-                        <div class="mt-0.5 text-xs font-semibold text-[var(--text-mute)]">
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('inicio.todayTitle') }}</div>
+                        <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">
                             {{ $t('inicio.todayAppointments', summary.todayCount) }}
                             <template v-if="summary.pendingCount > 0">
                                 · <span class="font-bold text-[#d97706]">{{ $t('inicio.todayPending', summary.pendingCount) }}</span>
@@ -210,12 +210,12 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                 class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4 hover:bg-[var(--surface-mute)]"
             >
                 <div class="min-w-0">
-                    <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+                    <div class="text-[13px] font-medium text-[var(--text-mute)]">
                         {{ $t('inicio.publicPageTitle') }}
                     </div>
-                    <div class="mt-0.5 truncate text-sm font-extrabold text-[var(--text-strong)]">{{ publicPath }}</div>
+                    <div class="mt-0.5 truncate text-[15px] font-semibold text-[var(--text-strong)]">{{ publicPath }}</div>
                 </div>
-                <span class="flex shrink-0 items-center gap-1.5 text-xs font-bold text-[var(--green-text)]">
+                <span class="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-[var(--green-text)]">
                     {{ $t('inicio.publicPageView') }}
                     <ExternalLink :size="14" />
                 </span>
@@ -224,10 +224,10 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                 v-else
                 class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4"
             >
-                <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+                <div class="text-[13px] font-medium text-[var(--text-mute)]">
                     {{ $t('inicio.publicPageTitle') }}
                 </div>
-                <div class="mt-0.5 text-xs font-semibold text-[var(--text-mute)]">{{ $t('inicio.publicPageHidden') }}</div>
+                <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('inicio.publicPageHidden') }}</div>
             </div>
         </div>
     </AdminLayout>

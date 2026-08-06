@@ -20,7 +20,7 @@ const variants = {
     <button
         :type="type"
         :disabled="disabled"
-        class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         :class="[variants[props.variant], block && 'w-full']"
     >
         <slot />

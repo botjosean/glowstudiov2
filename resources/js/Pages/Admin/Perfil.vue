@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { computed, reactive, ref, watch } from 'vue';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import { Camera, Ban, Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -8,6 +8,8 @@ import Input from '../../Components/ui/Input.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
+import Collapse from '../../Components/ui/Collapse.vue';
+import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
     profile: { type: Object, required: true },
@@ -16,6 +18,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const { returnToInicio } = useOnboardingReturn();
 
 const form = useForm({
     username: props.profile.username,
@@ -28,8 +31,57 @@ const form = useForm({
 });
 
 function submit() {
-    form.put('/admin/perfil', { preserveScroll: true, preserveState: true });
+    form.put('/admin/perfil', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
 }
+
+// One collapsible per topic, so the page reads as short questions instead of
+// one endless form. The first incomplete section starts open; coming from the
+// checklist's "publish" step (?abrir=publicacion) opens that one instead.
+const sectionDone = computed(() => ({
+    info: Boolean(props.profile.publicName) && Boolean(props.profile.bio),
+    ubicacion: Boolean(props.profile.isMobile ? props.profile.serviceArea : props.profile.addressLine),
+    fotos: props.profile.gallery.length > 0,
+    publicacion: props.profile.published,
+}));
+
+const page = usePage();
+
+function initialOpenSection() {
+    if (page.url.includes('abrir=publicacion')) return 'publicacion';
+    const order = ['info', 'ubicacion', 'fotos', 'publicacion'];
+    return order.find((key) => !sectionDone.value[key]) ?? null;
+}
+
+const openSections = reactive({
+    info: false,
+    ubicacion: false,
+    fotos: false,
+    publicacion: false,
+});
+const first = initialOpenSection();
+if (first) openSections[first] = true;
+
+// A validation error inside a collapsed section would be invisible — open
+// every section that has one.
+const errorSection = {
+    username: 'info',
+    publicName: 'info',
+    phone: 'info',
+    bio: 'info',
+    serviceArea: 'ubicacion',
+    addressLine: 'ubicacion',
+};
+
+watch(
+    () => form.errors,
+    (errors) => {
+        for (const field of Object.keys(errors)) {
+            const section = errorSection[field];
+            if (section) openSections[section] = true;
+        }
+    },
+    { deep: true },
+);
 
 const publishOptions = computed(() => [
     { value: 'public', label: t('admin.publishStatePublic') },
@@ -57,7 +109,14 @@ function togglePublish(value) {
     router.patch(
         '/admin/perfil/publicacion',
         { published: value === 'public' },
-        { preserveScroll: true, preserveState: true, onFinish: () => { publishProcessing.value = false; } },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (value === 'public') returnToInicio();
+            },
+            onFinish: () => { publishProcessing.value = false; },
+        },
     );
 }
 
@@ -129,9 +188,9 @@ function confirmDeletePhoto() {
 </script>
 
 <template>
-    <AdminLayout :provider-name="profile.publicName">
-        <div class="relative h-[140px] w-full overflow-hidden bg-[#131a2a]">
-            <img :src="profile.bannerPhoto" alt="Banner" class="h-full w-full object-cover opacity-75" />
+    <AdminLayout :provider-name="profile.publicName" :avatar-src="profile.avatarPhoto">
+        <div class="relative h-[120px] w-full overflow-hidden bg-[var(--surface-mute)]">
+            <img v-if="profile.bannerPhoto" :src="profile.bannerPhoto" alt="" class="h-full w-full object-cover" />
             <input
                 ref="bannerInput"
                 type="file"
@@ -142,7 +201,7 @@ function confirmDeletePhoto() {
             <button
                 type="button"
                 :disabled="bannerForm.processing"
-                class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[12px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                 @click="bannerInput?.click()"
             >
                 <Camera :size="12" />
@@ -150,12 +209,18 @@ function confirmDeletePhoto() {
             </button>
         </div>
 
-        <div class="relative -mt-12 flex justify-center pointer-events-none">
-            <div class="relative h-24 w-24 pointer-events-auto">
-                <div class="box-border h-24 w-24 rounded-full bg-[var(--surface)] p-[3px] shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
-                    <div class="box-border h-full w-full overflow-hidden rounded-full border-[3px] border-[var(--green-text)] bg-[var(--surface-mute)]">
-                        <img :src="profile.avatarPhoto" :alt="profile.publicName" class="h-full w-full object-cover" />
-                    </div>
+        <div class="pointer-events-none relative -mt-10 flex justify-center">
+            <div class="pointer-events-auto relative h-20 w-20">
+                <div class="box-border flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--surface)] bg-[var(--surface-mute)] shadow-[0_4px_14px_rgba(17,24,39,0.12)]">
+                    <img
+                        v-if="profile.avatarPhoto"
+                        :src="profile.avatarPhoto"
+                        :alt="profile.publicName"
+                        class="h-full w-full object-cover"
+                    />
+                    <span v-else class="text-xl font-semibold text-[var(--text-faint)]">{{
+                        profile.publicName?.charAt(0)?.toUpperCase() ?? '·'
+                    }}</span>
                 </div>
                 <input
                     ref="avatarInput"
@@ -167,60 +232,70 @@ function confirmDeletePhoto() {
                 <button
                     type="button"
                     :disabled="avatarForm.processing"
-                    class="absolute -bottom-0.5 -right-0.5 flex h-7.5 w-7.5 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--btn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--btn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                     @click="avatarInput?.click()"
                 >
-                    <span v-if="avatarForm.processing" class="text-[8px] font-extrabold text-white"
+                    <span v-if="avatarForm.processing" class="text-[8px] font-bold text-white"
                         >{{ avatarForm.progress?.percentage ?? 0 }}%</span
                     >
-                    <Camera v-else :size="14" class="text-white" />
+                    <Camera v-else :size="13" class="text-white" />
                 </button>
             </div>
         </div>
 
         <p
             v-if="avatarForm.errors.photo || bannerForm.errors.photo"
-            class="px-6 pt-2 text-center text-xs font-semibold text-[var(--danger)]"
+            class="px-6 pt-2 text-center text-[13px] font-normal text-[var(--danger)]"
         >
             {{ avatarForm.errors.photo || bannerForm.errors.photo }}
         </p>
 
-        <div class="flex flex-col gap-4 p-6 pb-8">
-            <div class="pb-1 text-center">
-                <h1 class="text-[22px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
+        <div class="flex flex-col gap-3 p-5 pb-8">
+            <div class="pb-2 pt-1 text-center">
+                <h1 class="text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ $t('admin.profileTitle') }}
                 </h1>
-                <p class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
-            </div>
-            <div>
-                <Input v-model="form.username" :label="$t('admin.username')" />
-                <p v-if="form.errors.username" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.username }}</p>
-            </div>
-            <div>
-                <Input v-model="form.publicName" :label="$t('admin.publicName')" />
-                <p v-if="form.errors.publicName" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.publicName }}</p>
-            </div>
-            <div>
-                <Input v-model="form.phone" :label="$t('admin.phone')" type="tel" />
-                <p v-if="form.errors.phone" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.phone }}</p>
-            </div>
-            <div>
-                <Input :model-value="profile.email" :label="$t('admin.email')" type="email" disabled />
-                <p class="mt-1.5 text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.emailReadOnly') }}</p>
-            </div>
-            <div>
-                <Textarea v-model="form.bio" :label="$t('admin.bio')" :rows="4" />
-                <p v-if="form.errors.bio" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.bio }}</p>
+                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
             </div>
 
-            <div>
-                <div class="mb-2 flex items-center justify-between">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
-                        $t('admin.location')
-                    }}</span>
+            <Collapse
+                v-model="openSections.info"
+                :title="$t('admin.sectionInfo')"
+                :hint="profile.publicName || $t('admin.sectionInfoHint')"
+                :done="sectionDone.info"
+            >
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <Input v-model="form.username" :label="$t('admin.username')" />
+                        <p v-if="form.errors.username" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.username }}</p>
+                    </div>
+                    <div>
+                        <Input v-model="form.publicName" :label="$t('admin.publicName')" />
+                        <p v-if="form.errors.publicName" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.publicName }}</p>
+                    </div>
+                    <div>
+                        <Input v-model="form.phone" :label="$t('admin.phone')" type="tel" />
+                        <p v-if="form.errors.phone" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.phone }}</p>
+                    </div>
+                    <div>
+                        <Input :model-value="profile.email" :label="$t('admin.email')" type="email" disabled />
+                        <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.emailReadOnly') }}</p>
+                    </div>
+                    <div>
+                        <Textarea v-model="form.bio" :label="$t('admin.bio')" :rows="4" />
+                        <p v-if="form.errors.bio" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.bio }}</p>
+                    </div>
                 </div>
+            </Collapse>
+
+            <Collapse
+                v-model="openSections.ubicacion"
+                :title="$t('admin.sectionLocation')"
+                :hint="(profile.isMobile ? profile.serviceArea : profile.addressLine) || $t('admin.sectionLocationHint')"
+                :done="sectionDone.ubicacion"
+            >
                 <ToggleGroup v-model="locationValue" :options="locationOptions" />
-                <p class="mt-1.5 text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.locationHint') }}</p>
+                <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.locationHint') }}</p>
 
                 <div class="mt-3">
                     <Input
@@ -235,50 +310,26 @@ function confirmDeletePhoto() {
                         :label="$t('admin.addressLine')"
                         :placeholder="$t('admin.addressLinePlaceholder')"
                     />
-                    <p v-if="form.errors.serviceArea" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">
+                    <p v-if="form.errors.serviceArea" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                         {{ form.errors.serviceArea }}
                     </p>
-                    <p v-if="form.errors.addressLine" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">
+                    <p v-if="form.errors.addressLine" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                         {{ form.errors.addressLine }}
                     </p>
                 </div>
-            </div>
+            </Collapse>
 
-            <div>
-                <div class="mb-2 flex items-center justify-between">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
-                        $t('admin.publishProfile')
-                    }}</span>
-                </div>
-                <ToggleGroup
-                    :model-value="publishValue"
-                    :options="publishOptions"
-                    :disabled="publishProcessing || !canPublish"
-                    @update:model-value="togglePublish"
-                />
-                <p class="mt-1.5 text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.publishProfileHint') }}</p>
-                <p v-if="!canPublish" class="mt-1.5 text-[11px] font-semibold text-[var(--amber-text)]">
-                    {{ $t('admin.publishBlockedNoServices') }}
-                </p>
-                <p v-else-if="profile.published && profile.activeServicesCount === 0" class="mt-1.5 text-[11px] font-semibold text-[var(--amber-text)]">
-                    {{ $t('admin.publishedWithoutServices') }}
-                </p>
-            </div>
-
-            <div>
-                <div class="mb-2 flex items-center justify-between">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
-                        $t('admin.sampleImages')
-                    }}</span>
-                    <span class="text-[10px] font-bold text-[var(--text-faint)]"
-                        >{{ profile.gallery.length }} / {{ profile.maxGallery }}</span
-                    >
-                </div>
+            <Collapse
+                v-model="openSections.fotos"
+                :title="$t('admin.sectionPhotos')"
+                :hint="profile.gallery.length ? `${profile.gallery.length} / ${profile.maxGallery}` : $t('admin.sectionPhotosHint')"
+                :done="sectionDone.fotos"
+            >
                 <div class="grid grid-cols-3 gap-2.5">
                     <div
                         v-for="photo in profile.gallery"
                         :key="photo.id"
-                        class="relative aspect-square overflow-hidden rounded-2xl bg-[var(--surface-mute)]"
+                        class="relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-mute)]"
                     >
                         <img :src="photo.url" alt="" class="h-full w-full object-cover" />
                         <button
@@ -300,27 +351,48 @@ function confirmDeletePhoto() {
                         v-if="profile.gallery.length < profile.maxGallery"
                         type="button"
                         :disabled="galleryForm.processing"
-                        class="flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-[var(--border-strong)] text-[var(--text-faint)] hover:border-[var(--text-faint)] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[var(--border-strong)] text-[var(--text-faint)] hover:border-[var(--text-faint)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="galleryInput?.click()"
                     >
                         <template v-if="galleryForm.processing">
-                            <span class="text-[11px] font-extrabold">{{ galleryForm.progress?.percentage ?? 0 }}%</span>
+                            <span class="text-[12px] font-medium">{{ galleryForm.progress?.percentage ?? 0 }}%</span>
                         </template>
                         <template v-else>
                             <Plus :size="20" />
-                            <span class="text-[9px] font-extrabold uppercase tracking-wide">{{ $t('admin.add') }}</span>
+                            <span class="text-[11px] font-medium">{{ $t('admin.add') }}</span>
                         </template>
                     </button>
                 </div>
-                <p v-if="galleryForm.errors.photo" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">
+                <p v-if="galleryForm.errors.photo" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                     {{ galleryForm.errors.photo }}
                 </p>
-            </div>
+            </Collapse>
+
+            <Collapse
+                v-model="openSections.publicacion"
+                :title="$t('admin.publishProfile')"
+                :hint="profile.published ? $t('admin.publishStatePublic') : $t('admin.publishStateHidden')"
+                :done="sectionDone.publicacion"
+            >
+                <ToggleGroup
+                    :model-value="publishValue"
+                    :options="publishOptions"
+                    :disabled="publishProcessing || !canPublish"
+                    @update:model-value="togglePublish"
+                />
+                <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.publishProfileHint') }}</p>
+                <p v-if="!canPublish" class="mt-1.5 text-[12px] font-normal text-[var(--amber-text)]">
+                    {{ $t('admin.publishBlockedNoServices') }}
+                </p>
+                <p v-else-if="profile.published && profile.activeServicesCount === 0" class="mt-1.5 text-[12px] font-normal text-[var(--amber-text)]">
+                    {{ $t('admin.publishedWithoutServices') }}
+                </p>
+            </Collapse>
 
             <button
                 type="button"
                 :disabled="form.processing"
-                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                class="mt-2 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="submit"
             >
                 {{ form.processing ? $t('common.saving') : $t('admin.saveChanges') }}

@@ -23,7 +23,7 @@ const initials = props.name
         <img v-if="src" :src="src" :alt="name" class="h-full w-full object-cover" />
         <div
             v-else
-            class="flex h-full w-full items-center justify-center font-extrabold text-[var(--text-mute)]"
+            class="flex h-full w-full items-center justify-center font-bold text-[var(--text-mute)]"
             :style="{ fontSize: `${Math.max(size * 0.32, 11)}px` }"
         >
             {{ initials }}

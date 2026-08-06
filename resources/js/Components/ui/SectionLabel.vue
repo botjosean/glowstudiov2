@@ -6,7 +6,7 @@ defineProps({
 
 <template>
     <div class="flex items-center justify-between">
-        <span class="text-[11px] font-bold uppercase tracking-widest text-[var(--text-faint)]">{{ text }}</span>
+        <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ text }}</span>
         <slot name="action" />
     </div>
 </template>

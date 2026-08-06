@@ -46,6 +46,17 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($provider->user)->get('/admin/citas')->assertOk();
     }
 
+    /**
+     * The notice page polls itself while waiting; this redirect is what
+     * moves the waiting tab into the panel once the link is clicked.
+     */
+    public function test_a_verified_user_polling_the_notice_page_is_sent_to_the_panel(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->get('/verificar-correo')->assertRedirect('/admin/inicio');
+    }
+
     public function test_the_notice_page_shows_the_users_email(): void
     {
         $user = User::factory()->unverified()->create(['email' => 'pending@example.com']);

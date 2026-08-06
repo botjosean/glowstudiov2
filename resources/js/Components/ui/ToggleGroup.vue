@@ -26,7 +26,7 @@ const model = defineModel({ type: [String, Number], required: true });
             @click="model = opt.value"
         >
             <span
-                class="text-xs font-extrabold"
+                class="text-[13px] font-medium"
                 :class="model === opt.value ? 'text-[var(--text-strong)]' : 'text-[var(--text-mute)] font-bold'"
                 >{{ opt.label }}</span
             >

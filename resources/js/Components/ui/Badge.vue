@@ -14,7 +14,7 @@ const variants = {
 
 <template>
     <span
-        class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-extrabold"
+        class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium"
         :class="[variants[props.variant], uppercase && 'uppercase tracking-wider']"
     >
         <slot />

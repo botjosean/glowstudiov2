@@ -44,10 +44,10 @@ const categoryOptions = [
     <BottomSheet v-model="open">
         <div class="mb-5 flex items-center justify-between">
             <div>
-                <div class="text-lg font-extrabold text-[var(--text-strong)]">
+                <div class="text-lg font-bold text-[var(--text-strong)]">
                     {{ mode === 'create' ? $t('admin.newService') : $t('admin.editService') }}
                 </div>
-                <div v-if="mode === 'edit'" class="mt-0.5 text-[11px] font-bold text-[var(--text-faint)]">{{ service.name }}</div>
+                <div v-if="mode === 'edit'" class="mt-0.5 text-[12px] font-medium text-[var(--text-faint)]">{{ service.name }}</div>
             </div>
             <button
                 type="button"
@@ -60,41 +60,41 @@ const categoryOptions = [
 
         <div class="mb-4">
             <Input v-model="form.name" :label="$t('admin.serviceName')" :placeholder="$t('admin.serviceNamePlaceholder')" />
-            <p v-if="errors.name" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.name }}</p>
+            <p v-if="errors.name" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.name }}</p>
         </div>
 
         <div class="mb-4 grid grid-cols-2 gap-3">
             <div>
                 <Select v-model="form.durationMinutes" :label="$t('admin.duration')" :options="durationOptions" />
                 <div class="mt-1.5 text-[10px] font-semibold text-[var(--text-faint)]">{{ $t('admin.durationHint') }}</div>
-                <p v-if="errors.durationMinutes" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.durationMinutes }}</p>
+                <p v-if="errors.durationMinutes" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.durationMinutes }}</p>
             </div>
             <label class="flex flex-col gap-2">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{ $t('admin.price') }}</span>
+                <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.price') }}</span>
                 <div class="flex items-center gap-1 rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5">
-                    <span class="text-sm font-bold text-[var(--text-faint)]">$</span>
+                    <span class="text-[15px] font-semibold text-[var(--text-faint)]">$</span>
                     <input
                         v-model.number="form.price"
                         type="number"
                         min="0"
                         step="1"
-                        class="w-full bg-transparent text-sm font-bold text-[var(--text-strong)] focus:outline-none"
+                        class="w-full bg-transparent text-[15px] font-semibold text-[var(--text-strong)] focus:outline-none"
                     />
                 </div>
-                <p v-if="errors.price" class="text-xs font-semibold text-[var(--danger)]">{{ errors.price }}</p>
+                <p v-if="errors.price" class="text-[13px] font-normal text-[var(--danger)]">{{ errors.price }}</p>
             </label>
         </div>
 
         <div class="mb-6">
             <Select v-model="form.category" :label="$t('admin.category')" :options="categoryOptions" />
-            <p v-if="errors.category" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ errors.category }}</p>
+            <p v-if="errors.category" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.category }}</p>
         </div>
 
         <div class="flex gap-3" :class="mode === 'edit' && 'mb-3'">
             <button
                 type="button"
                 :disabled="processing"
-                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-sm font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[15px] font-semibold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="open = false"
             >
                 {{ $t('common.cancel') }}
@@ -102,7 +102,7 @@ const categoryOptions = [
             <button
                 type="button"
                 :disabled="processing"
-                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-sm font-bold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="emit('save', { ...form })"
             >
                 <Check :size="15" />
@@ -114,7 +114,7 @@ const categoryOptions = [
             v-if="mode === 'edit'"
             type="button"
             :disabled="processing"
-            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[13px] font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[14px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             @click="emit('delete')"
         >
             <Ban :size="15" />

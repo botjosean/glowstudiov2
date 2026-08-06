@@ -53,10 +53,10 @@ const filteredProviders = computed(() =>
 
         <div class="px-6 pb-8 pt-5">
             <div class="mb-3.5 flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                     $t('providers.title')
                 }}</span>
-                <span class="text-[11px] font-bold text-[var(--text-mute)]"
+                <span class="text-[12px] font-medium text-[var(--text-mute)]"
                     >{{ filteredProviders.length }} {{ $t('providers.profilesLabel') }}</span
                 >
             </div>
@@ -71,13 +71,13 @@ const filteredProviders = computed(() =>
                             <img :src="provider.photo" :alt="provider.name" class="h-full w-full object-cover" />
                         </div>
                         <div class="min-w-0">
-                            <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ provider.name }}</div>
-                            <div class="mt-0.5 truncate text-xs font-medium text-[var(--text-mute)]">
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ provider.name }}</div>
+                            <div class="mt-0.5 truncate text-[13px] font-normal text-[var(--text-mute)]">
                                 {{ provider.bio }}
                             </div>
                             <div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-mute)] px-2.5 py-1">
                                 <LayoutList :size="11" class="text-[var(--text-mute)]" />
-                                <span class="text-[10px] font-extrabold tracking-wide text-[var(--text-mute)]"
+                                <span class="text-[11px] font-medium tracking-wide text-[var(--text-mute)]"
                                     >{{ provider.servicesCount }} {{ $t('providers.servicesLabel') }}</span
                                 >
                             </div>
@@ -85,7 +85,7 @@ const filteredProviders = computed(() =>
                     </div>
                     <Link
                         :href="`/p/${provider.slug}`"
-                        class="shrink-0 rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-xs font-bold text-white hover:bg-[var(--btn-hover)]"
+                        class="shrink-0 rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-[13px] font-medium text-white hover:bg-[var(--btn-hover)]"
                         >{{ $t('providers.view') }}</Link
                     >
                 </div>

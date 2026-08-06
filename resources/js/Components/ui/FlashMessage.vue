@@ -76,7 +76,7 @@ function dismiss() {
             class="fixed left-1/2 top-3 z-[60] w-[calc(100%-2rem)] max-w-[448px] -translate-x-1/2"
         >
             <div
-                class="flex items-start gap-2.5 rounded-2xl border p-4 text-xs font-semibold leading-relaxed shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+                class="flex items-start gap-2.5 rounded-2xl border p-4 text-[13px] font-normal leading-relaxed shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
                 :class="variants[variant].classes"
             >
                 <component :is="variants[variant].icon" :size="16" class="mt-0.5 shrink-0" />

@@ -69,6 +69,33 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'booking' => fn () => $request->session()->get('booking'),
             ],
+            // Drives the layout's "N steps left" banner. Null (banner hidden)
+            // for guests, provider-less users, and fully set-up providers.
+            // Closure so partial reloads that don't request it skip the queries.
+            'onboarding' => fn () => $this->onboardingFor($user?->provider),
         ];
+    }
+
+    /**
+     * @return array{pending: int}|null
+     */
+    private function onboardingFor(?\App\Models\Provider $provider): ?array
+    {
+        if ($provider === null) {
+            return null;
+        }
+
+        $profileComplete = filled($provider->bio)
+            && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line));
+
+        $pending = collect([
+            $profileComplete,
+            $provider->services()->active()->exists(),
+            $provider->whatsapp_phone_number_id !== null,
+            $provider->published_at !== null,
+            $provider->appointments()->exists(),
+        ])->filter(fn (bool $done) => ! $done)->count();
+
+        return $pending > 0 ? ['pending' => $pending] : null;
     }
 }

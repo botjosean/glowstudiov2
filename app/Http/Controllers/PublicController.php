@@ -9,6 +9,7 @@ use App\Models\ServiceType;
 use App\Support\Format;
 use App\Support\MediaUrl;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -170,8 +171,17 @@ class PublicController extends Controller
      * stay exactly that: EnsureEmailIsVerified hardcodes it as the redirect
      * target for unverified users.
      */
-    public function verifyEmail(Request $request): Response
+    /**
+     * The waiting page polls this same route every few seconds — the moment
+     * the user clicks the email link (usually in another tab), the poll
+     * follows this redirect into the panel instead of waiting forever.
+     */
+    public function verifyEmail(Request $request): Response|RedirectResponse
     {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect(config('fortify.home'));
+        }
+
         return Inertia::render('Auth/VerifyEmail', [
             'email' => $request->user()->email,
         ]);

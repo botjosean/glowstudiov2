@@ -2,7 +2,22 @@
 import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { ArrowLeft, Globe, Clock4, Sun, Moon, Check, LogOut, Info, MessageCircle } from '@lucide/vue';
+import {
+    ArrowLeft,
+    Globe,
+    Clock4,
+    Sun,
+    Moon,
+    Check,
+    LogOut,
+    MessageCircle,
+    ChevronRight,
+    Store,
+    Scissors,
+    CalendarClock,
+    FileText,
+    ShieldCheck,
+} from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import { useTheme } from '../../composables/useTheme';
@@ -30,122 +45,158 @@ const whatsappPromptOptions = computed(() => [
     { value: 'ask', label: t('admin.waPromptStateAsk') },
     { value: 'never', label: t('admin.waPromptStateNever') },
 ]);
+
+const businessLinks = [
+    { href: '/admin/perfil', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
+    { href: '/admin/servicios', icon: Scissors, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
+    { href: '/admin/horario', icon: CalendarClock, titleKey: 'nav.schedule', hintKey: 'admin.settingsScheduleHint' },
+];
+
+const legalLinks = [
+    { href: '/terminos', icon: FileText, titleKey: 'legal.termsTitle' },
+    { href: '/privacidad', icon: ShieldCheck, titleKey: 'legal.privacyTitle' },
+];
 </script>
 
 <template>
     <AdminLayout :provider-name="providerName">
         <template #header>
-            <header class="flex items-center gap-3 border-b border-[var(--surface-mute)] bg-[var(--surface)] p-4">
+            <header class="flex items-center gap-3 border-b border-[var(--surface-mute)] bg-[var(--surface)] px-4 py-3">
                 <Link
                     href="/admin/inicio"
-                    class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)] hover:bg-[var(--border-strong)]"
+                    class="-ml-1 flex h-9 w-9 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
                 >
-                    <ArrowLeft :size="16" class="text-[var(--text-mute)]" />
+                    <ArrowLeft :size="20" class="text-[var(--text-strong)]" />
                 </Link>
-                <span class="text-base font-extrabold tracking-tight text-[var(--text-strong)]">{{ $t('admin.settings') }}</span>
+                <span class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.settings') }}</span>
             </header>
         </template>
 
-        <div class="flex flex-col gap-4 p-5 pb-7">
-            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="mb-3 flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
-                        <Globe :size="16" class="text-[var(--chip-fg)]" />
-                    </div>
-                    <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.language') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.languageHint') }}</div>
-                    </div>
-                </div>
-                <ToggleGroup :model-value="locale" :options="languageOptions" @update:model-value="setLanguage" />
-            </div>
-
-            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="mb-3 flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
-                        <Clock4 :size="16" class="text-[var(--chip-fg)]" />
-                    </div>
-                    <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.timeFormat') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.timeFormatHint') }}</div>
-                    </div>
-                </div>
-                <ToggleGroup :model-value="timeFormat" :options="timeFormatOptions" @update:model-value="setTimeFormat" />
-            </div>
-
-            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="mb-3 flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
-                        <MessageCircle :size="16" class="text-[var(--chip-fg)]" />
-                    </div>
-                    <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.waPromptSetting') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.waPromptSettingHint') }}</div>
-                    </div>
-                </div>
-                <ToggleGroup :model-value="whatsappPrompt" :options="whatsappPromptOptions" @update:model-value="setWhatsappPrompt" />
-            </div>
-
-            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="mb-3 flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
-                        <Sun :size="16" class="text-[var(--chip-fg)]" />
-                    </div>
-                    <div>
-                        <div class="text-sm font-extrabold text-[var(--text-strong)]">{{ $t('admin.appearance') }}</div>
-                        <div class="text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.appearanceHint') }}</div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <button
-                        type="button"
-                        class="rounded-2xl border p-2.5"
-                        :class="theme === 'light' ? 'border-[var(--border-strong)]' : 'border-[var(--border-strong)]'"
-                        @click="setTheme('light')"
+        <div class="flex flex-col gap-6 p-5 pb-8">
+            <section>
+                <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsBusiness') }}</h2>
+                <div class="overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]">
+                    <Link
+                        v-for="(item, index) in businessLinks"
+                        :key="item.href"
+                        :href="item.href"
+                        class="flex w-full items-center gap-3.5 px-4 py-4 hover:bg-[var(--surface-alt)]"
+                        :class="index > 0 && 'border-t border-[var(--surface-mute)]'"
                     >
-                        <div class="h-14 overflow-hidden rounded-[10px] border border-[#e2e8f0] bg-[#f1f5f9]" />
-                        <div class="mt-2 flex items-center justify-center gap-1.5">
-                            <Sun :size="12" class="text-[var(--text-mute)]" />
-                            <span
-                                class="text-xs"
-                                :class="theme === 'light' ? 'font-extrabold text-[var(--text-strong)]' : 'font-bold text-[var(--text-mute)]'"
-                                >{{ $t('admin.light') }}</span
-                            >
-                        </div>
-                    </button>
-                    <button
-                        type="button"
-                        class="relative rounded-2xl border p-2.5"
-                        :class="theme === 'dark' ? 'border-2 border-[var(--green-text)]' : 'border-[var(--border-strong)]'"
-                        @click="setTheme('dark')"
-                    >
-                        <span
-                            v-if="theme === 'dark'"
-                            class="absolute right-1.5 top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--green-text)]"
-                        >
-                            <Check :size="10" class="text-white" />
+                        <component :is="item.icon" :size="19" class="shrink-0 text-[var(--text-mute)]" :stroke-width="1.8" />
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[15px] font-semibold text-[var(--text-strong)]">{{ $t(item.titleKey) }}</span>
+                            <span class="mt-0.5 block truncate text-[13px] font-normal text-[var(--text-mute)]">{{
+                                $t(item.hintKey)
+                            }}</span>
                         </span>
-                        <div class="h-14 overflow-hidden rounded-[10px] border border-[#232b3b] bg-[#0a0e16]" />
-                        <div class="mt-2 flex items-center justify-center gap-1.5">
-                            <Moon :size="12" class="text-[var(--text-strong)]" />
-                            <span
-                                class="text-xs"
-                                :class="theme === 'dark' ? 'font-extrabold text-[var(--text-strong)]' : 'font-bold text-[var(--text-mute)]'"
-                                >{{ $t('admin.dark') }}</span
-                            >
-                        </div>
-                    </button>
+                        <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                    </Link>
                 </div>
-            </div>
+            </section>
 
-            <div class="flex items-start gap-2.5 rounded-2xl border border-[var(--green-border)] bg-[var(--green-soft)] p-4">
-                <Info :size="16" class="mt-0.5 shrink-0 text-[var(--green-text)]" />
-                <div class="text-xs font-semibold leading-relaxed text-[var(--green-deep)]">{{ $t('admin.settingsScope') }}</div>
-            </div>
+            <section>
+                <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsPreferences') }}</h2>
+                <div class="flex flex-col gap-3">
+                    <div class="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <Globe :size="17" class="text-[var(--text-mute)]" :stroke-width="1.8" />
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.language') }}</div>
+                        </div>
+                        <ToggleGroup :model-value="locale" :options="languageOptions" @update:model-value="setLanguage" />
+                    </div>
+
+                    <div class="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <Clock4 :size="17" class="text-[var(--text-mute)]" :stroke-width="1.8" />
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.timeFormat') }}</div>
+                        </div>
+                        <ToggleGroup :model-value="timeFormat" :options="timeFormatOptions" @update:model-value="setTimeFormat" />
+                    </div>
+
+                    <div class="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <MessageCircle :size="17" class="text-[var(--text-mute)]" :stroke-width="1.8" />
+                            <div>
+                                <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.waPromptSetting') }}</div>
+                                <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.waPromptSettingHint') }}</div>
+                            </div>
+                        </div>
+                        <ToggleGroup :model-value="whatsappPrompt" :options="whatsappPromptOptions" @update:model-value="setWhatsappPrompt" />
+                    </div>
+
+                    <div class="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <Sun :size="17" class="text-[var(--text-mute)]" :stroke-width="1.8" />
+                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.appearance') }}</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <button
+                                type="button"
+                                class="relative rounded-xl border p-2.5"
+                                :class="theme === 'light' ? 'border-[var(--text-strong)]' : 'border-[var(--border-strong)]'"
+                                @click="setTheme('light')"
+                            >
+                                <span
+                                    v-if="theme === 'light'"
+                                    class="absolute right-1.5 top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--text-strong)]"
+                                >
+                                    <Check :size="10" class="text-[var(--surface)]" />
+                                </span>
+                                <div class="h-12 overflow-hidden rounded-lg border border-[#e5e7eb] bg-[#f9fafb]" />
+                                <div class="mt-2 flex items-center justify-center gap-1.5">
+                                    <Sun :size="12" class="text-[var(--text-mute)]" />
+                                    <span class="text-[13px] font-medium text-[var(--text-strong)]">{{ $t('admin.light') }}</span>
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                class="relative rounded-xl border p-2.5"
+                                :class="theme === 'dark' ? 'border-[var(--text-strong)]' : 'border-[var(--border-strong)]'"
+                                @click="setTheme('dark')"
+                            >
+                                <span
+                                    v-if="theme === 'dark'"
+                                    class="absolute right-1.5 top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--text-strong)]"
+                                >
+                                    <Check :size="10" class="text-[var(--surface)]" />
+                                </span>
+                                <div class="h-12 overflow-hidden rounded-lg border border-[#2b3340] bg-[#0d1117]" />
+                                <div class="mt-2 flex items-center justify-center gap-1.5">
+                                    <Moon :size="12" class="text-[var(--text-mute)]" />
+                                    <span class="text-[13px] font-medium text-[var(--text-strong)]">{{ $t('admin.dark') }}</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsLegal') }}</h2>
+                <div class="overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]">
+                    <Link
+                        v-for="(item, index) in legalLinks"
+                        :key="item.href"
+                        :href="item.href"
+                        class="flex w-full items-center gap-3.5 px-4 py-4 hover:bg-[var(--surface-alt)]"
+                        :class="index > 0 && 'border-t border-[var(--surface-mute)]'"
+                    >
+                        <component :is="item.icon" :size="19" class="shrink-0 text-[var(--text-mute)]" :stroke-width="1.8" />
+                        <span class="flex-1 text-[15px] font-semibold text-[var(--text-strong)]">{{ $t(item.titleKey) }}</span>
+                        <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                    </Link>
+                    <div class="border-t border-[var(--surface-mute)] px-4 py-3.5 text-[13px] font-normal text-[var(--text-faint)]">
+                        {{ $t('app.name') }} · {{ $t('admin.settingsVersion') }} 2.0
+                    </div>
+                </div>
+            </section>
+
+            <p class="px-1 text-[12px] font-normal leading-relaxed text-[var(--text-faint)]">{{ $t('admin.settingsScope') }}</p>
 
             <button
                 type="button"
-                class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] py-3.5 text-sm font-bold text-[var(--danger)] hover:bg-[var(--danger-hover)]"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] py-3.5 text-[15px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)]"
                 @click="router.post('/logout')"
             >
                 <LogOut :size="16" />

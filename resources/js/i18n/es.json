@@ -139,7 +139,20 @@
         "servicesSubtitle": "Lo que tus clientas pueden reservar.",
         "profileTitle": "Tu perfil público",
         "profileSubtitle": "Lo que ven tus clientas en tu página.",
-        "appointmentsTitle": "Tus citas"
+        "appointmentsTitle": "Tus citas",
+        "sectionInfo": "Tu información",
+        "sectionInfoHint": "Nombre, teléfono y tu presentación",
+        "sectionLocation": "Dónde atiendes",
+        "sectionLocationHint": "Tu dirección o zona de servicio",
+        "sectionPhotos": "Fotos de tu trabajo",
+        "sectionPhotosHint": "Enseña tus mejores resultados",
+        "settingsBusiness": "Tu negocio",
+        "settingsBusinessInfo": "Información del negocio",
+        "settingsBusinessInfoHint": "Perfil, fotos, dirección y publicación",
+        "settingsScheduleHint": "Jornada, almuerzo y descanso entre citas",
+        "settingsPreferences": "Preferencias",
+        "settingsLegal": "Legal y privacidad",
+        "settingsVersion": "versión"
     },
     "nav": {
         "appointments": "Citas",
@@ -227,7 +240,8 @@
         "body": "Haz clic en el enlace para activar tu cuenta. Si no lo ves, revisa la carpeta de spam.",
         "resend": "Reenviar enlace",
         "linkSent": "Enlace de verificación reenviado",
-        "logOut": "Cerrar sesión"
+        "logOut": "Cerrar sesión",
+        "waiting": "Esperando tu confirmación — esta página avanzará sola"
     },
     "booking": {
         "stepOf": "Paso {current} de {total}",
@@ -289,6 +303,12 @@
         "viewAppointments": "Ver citas",
         "publicPageTitle": "Tu página pública",
         "publicPageView": "Ver",
-        "publicPageHidden": "Oculta por ahora — publícala desde tu perfil"
+        "publicPageHidden": "Oculta por ahora — publícala desde tu perfil",
+        "bannerText": "Te falta 1 paso para completar tu negocio | Te faltan {count} pasos para completar tu negocio",
+        "bannerCta": "Continuar"
+    },
+    "legal": {
+        "termsTitle": "Condiciones de uso",
+        "privacyTitle": "Política de privacidad"
     }
 }

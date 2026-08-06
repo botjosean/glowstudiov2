@@ -16,6 +16,8 @@ use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::inertia('/terminos', 'Public/Terminos')->name('terms');
+Route::inertia('/privacidad', 'Public/Privacidad')->name('privacy');
 Route::get('/proveedores', [PublicController::class, 'providers'])->name('providers');
 Route::get('/p/{provider}', [PublicController::class, 'profile'])->name('providers.show');
 Route::get('/reservar/{provider}/{service}', [PublicController::class, 'booking'])

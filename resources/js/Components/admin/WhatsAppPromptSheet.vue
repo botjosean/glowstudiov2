@@ -34,7 +34,7 @@ function dismiss() {
 <template>
     <BottomSheet v-model="open">
         <div class="mb-4 flex items-center justify-between">
-            <div class="text-lg font-extrabold text-[var(--text-strong)]">{{ $t('admin.waPromptTitle') }}</div>
+            <div class="text-lg font-bold text-[var(--text-strong)]">{{ $t('admin.waPromptTitle') }}</div>
             <button
                 type="button"
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)]"
@@ -48,13 +48,13 @@ function dismiss() {
             {{ $t('admin.waPromptBody', { name: clientName }) }}
         </p>
 
-        <div class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-mute)]">
+        <div class="mb-3 flex items-center gap-1.5 text-[13px] font-normal text-[var(--text-mute)]">
             <Phone :size="13" class="text-[var(--text-faint)]" />
             {{ clientPhone }}
         </div>
 
         <div class="mb-5 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
-            <div class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+            <div class="mb-1.5 text-[13px] font-medium text-[var(--text-mute)]">
                 {{ $t('admin.waPromptPreviewLabel') }}
             </div>
             <p class="text-[13px] leading-relaxed text-[var(--text-body)]">{{ message }}</p>
@@ -66,13 +66,13 @@ function dismiss() {
                 type="checkbox"
                 class="h-[18px] w-[18px] rounded-[5px] border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] accent-[var(--btn-green)]"
             />
-            <span class="text-xs font-semibold text-[var(--text-body)]">{{ $t('admin.waDontAskAgain') }}</span>
+            <span class="text-[13px] font-normal text-[var(--text-body)]">{{ $t('admin.waDontAskAgain') }}</span>
         </label>
 
         <div class="flex gap-3">
             <button
                 type="button"
-                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-sm font-bold text-[var(--text-body)] hover:bg-[var(--border-strong)]"
+                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[15px] font-semibold text-[var(--text-body)] hover:bg-[var(--border-strong)]"
                 @click="dismiss"
             >
                 {{ $t('admin.waSkip') }}
@@ -81,7 +81,7 @@ function dismiss() {
                 :href="waHref"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-white hover:brightness-95"
+                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[#25D366] py-3.5 text-[15px] font-semibold text-white hover:brightness-95"
                 @click="dismiss"
             >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff">
