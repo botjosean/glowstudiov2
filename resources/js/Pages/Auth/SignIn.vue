@@ -19,10 +19,10 @@ function submit() {
 <template>
     <PublicLayout>
         <div class="p-6">
-            <div class="text-xl font-extrabold tracking-tight text-[var(--text-strong)]">
+            <h1 class="text-[26px] font-extrabold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('signIn.title') }}
-            </div>
-            <div class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('signIn.subtitle') }}</div>
+            </h1>
+            <div class="mt-1.5 text-sm font-medium leading-relaxed text-[var(--text-mute)]">{{ $t('signIn.subtitle') }}</div>
 
             <form class="mt-6 flex flex-col gap-4" @submit.prevent="submit">
                 <p v-if="form.errors.identifier" class="text-xs font-semibold text-[var(--danger)]">
