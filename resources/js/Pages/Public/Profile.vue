@@ -108,7 +108,7 @@ const props = defineProps({
             </div>
         </div>
 
-        <div class="px-6 pt-8">
+        <div v-if="provider.gallery.length" class="px-6 pt-8">
             <div class="mb-3.5 flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
                     $t('profile.ourWork')

@@ -122,7 +122,7 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                     <span class="min-w-0 flex-1">
                         <span
                             class="block text-sm"
-                            :class="step.done ? 'font-semibold text-[var(--text-faint)] line-through decoration-1' : 'font-extrabold text-[var(--text-strong)]'"
+                            :class="step.done ? 'font-semibold text-[var(--text-mute)]' : 'font-extrabold text-[var(--text-strong)]'"
                             >{{ $t(step.titleKey) }}</span
                         >
                         <span v-if="step.hintKey && !step.done" class="mt-0.5 block text-[11px] font-semibold text-[var(--text-faint)]">{{
