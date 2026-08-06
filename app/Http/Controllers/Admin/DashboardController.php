@@ -102,6 +102,9 @@ class DashboardController extends Controller
                 'phone' => Format::usPhone((string) $request->user()->phone),
                 'email' => $request->user()->email,
                 'bio' => $provider->bio,
+                'isMobile' => $provider->is_mobile,
+                'serviceArea' => $provider->service_area,
+                'addressLine' => $provider->address_line,
                 'bannerPhoto' => MediaUrl::resolve($provider->banner_photo_url),
                 'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
                 'gallery' => $provider->photos->map(fn ($photo) => [

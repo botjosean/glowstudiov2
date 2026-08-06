@@ -58,6 +58,14 @@
         "phone": "Teléfono",
         "email": "Email",
         "bio": "Biografía",
+        "location": "Ubicación",
+        "locationHint": "Dónde atiendes a tus clientes",
+        "locationStudio": "En estudio",
+        "locationMobile": "A domicilio",
+        "serviceArea": "Zona de servicio",
+        "serviceAreaPlaceholder": "p. ej. Zona metro",
+        "addressLine": "Dirección",
+        "addressLinePlaceholder": "p. ej. Calle 10 #5-20",
         "sampleImages": "Imágenes de muestra",
         "add": "Añadir",
         "settings": "Ajustes",
@@ -164,7 +172,8 @@
         "or": "O",
         "confirm": "Confirmar",
         "close": "Cerrar",
-        "saving": "Guardando…"
+        "saving": "Guardando…",
+        "continueWithGoogle": "Continuar con Google"
     },
     "signIn": {
         "title": "Bienvenido de nuevo",
@@ -186,8 +195,18 @@
         "emailLabel": "Email",
         "passwordLabel": "Contraseña",
         "confirmPasswordLabel": "Confirmar contraseña",
-        "google": "Registrarse con Google",
         "alreadyRegistered": "¿Ya tienes cuenta?"
+    },
+    "createPassword": {
+        "title": "Crea una contraseña",
+        "subtitle": "Para poder entrar también sin depender de Google",
+        "passwordLabel": "Contraseña",
+        "confirmPasswordLabel": "Confirmar contraseña",
+        "submit": "Guardar y continuar"
+    },
+    "auth": {
+        "googleFailed": "No se pudo continuar con Google. Intenta de nuevo.",
+        "googleNoEmail": "Tu cuenta de Google no tiene un correo verificado disponible."
     },
     "verifyEmail": {
         "title": "Verifica tu correo",

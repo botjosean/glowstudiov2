@@ -154,6 +154,16 @@ class PublicController extends Controller
     }
 
     /**
+     * The one-time "set a password" step for an account that arrived via
+     * Google and doesn't have one. EnsureUserHasPassword is what actually
+     * redirects here; this just renders it.
+     */
+    public function createPassword(): Response
+    {
+        return Inertia::render('Auth/CreatePassword');
+    }
+
+    /**
      * Fortify's own view-rendering routes are disabled (config('fortify.views')
      * is false — this app renders every auth screen itself via Inertia), so
      * 'verification.notice' has to be registered here instead. The name must

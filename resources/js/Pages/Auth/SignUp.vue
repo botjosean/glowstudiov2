@@ -125,8 +125,8 @@ function submit() {
                 <div class="h-px flex-1 bg-[var(--border-strong)]" />
             </div>
 
-            <button
-                type="button"
+            <a
+                href="/auth/google/redirect"
                 class="mt-3.5 flex w-full items-center justify-center gap-2.5 rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface)] py-3.5 text-sm font-bold text-[var(--text-strong)] hover:bg-[var(--surface-mute)]"
             >
                 <svg width="18" height="18" viewBox="0 0 48 48">
@@ -147,8 +147,8 @@ function submit() {
                         d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.9l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
                     />
                 </svg>
-                {{ $t('signUp.google') }}
-            </button>
+                {{ $t('common.continueWithGoogle') }}
+            </a>
 
             <div class="mt-5 flex gap-3">
                 <Link

@@ -27,6 +27,9 @@ class ProfileController extends Controller
         $user->provider->update([
             'public_name' => $data['publicName'],
             'bio' => $data['bio'],
+            'is_mobile' => $data['isMobile'],
+            'service_area' => $data['serviceArea'],
+            'address_line' => $data['addressLine'],
         ]);
 
         return to_route('admin.perfil')->with('success', 'admin.profileUpdated');

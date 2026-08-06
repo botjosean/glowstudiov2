@@ -39,6 +39,12 @@ return [
         'human_handover_minutes' => env('ASSISTANT_HUMAN_HANDOVER_MINUTES', 15),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'kapso' => [
         'api_key' => env('KAPSO_API_KEY'),
         'webhook_secret' => env('KAPSO_WEBHOOK_SECRET'),

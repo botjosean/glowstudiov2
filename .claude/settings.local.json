@@ -1,4 +1,21 @@
 {
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(composer require *)",
+      "Bash(php -v)",
+      "Bash(command -v composer)",
+      "Bash(command -v composer.phar)",
+      "Bash(find / -maxdepth 4 -iname \"composer*\")",
+      "Bash(command -v docker)",
+      "Bash(command -v sail)",
+      "Bash(docker compose *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost",
+    "supabase"
+  ],
   "hooks": {
     "PostToolUse": [
       {
@@ -26,9 +43,5 @@
       }
     ]
   },
-  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop.",
-  "enabledMcpjsonServers": [
-    "laravel-boost",
-    "supabase"
-  ]
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop."
 }

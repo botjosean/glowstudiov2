@@ -34,6 +34,8 @@ class UpdateProfileRequest extends FormRequest
         $this->merge([
             'phone' => Format::digitsOnly((string) $this->input('phone', '')),
             'username' => Str::lower(trim((string) $this->input('username', ''))),
+            'serviceArea' => $this->filled('serviceArea') ? trim((string) $this->input('serviceArea')) : null,
+            'addressLine' => $this->filled('addressLine') ? trim((string) $this->input('addressLine')) : null,
         ]);
     }
 
@@ -53,6 +55,9 @@ class UpdateProfileRequest extends FormRequest
             'publicName' => ['required', 'string', 'min:2', 'max:80'],
             'phone' => ['required', 'digits:10'],
             'bio' => ['nullable', 'string', 'max:1000'],
+            'isMobile' => ['required', 'boolean'],
+            'serviceArea' => ['nullable', 'string', 'max:120'],
+            'addressLine' => ['nullable', 'string', 'max:160'],
         ];
     }
 }

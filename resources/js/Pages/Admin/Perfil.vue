@@ -11,8 +11,8 @@ import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 
 const props = defineProps({
     profile: { type: Object, required: true },
-    // { username, publicName, phone, email, bio, bannerPhoto, avatarPhoto,
-    //   gallery: [{ id, url }], maxGallery, published, activeServicesCount }
+    // { username, publicName, phone, email, bio, isMobile, serviceArea, addressLine,
+    //   bannerPhoto, avatarPhoto, gallery: [{ id, url }], maxGallery, published, activeServicesCount }
 });
 
 const { t } = useI18n();
@@ -22,6 +22,9 @@ const form = useForm({
     publicName: props.profile.publicName,
     phone: props.profile.phone,
     bio: props.profile.bio,
+    isMobile: props.profile.isMobile,
+    serviceArea: props.profile.serviceArea,
+    addressLine: props.profile.addressLine,
 });
 
 function submit() {
@@ -32,6 +35,18 @@ const publishOptions = computed(() => [
     { value: 'public', label: t('admin.publishStatePublic') },
     { value: 'hidden', label: t('admin.publishStateHidden') },
 ]);
+
+const locationOptions = computed(() => [
+    { value: 'studio', label: t('admin.locationStudio') },
+    { value: 'mobile', label: t('admin.locationMobile') },
+]);
+
+const locationValue = computed({
+    get: () => (form.isMobile ? 'mobile' : 'studio'),
+    set: (value) => {
+        form.isMobile = value === 'mobile';
+    },
+});
 
 const canPublish = computed(() => props.profile.published || props.profile.activeServicesCount > 0);
 const publishValue = computed(() => (props.profile.published ? 'public' : 'hidden'));
@@ -190,6 +205,37 @@ function confirmDeletePhoto() {
             <div>
                 <Textarea v-model="form.bio" :label="$t('admin.bio')" :rows="4" />
                 <p v-if="form.errors.bio" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">{{ form.errors.bio }}</p>
+            </div>
+
+            <div>
+                <div class="mb-2 flex items-center justify-between">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{{
+                        $t('admin.location')
+                    }}</span>
+                </div>
+                <ToggleGroup v-model="locationValue" :options="locationOptions" />
+                <p class="mt-1.5 text-[11px] font-semibold text-[var(--text-faint)]">{{ $t('admin.locationHint') }}</p>
+
+                <div class="mt-3">
+                    <Input
+                        v-if="form.isMobile"
+                        v-model="form.serviceArea"
+                        :label="$t('admin.serviceArea')"
+                        :placeholder="$t('admin.serviceAreaPlaceholder')"
+                    />
+                    <Input
+                        v-else
+                        v-model="form.addressLine"
+                        :label="$t('admin.addressLine')"
+                        :placeholder="$t('admin.addressLinePlaceholder')"
+                    />
+                    <p v-if="form.errors.serviceArea" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">
+                        {{ form.errors.serviceArea }}
+                    </p>
+                    <p v-if="form.errors.addressLine" class="mt-1.5 text-xs font-semibold text-[var(--danger)]">
+                        {{ form.errors.addressLine }}
+                    </p>
+                </div>
             </div>
 
             <div>

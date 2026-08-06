@@ -58,6 +58,14 @@
         "phone": "Phone",
         "email": "Email",
         "bio": "Bio",
+        "location": "Location",
+        "locationHint": "Where you serve your clients",
+        "locationStudio": "In studio",
+        "locationMobile": "Mobile",
+        "serviceArea": "Service area",
+        "serviceAreaPlaceholder": "e.g. Downtown area",
+        "addressLine": "Address",
+        "addressLinePlaceholder": "e.g. 123 Main St",
         "sampleImages": "Sample images",
         "add": "Add",
         "settings": "Settings",
@@ -164,7 +172,8 @@
         "or": "OR",
         "confirm": "Confirm",
         "close": "Close",
-        "saving": "Saving…"
+        "saving": "Saving…",
+        "continueWithGoogle": "Continue with Google"
     },
     "signIn": {
         "title": "Welcome back",
@@ -186,8 +195,18 @@
         "emailLabel": "Email",
         "passwordLabel": "Password",
         "confirmPasswordLabel": "Confirm password",
-        "google": "Sign up with Google",
         "alreadyRegistered": "Already registered?"
+    },
+    "createPassword": {
+        "title": "Create a password",
+        "subtitle": "So you can also sign in without relying on Google",
+        "passwordLabel": "Password",
+        "confirmPasswordLabel": "Confirm password",
+        "submit": "Save and continue"
+    },
+    "auth": {
+        "googleFailed": "Couldn't continue with Google. Please try again.",
+        "googleNoEmail": "Your Google account has no verifiable email available."
     },
     "verifyEmail": {
         "title": "Verify your email",

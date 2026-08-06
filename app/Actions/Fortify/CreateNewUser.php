@@ -2,7 +2,6 @@
 
 namespace App\Actions\Fortify;
 
-use App\Models\Provider;
 use App\Models\User;
 use App\Support\Format;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +14,8 @@ use Laravel\Fortify\Contracts\CreatesNewUsers;
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;
+
+    public function __construct(private readonly CreatesProviderProfile $providerProfiles) {}
 
     /**
      * Validate and create a newly registered user, plus the provider
@@ -64,26 +65,9 @@ class CreateNewUser implements CreatesNewUsers
                 'password' => $input['password'],
             ]);
 
-            $user->provider()->create([
-                'slug' => $this->uniqueSlug($input['username']),
-                'public_name' => $input['fullName'],
-                'timezone' => 'America/New_York',
-            ]);
+            $this->providerProfiles->create($user, $input['fullName'], $input['username']);
 
             return $user;
         });
-    }
-
-    private function uniqueSlug(string $username): string
-    {
-        $base = Str::slug($username) ?: 'provider';
-        $slug = $base;
-        $suffix = 1;
-
-        while (Provider::where('slug', $slug)->exists()) {
-            $slug = "{$base}-".++$suffix;
-        }
-
-        return $slug;
     }
 }

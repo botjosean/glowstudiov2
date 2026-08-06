@@ -59,8 +59,15 @@ class KapsoClient
     {
         $base = rtrim((string) config('services.kapso.base_url'), '/');
 
+        // `conversation_id`, not `whatsapp_conversation_id`. Kapso ignores an
+        // unrecognised query parameter instead of rejecting it, so the wrong
+        // name here does not fail loudly: it silently returns the account's
+        // latest messages instead of this conversation's, and both the model's
+        // history and the human hand-off guard below read them as if they were.
+        // Verified directly against Kapso: a nonexistent conversation id still
+        // returned rows under the old name, and returned none under this one.
         $response = $this->request()->get("{$base}/platform/v1/whatsapp/messages", [
-            'whatsapp_conversation_id' => $conversationId,
+            'conversation_id' => $conversationId,
             'per_page' => $limit,
         ]);
 
