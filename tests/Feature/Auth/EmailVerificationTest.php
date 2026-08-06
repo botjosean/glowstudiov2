@@ -66,7 +66,7 @@ class EmailVerificationTest extends TestCase
             'hash' => sha1($user->getEmailForVerification()),
         ]);
 
-        $this->actingAs($user)->get($url)->assertRedirect('/admin/citas?verified=1');
+        $this->actingAs($user)->get($url)->assertRedirect('/admin/inicio?verified=1');
 
         $this->assertNotNull($user->fresh()->email_verified_at);
         $this->actingAs($user->fresh())->get('/admin/citas')->assertOk();
