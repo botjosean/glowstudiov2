@@ -67,9 +67,12 @@ class SuperadminTest extends TestCase
 
         $providerlessUser = User::factory()->create();
 
+        // Captured before the wipe: afterwards the relation resolves to null.
+        $testUserId = $testProvider->user_id;
+
         $this->actingAs($admin)->post('/admin-general/limpiar')->assertRedirect();
 
-        $this->assertNull(User::find($testProvider->user->id));
+        $this->assertNull(User::find($testUserId));
         $this->assertNull(Provider::find($testProvider->id));
         $this->assertNull(User::find($providerlessUser->id));
 
