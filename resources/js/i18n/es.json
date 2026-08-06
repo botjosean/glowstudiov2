@@ -330,6 +330,8 @@
         "deleteAppointment": "Borrar cita",
         "confirmDeleteApptTitle": "¿Borrar esta cita?",
         "appointmentDeleted": "Cita eliminada.",
-        "refresh": "Actualizar datos"
+        "refresh": "Actualizar datos",
+        "servicesCount": "sin servicios | 1 servicio | {count} servicios",
+        "appointmentsCount": "sin citas | 1 cita | {count} citas"
     }
 }

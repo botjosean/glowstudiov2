@@ -330,6 +330,8 @@
         "deleteAppointment": "Delete appointment",
         "confirmDeleteApptTitle": "Delete this appointment?",
         "appointmentDeleted": "Appointment deleted.",
-        "refresh": "Refresh data"
+        "refresh": "Refresh data",
+        "servicesCount": "no services | 1 service | {count} services",
+        "appointmentsCount": "no appointments | 1 appointment | {count} appointments"
     }
 }
