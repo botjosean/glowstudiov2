@@ -78,7 +78,7 @@ class RespondToWhatsAppMessage implements ShouldQueue
         // sitting on the queue while the allowlist is being tightened would
         // otherwise still go out. The cost is one config read; the cost of being
         // wrong is a message on a real client's phone.
-        if (! $policy->allows($this->message->fromPhone)) {
+        if (! $policy->allows($this->message->fromPhone, $this->message->phoneNumberId, $this->message->contactName)) {
             Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
                 'phone_number_id' => $this->message->phoneNumberId,
                 'policy' => $policy->describe(),

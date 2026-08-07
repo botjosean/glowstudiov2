@@ -81,7 +81,7 @@ class KapsoWebhookController extends Controller
             // Checked before queueing, not inside the job: a message from
             // someone the assistant must not answer should leave no job, no
             // claim and no trace beyond the count reported here.
-            if (! $policy->allows($message->fromPhone)) {
+            if (! $policy->allows($message->fromPhone, $message->phoneNumberId, $message->contactName)) {
                 $notAllowed++;
 
                 continue;

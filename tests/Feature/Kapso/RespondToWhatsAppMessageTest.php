@@ -95,6 +95,90 @@ class RespondToWhatsAppMessageTest extends TestCase
         $this->assertSame(0, $this->sentMessages());
     }
 
+    /**
+     * Vanessa's guard: a number still shared with personal use must not
+     * answer anyone already saved in her phone contacts.
+     */
+    public function test_a_saved_contact_is_not_answered_on_a_guarded_number(): void
+    {
+        $this->fake($this->text('Hola'));
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        // job() carries a contact_name, matching a name saved on that phone.
+        $this->runJob($this->job());
+
+        $this->assertSame(0, $this->sentMessages());
+    }
+
+    /**
+     * The other half of the guard: a stranger with no saved name is still a
+     * potential new client and must be answered normally.
+     */
+    public function test_a_stranger_with_no_saved_name_is_still_answered_on_a_guarded_number(): void
+    {
+        $this->fake($this->text('Hola'));
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        $message = InboundMessage::fromDelivery([
+            'message' => [
+                'id' => 'wamid.stranger',
+                'type' => 'text',
+                'from' => self::CLIENT,
+                'text' => ['body' => 'hola'],
+                'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api'],
+            ],
+            'conversation' => [
+                'id' => 'conv_1',
+                'phone_number' => self::CLIENT,
+                'phone_number_id' => self::PHONE_NUMBER_ID,
+            ],
+            'phone_number_id' => self::PHONE_NUMBER_ID,
+        ]);
+
+        $this->assertNotNull($message);
+        $this->runJob(new RespondToWhatsAppMessage($message));
+
+        $this->assertSame(1, $this->sentMessages());
+    }
+
+    /**
+     * The shape Kapso actually sends for a stranger: not a missing
+     * contact_name, but the sender's own phone number echoed back as one.
+     */
+    public function test_kapsos_bare_number_fallback_is_still_answered_on_a_guarded_number(): void
+    {
+        $this->fake($this->text('Hola'));
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        $message = InboundMessage::fromDelivery([
+            'message' => [
+                'id' => 'wamid.fallback-name',
+                'type' => 'text',
+                'from' => self::CLIENT,
+                'text' => ['body' => 'hola'],
+                'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api'],
+            ],
+            'conversation' => [
+                'id' => 'conv_1',
+                'phone_number' => self::CLIENT,
+                'phone_number_id' => self::PHONE_NUMBER_ID,
+                'kapso' => ['contact_name' => self::CLIENT],
+            ],
+            'phone_number_id' => self::PHONE_NUMBER_ID,
+        ]);
+
+        $this->assertNotNull($message);
+        $this->runJob(new RespondToWhatsAppMessage($message));
+
+        $this->assertSame(1, $this->sentMessages());
+    }
+
     public function test_a_message_without_a_phone_number_is_skipped_without_sending(): void
     {
         $this->fake($this->text('Hola'));

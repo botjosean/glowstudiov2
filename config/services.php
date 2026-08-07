@@ -53,6 +53,11 @@ return [
         // letting it text a real salon's whole client list.
         'reply_mode' => env('KAPSO_REPLY_MODE', 'allowlist'),
         'test_recipients' => env('KAPSO_TEST_RECIPIENTS'),
+        // A number still shared with a professional's personal WhatsApp while
+        // she migrates it to the business. See ReplyPolicy: any sender saved
+        // as a contact on that phone is never answered. Leave unset once the
+        // number is business-only.
+        'personal_phone_number_id' => env('KAPSO_PERSONAL_PHONE_NUMBER_ID'),
         'base_url' => env('KAPSO_BASE_URL', 'https://api.kapso.ai'),
         // Tracks Meta's Graph version, which Kapso proxies verbatim.
         'graph_version' => env('KAPSO_GRAPH_VERSION', 'v24.0'),
