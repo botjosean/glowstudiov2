@@ -97,60 +97,28 @@ class RespondToWhatsAppMessageTest extends TestCase
 
     /**
      * Vanessa's guard: a number still shared with personal use must not
-     * answer anyone already saved in her phone contacts.
+     * answer anyone already saved in her phone contacts. Confirmed against a
+     * live payload that Kapso never puts contact_name in the webhook
+     * delivery itself (not under message.kapso, not under conversation.kapso
+     * — contrary to the webhook docs' example), so the job asks for it with
+     * a dedicated lookup instead of trusting the delivery.
      */
     public function test_a_saved_contact_is_not_answered_on_a_guarded_number(): void
     {
-        $this->fake($this->text('Hola'));
+        $this->fakeWithContactLookup(['kapso' => ['contact_name' => 'Josean Sosa']]);
         $this->provider();
 
         config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
 
-        // job() carries a contact_name, matching a name saved on that phone.
         $this->runJob($this->job());
 
         $this->assertSame(0, $this->sentMessages());
     }
 
     /**
-     * The exact bug seen for real on Vanessa's number: a raw payload pulled
-     * from Kapso showed contact_name living under message.kapso, not
-     * conversation.kapso as the webhook docs example shows. With only the
-     * conversation location read, the guard silently never triggered — every
-     * saved contact looked like a stranger and got answered anyway.
-     */
-    public function test_a_saved_contact_is_not_answered_when_the_name_lives_under_message_kapso(): void
-    {
-        $this->fake($this->text('Hola'));
-        $this->provider();
-
-        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
-
-        $message = InboundMessage::fromDelivery([
-            'message' => [
-                'id' => 'wamid.real-shape',
-                'type' => 'text',
-                'from' => self::CLIENT,
-                'text' => ['body' => 'hola'],
-                'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api', 'contact_name' => 'Josean Sosa'],
-            ],
-            'conversation' => [
-                'id' => 'conv_1',
-                'phone_number' => self::CLIENT,
-                'phone_number_id' => self::PHONE_NUMBER_ID,
-            ],
-            'phone_number_id' => self::PHONE_NUMBER_ID,
-        ]);
-
-        $this->assertNotNull($message);
-        $this->runJob(new RespondToWhatsAppMessage($message));
-
-        $this->assertSame(0, $this->sentMessages());
-    }
-
-    /**
      * The other half of the guard: a stranger with no saved name is still a
-     * potential new client and must be answered normally.
+     * potential new client and must be answered normally. Kapso's default
+     * lookup response for someone it does not know carries no name at all.
      */
     public function test_a_stranger_with_no_saved_name_is_still_answered_on_a_guarded_number(): void
     {
@@ -159,19 +127,56 @@ class RespondToWhatsAppMessageTest extends TestCase
 
         config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
 
+        $this->runJob($this->job());
+
+        $this->assertSame(1, $this->sentMessages());
+    }
+
+    /**
+     * Kapso's fallback when nothing is saved: not a missing name, but the
+     * sender's own phone number echoed back as one (seen on Patricia's real
+     * conversations before this guard existed). That is not a real contact.
+     */
+    public function test_kapsos_bare_number_fallback_is_still_answered_on_a_guarded_number(): void
+    {
+        $this->fakeWithContactLookup(['kapso' => ['contact_name' => self::CLIENT]]);
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        $this->runJob($this->job());
+
+        $this->assertSame(1, $this->sentMessages());
+    }
+
+    /**
+     * An API hiccup on the lookup must not silence the assistant for a
+     * genuine new client — it falls back to answering, same as a stranger.
+     */
+    public function test_a_failed_contact_lookup_still_answers_rather_than_staying_silent(): void
+    {
+        Http::fake([
+            'api.kapso.ai/platform/v1/whatsapp/conversations/*' => Http::response('boom', 500),
+            'api.kapso.ai/platform/*' => Http::response(['data' => []]),
+            'api.kapso.ai/meta/*' => Http::response(['messages' => [['id' => 'wamid.out']]]),
+            'openrouter.ai/*' => Http::response($this->text('Hola')),
+        ]);
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        // Built without a contact_name, matching the real webhook delivery
+        // shape — job() carries one purely as legacy fixture data other
+        // tests still rely on and would make this case test nothing.
         $message = InboundMessage::fromDelivery([
             'message' => [
-                'id' => 'wamid.stranger',
+                'id' => 'wamid.lookup-failure',
                 'type' => 'text',
                 'from' => self::CLIENT,
                 'text' => ['body' => 'hola'],
                 'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api'],
             ],
-            'conversation' => [
-                'id' => 'conv_1',
-                'phone_number' => self::CLIENT,
-                'phone_number_id' => self::PHONE_NUMBER_ID,
-            ],
+            'conversation' => ['id' => 'conv_1', 'phone_number' => self::CLIENT, 'phone_number_id' => self::PHONE_NUMBER_ID],
             'phone_number_id' => self::PHONE_NUMBER_ID,
         ]);
 
@@ -182,37 +187,30 @@ class RespondToWhatsAppMessageTest extends TestCase
     }
 
     /**
-     * The shape Kapso actually sends for a stranger: not a missing
-     * contact_name, but the sender's own phone number echoed back as one.
+     * The lookup is scoped to the guarded number: every other message must
+     * not pay for an extra request it does not need.
      */
-    public function test_kapsos_bare_number_fallback_is_still_answered_on_a_guarded_number(): void
+    public function test_the_contact_lookup_is_never_made_for_a_number_without_the_guard(): void
     {
         $this->fake($this->text('Hola'));
         $this->provider();
 
-        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+        $this->runJob($this->job());
 
-        $message = InboundMessage::fromDelivery([
-            'message' => [
-                'id' => 'wamid.fallback-name',
-                'type' => 'text',
-                'from' => self::CLIENT,
-                'text' => ['body' => 'hola'],
-                'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api'],
-            ],
-            'conversation' => [
-                'id' => 'conv_1',
-                'phone_number' => self::CLIENT,
-                'phone_number_id' => self::PHONE_NUMBER_ID,
-                'kapso' => ['contact_name' => self::CLIENT],
-            ],
-            'phone_number_id' => self::PHONE_NUMBER_ID,
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/whatsapp/conversations/'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $conversationData
+     */
+    private function fakeWithContactLookup(array $conversationData): void
+    {
+        Http::fake([
+            'api.kapso.ai/platform/v1/whatsapp/conversations/*' => Http::response(['data' => $conversationData]),
+            'api.kapso.ai/platform/*' => Http::response(['data' => []]),
+            'api.kapso.ai/meta/*' => Http::response(['messages' => [['id' => 'wamid.out']]]),
+            'openrouter.ai/*' => Http::response($this->text('Hola')),
         ]);
-
-        $this->assertNotNull($message);
-        $this->runJob(new RespondToWhatsAppMessage($message));
-
-        $this->assertSame(1, $this->sentMessages());
     }
 
     public function test_a_message_without_a_phone_number_is_skipped_without_sending(): void

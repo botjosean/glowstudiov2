@@ -5,6 +5,7 @@ namespace Tests\Unit\Kapso;
 use App\Support\Kapso\KapsoClient;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Tests\TestCase;
 
 class KapsoClientTest extends TestCase
@@ -50,5 +51,43 @@ class KapsoClientTest extends TestCase
         $turns = (new KapsoClient)->recentMessages('conv_123', 8);
 
         $this->assertSame(['wamid.1', 'wamid.2'], array_column($turns, 'id'));
+    }
+
+    /**
+     * The webhook delivery never carries contact_name — confirmed against a
+     * live payload, where it was missing from both message.kapso and
+     * conversation.kapso — so ReplyPolicy's personal-contact guard has to
+     * ask for it directly instead.
+     */
+    public function test_it_asks_kapso_for_the_conversation_by_id(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['data' => ['kapso' => ['contact_name' => 'Josean Sosa']]])]);
+
+        (new KapsoClient)->contactNameFor('conv_123');
+
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.kapso.ai/platform/v1/whatsapp/conversations/conv_123');
+    }
+
+    public function test_it_extracts_the_contact_name_from_the_conversation(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['data' => ['kapso' => ['contact_name' => 'Josean Sosa']]])]);
+
+        $this->assertSame('Josean Sosa', (new KapsoClient)->contactNameFor('conv_123'));
+    }
+
+    public function test_it_returns_null_when_kapso_has_no_name_for_the_conversation(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['data' => ['kapso' => []]])]);
+
+        $this->assertNull((new KapsoClient)->contactNameFor('conv_123'));
+    }
+
+    public function test_it_throws_when_kapso_rejects_the_lookup(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response('boom', 500)]);
+
+        $this->expectException(RuntimeException::class);
+
+        (new KapsoClient)->contactNameFor('conv_123');
     }
 }

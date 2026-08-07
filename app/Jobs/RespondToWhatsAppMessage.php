@@ -78,7 +78,20 @@ class RespondToWhatsAppMessage implements ShouldQueue
         // sitting on the queue while the allowlist is being tightened would
         // otherwise still go out. The cost is one config read; the cost of being
         // wrong is a message on a real client's phone.
-        if (! $policy->allows($this->message->fromPhone, $this->message->phoneNumberId, $this->message->contactName)) {
+        //
+        // contactName is resolved fresh here rather than trusted from the
+        // webhook delivery: confirmed against a live payload that Kapso does
+        // not include it there at all (contrary to the webhook docs'
+        // example), only through this read call — so the personal-contact
+        // guard cannot work off the delivery alone. Scoped to the guarded
+        // number only, since every other message answers just as before
+        // with zero extra requests. A failed lookup falls back to the
+        // delivery's own value (normally null, i.e. "unknown") rather than
+        // holding up the reply — an API hiccup must not silence the
+        // assistant for a genuine new client.
+        $contactName = $this->resolvedContactName($kapso);
+
+        if (! $policy->allows($this->message->fromPhone, $this->message->phoneNumberId, $contactName)) {
             Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
                 'phone_number_id' => $this->message->phoneNumberId,
                 'policy' => $policy->describe(),
@@ -144,6 +157,32 @@ class RespondToWhatsAppMessage implements ShouldQueue
         }
 
         $this->send($kapso, $deduplicator, $reply);
+    }
+
+    /**
+     * The delivery's own contactName, unless this message is on the one
+     * number guarded for personal contacts — where it is always null (see
+     * handle()) and worth the extra request to get right.
+     */
+    private function resolvedContactName(KapsoClient $kapso): ?string
+    {
+        $guarded = config('services.kapso.personal_phone_number_id');
+        $onGuardedNumber = is_string($guarded) && trim($guarded) !== '' && trim($guarded) === $this->message->phoneNumberId;
+
+        if (! $onGuardedNumber || $this->message->conversationId === null) {
+            return $this->message->contactName;
+        }
+
+        try {
+            return $kapso->contactNameFor($this->message->conversationId);
+        } catch (\Throwable $exception) {
+            Log::warning('Could not resolve the contact name for the personal-contact guard; answering as if unknown.', [
+                'phone_number_id' => $this->message->phoneNumberId,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            return $this->message->contactName;
+        }
     }
 
     /**

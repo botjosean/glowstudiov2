@@ -109,6 +109,34 @@ class KapsoClient
         return array_reverse($turns);
     }
 
+    /**
+     * The contact name Kapso has resolved for a conversation, when it has
+     * one.
+     *
+     * The webhook delivery never carries this — confirmed against a live
+     * payload, where both message.kapso and conversation.kapso lacked the
+     * key entirely, unlike the webhook docs' example. Kapso resolves it
+     * later and only exposes it through this read endpoint, so a caller that
+     * needs it at reply time (see ReplyPolicy's personal-contact guard) has
+     * to ask for it directly rather than trust the delivery.
+     *
+     * @throws RuntimeException
+     */
+    public function contactNameFor(string $conversationId): ?string
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->get("{$base}/platform/v1/whatsapp/conversations/{$conversationId}");
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso returned HTTP {$response->status()} for a conversation lookup.");
+        }
+
+        $name = $response->json('data.kapso.contact_name');
+
+        return is_string($name) && $name !== '' ? $name : null;
+    }
+
     private function request(): PendingRequest
     {
         $apiKey = config('services.kapso.api_key');
