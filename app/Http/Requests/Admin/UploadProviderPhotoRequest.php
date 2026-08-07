@@ -30,7 +30,11 @@ class UploadProviderPhotoRequest extends FormRequest
             'photo' => [
                 'required',
                 // No SVG: File::image() excludes it by default (XSS risk).
-                File::image()->max(8 * 1024),
+                // 20 MB matches the server's own upload_max_filesize/post_max_size
+                // (php -i, verified) — a phone photo routinely lands well past the
+                // old 8 MB cap, and anything above this ceiling never reaches
+                // Laravel's validator anyway, PHP rejects it first.
+                File::image()->max(20 * 1024),
                 // A tiny compressed file can still decode into a huge
                 // bitmap (decompression bomb) — cap dimensions separately
                 // from the byte-size limit.
