@@ -94,6 +94,78 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * The gap a real conversation hit: a client asked "¿a dónde voy?" right
+     * after booking and the assistant had nothing, even though the profile
+     * panel already had an address saved — it was just never read into the
+     * prompt.
+     */
+    public function test_the_system_prompt_carries_the_studio_address_when_set(): void
+    {
+        $this->fakeGroq([$this->text('Hola')]);
+
+        $provider = $this->provider();
+        $provider->update(['address_line' => '123 Peachtree St, Atlanta, GA']);
+
+        $this->coordinator()->reply($this->message('hola'), $provider);
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $system = $request['messages'][0]['content'];
+
+            return str_contains($system, 'UBICACIÓN')
+                && str_contains($system, '123 Peachtree St, Atlanta, GA');
+        });
+    }
+
+    /**
+     * A mobile professional has no studio address at all — the assistant
+     * must say the service area, not a street that does not exist.
+     */
+    public function test_the_system_prompt_carries_the_service_area_for_mobile_providers(): void
+    {
+        $this->fakeGroq([$this->text('Hola')]);
+
+        $provider = $this->provider();
+        $provider->update(['is_mobile' => true, 'service_area' => 'Buckhead y Midtown', 'address_line' => null]);
+
+        $this->coordinator()->reply($this->message('hola'), $provider);
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $system = $request['messages'][0]['content'];
+
+            return str_contains($system, 'UBICACIÓN')
+                && str_contains($system, 'Buckhead y Midtown');
+        });
+    }
+
+    /**
+     * Neither field set (Vanessa's situation before she fills her profile):
+     * the section must not appear at all, rather than printing an empty
+     * "UBICACIÓN" heading with nothing under it.
+     */
+    public function test_the_system_prompt_omits_the_location_section_when_nothing_is_set(): void
+    {
+        $this->fakeGroq([$this->text('Hola')]);
+
+        $this->coordinator()->reply($this->message('hola'), $this->provider());
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            return ! str_contains($request['messages'][0]['content'], 'UBICACIÓN');
+        });
+    }
+
+    /**
      * A model that never stops calling tools must not hold a worker forever.
      */
     public function test_it_gives_up_after_the_iteration_limit(): void

@@ -39,6 +39,7 @@ class SystemPrompt
         return implode("\n\n", array_filter([
             $this->rules($provider),
             $this->catalogue($provider),
+            $this->location($provider),
             $this->ownerNotes(),
             // Last, and deliberately: this is the only part that changes, so
             // everything above it stays a cacheable prefix all day.
@@ -115,6 +116,29 @@ class SystemPrompt
         ))->implode("\n");
 
         return "SERVICIOS (usa el servicio_id al llamar a las herramientas)\n".$lines;
+    }
+
+    /**
+     * The location fields the profile panel already collects (`is_mobile`,
+     * `service_area`, `address_line` — same ones the public booking page
+     * shows). Added because a real conversation asked "¿a dónde voy?" right
+     * after booking and the assistant had nothing: the fields existed in the
+     * database and the panel, they were simply never read into the prompt.
+     *
+     * Null when nothing is set, same as ownerNotes() — the "don't invent, ask
+     * a human" rule already covers what this doesn't answer.
+     */
+    private function location(Provider $provider): ?string
+    {
+        if ($provider->is_mobile) {
+            return $provider->service_area === null
+                ? null
+                : "UBICACIÓN\nEste servicio es a domicilio, en la zona de: {$provider->service_area}.";
+        }
+
+        return $provider->address_line === null
+            ? null
+            : "UBICACIÓN\nLa dirección del salón es: {$provider->address_line}.";
     }
 
     /**
