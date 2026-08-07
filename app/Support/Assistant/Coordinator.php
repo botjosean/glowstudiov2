@@ -44,6 +44,28 @@ class Coordinator
      */
     private const DEFAULT_HANDOVER_MINUTES = 15;
 
+    /**
+     * The exact text RespondToWhatsAppMessage sends when the assistant could
+     * not answer. Recognising it in the client's own Kapso history is how the
+     * assistant knows it already gave up on this conversation, with no second
+     * table to keep in sync — Kapso already stores every message this app
+     * ever sent (see turns()).
+     */
+    public const WAIT_MESSAGE = 'Gracias por escribirnos. Ahora mismo no puedo responderte yo, pero ya avisé al salón y una persona te contesta en breve. 💛';
+
+    /**
+     * How long the assistant stays out of a conversation after telling a
+     * client "a person will answer you", when nothing is configured.
+     *
+     * Seen for real: the assistant failed once, sent the wait message, and
+     * the very next message from the same client hit the same failure again
+     * — two "no puedo responderte" in a row, which undermines the hand-off
+     * instead of honouring it. A client told a human is coming is expected to
+     * wait for that human (or write again later), not get answered by the
+     * same assistant that just said it couldn't.
+     */
+    private const DEFAULT_HANDOFF_PAUSE_MINUTES = 120;
+
     public function __construct(
         private readonly ChatModel $model,
         private readonly AssistantTools $tools,
@@ -65,6 +87,15 @@ class Coordinator
 
         if ($this->humanTookOver($turns)) {
             Log::info('A person from the salon answered by hand recently; staying quiet.', [
+                'phone_number_id' => $message->phoneNumberId,
+                'provider' => $provider->slug,
+            ]);
+
+            return null;
+        }
+
+        if ($this->recentlyHandedOff($turns)) {
+            Log::info('Already told this client a person would answer; staying quiet.', [
                 'phone_number_id' => $message->phoneNumberId,
                 'provider' => $provider->slug,
             ]);
@@ -163,6 +194,29 @@ class Coordinator
 
         foreach ($turns as $turn) {
             if ($turn['direction'] === 'outbound' && $turn['from'] !== '' && $turn['at'] >= $cutoff) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the assistant already told this client "a person will answer
+     * you" within the pause window. Matched on the exact wait-message text
+     * among this app's own outbound turns (empty `from`, see humanTookOver())
+     * so a professional's own reply from her phone never trips this.
+     *
+     * @param  list<array{id: string, direction: string, text: string, at: int, from: string}>  $turns
+     */
+    private function recentlyHandedOff(array $turns): bool
+    {
+        $minutes = (int) (config('services.assistant.handoff_pause_minutes') ?: self::DEFAULT_HANDOFF_PAUSE_MINUTES);
+
+        $cutoff = CarbonImmutable::now()->subMinutes($minutes)->getTimestamp();
+
+        foreach ($turns as $turn) {
+            if ($turn['direction'] === 'outbound' && $turn['at'] >= $cutoff && trim($turn['text']) === self::WAIT_MESSAGE) {
                 return true;
             }
         }

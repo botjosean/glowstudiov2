@@ -37,6 +37,10 @@ return [
         // answered by hand. Long enough for a real back-and-forth,
         // short enough that one stray message does not strand a client.
         'human_handover_minutes' => env('ASSISTANT_HUMAN_HANDOVER_MINUTES', 15),
+        // How long the assistant stays quiet after telling a client "a person
+        // will answer you" — trying again right away is what produced two
+        // wait messages in a row for a real client.
+        'handoff_pause_minutes' => env('ASSISTANT_HANDOFF_PAUSE_MINUTES', 120),
     ],
 
     'google' => [

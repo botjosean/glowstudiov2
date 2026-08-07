@@ -351,6 +351,42 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * The real failure this guards against: the assistant fails once, sends
+     * "no puedo responderte yo, ya avisé al salón", and the client's very
+     * next message must not hit the same failure again — two wait messages
+     * in a row undermines the hand-off instead of honouring it.
+     */
+    public function test_it_stays_quiet_after_recently_handing_off_to_a_person(): void
+    {
+        $this->fakeWithHistory([
+            ['id' => 'wamid.wait', 'text' => ['body' => Coordinator::WAIT_MESSAGE],
+                'timestamp' => (string) now()->subMinutes(10)->getTimestamp(),
+                'from' => '', 'kapso' => ['direction' => 'outbound']],
+        ]);
+
+        $this->assertNull($this->coordinator()->reply($this->message('hola'), $this->provider()));
+
+        // It did not even ask the model, so a client writing again while
+        // waiting does not cost anything either.
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'chat/completions'));
+    }
+
+    /**
+     * The pause has an end: a hand-off from hours ago must not mute the
+     * assistant on that number forever.
+     */
+    public function test_an_old_handoff_does_not_silence_it_forever(): void
+    {
+        $this->fakeWithHistory([
+            ['id' => 'wamid.wait', 'text' => ['body' => Coordinator::WAIT_MESSAGE],
+                'timestamp' => (string) now()->subHours(3)->getTimestamp(),
+                'from' => '', 'kapso' => ['direction' => 'outbound']],
+        ]);
+
+        $this->assertSame('Hola', $this->coordinator()->reply($this->message('hola'), $this->provider()));
+    }
+
+    /**
      * @param  list<array<mixed>>  $rows
      */
     private function fakeWithHistory(array $rows): void

@@ -230,6 +230,9 @@ class RespondToWhatsAppMessage implements ShouldQueue
 
     private function waitMessage(): string
     {
-        return 'Gracias por escribirnos. Ahora mismo no puedo responderte yo, pero ya avisé al salón y una persona te contesta en breve. 💛';
+        // Kept as one constant, not duplicated: Coordinator recognises this
+        // exact text in the client's own history to know it already handed
+        // this conversation off and pause instead of trying again.
+        return Coordinator::WAIT_MESSAGE;
     }
 }
