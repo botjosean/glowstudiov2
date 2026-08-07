@@ -122,7 +122,12 @@ final readonly class InboundMessage
             businessScopedUserId: self::stringOrNull(
                 $message['from_user_id'] ?? $conversation['business_scoped_user_id'] ?? null
             ),
-            contactName: self::stringOrNull($conversation['kapso']['contact_name'] ?? null),
+            // Confirmed against a real payload to live under message.kapso,
+            // not conversation.kapso as the webhook docs example shows — the
+            // conversation location is kept as a fallback rather than
+            // trusted alone, since this field going missing is not cosmetic
+            // any more: ReplyPolicy's personal-contact guard depends on it.
+            contactName: self::stringOrNull($message['kapso']['contact_name'] ?? $conversation['kapso']['contact_name'] ?? null),
             text: trim($text),
         );
     }

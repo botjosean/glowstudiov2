@@ -113,6 +113,42 @@ class RespondToWhatsAppMessageTest extends TestCase
     }
 
     /**
+     * The exact bug seen for real on Vanessa's number: a raw payload pulled
+     * from Kapso showed contact_name living under message.kapso, not
+     * conversation.kapso as the webhook docs example shows. With only the
+     * conversation location read, the guard silently never triggered — every
+     * saved contact looked like a stranger and got answered anyway.
+     */
+    public function test_a_saved_contact_is_not_answered_when_the_name_lives_under_message_kapso(): void
+    {
+        $this->fake($this->text('Hola'));
+        $this->provider();
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        $message = InboundMessage::fromDelivery([
+            'message' => [
+                'id' => 'wamid.real-shape',
+                'type' => 'text',
+                'from' => self::CLIENT,
+                'text' => ['body' => 'hola'],
+                'kapso' => ['direction' => 'inbound', 'origin' => 'cloud_api', 'contact_name' => 'Josean Sosa'],
+            ],
+            'conversation' => [
+                'id' => 'conv_1',
+                'phone_number' => self::CLIENT,
+                'phone_number_id' => self::PHONE_NUMBER_ID,
+            ],
+            'phone_number_id' => self::PHONE_NUMBER_ID,
+        ]);
+
+        $this->assertNotNull($message);
+        $this->runJob(new RespondToWhatsAppMessage($message));
+
+        $this->assertSame(0, $this->sentMessages());
+    }
+
+    /**
      * The other half of the guard: a stranger with no saved name is still a
      * potential new client and must be answered normally.
      */
