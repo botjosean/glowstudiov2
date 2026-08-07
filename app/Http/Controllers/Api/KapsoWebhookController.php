@@ -78,6 +78,25 @@ class KapsoWebhookController extends Controller
                 continue;
             }
 
+            // TEMP diagnostic, remove once confirmed: a real test on the
+            // guarded number still got answered after fixing the
+            // message.kapso vs conversation.kapso location, so something
+            // about the *live* webhook body — as opposed to the messages
+            // read API used to confirm that fix — may still differ. No
+            // client data logged, only which keys arrived.
+            if ($message->phoneNumberId === config('services.kapso.personal_phone_number_id')) {
+                $messageKapso = is_array($delivery['message']['kapso'] ?? null) ? $delivery['message']['kapso'] : [];
+                $conversationKapso = is_array($delivery['conversation']['kapso'] ?? null) ? $delivery['conversation']['kapso'] : [];
+
+                // info, not debug: LOG_LEVEL is info in production on purpose.
+                Log::info('TEMP diagnóstico: forma real de contact_name en el webhook.', [
+                    'parsed_contact_name_present' => $message->contactName !== null,
+                    'message_kapso_keys' => array_keys($messageKapso),
+                    'conversation_kapso_keys' => array_keys($conversationKapso),
+                    'is_batch' => $this->isBatch($request),
+                ]);
+            }
+
             // Checked before queueing, not inside the job: a message from
             // someone the assistant must not answer should leave no job, no
             // claim and no trace beyond the count reported here.
