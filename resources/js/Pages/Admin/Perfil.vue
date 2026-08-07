@@ -9,12 +9,14 @@ import Textarea from '../../Components/ui/Textarea.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import Collapse from '../../Components/ui/Collapse.vue';
+import PublicLinkCard from '../../Components/admin/PublicLinkCard.vue';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
     profile: { type: Object, required: true },
     // { username, publicName, phone, email, bio, isMobile, serviceArea, addressLine,
     //   bannerPhoto, avatarPhoto, gallery: [{ id, url }], maxGallery, published, activeServicesCount }
+    publicUrl: { type: String, required: true },
 });
 
 const { t } = useI18n();
@@ -121,9 +123,16 @@ function togglePublish(value) {
 }
 
 // Client-side size check is convenience only — instant feedback instead of
-// waiting out an 8MB upload just to get the same rejection from the
+// waiting out a large upload just to get the same rejection from the
 // server, which validates this regardless.
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+//
+// This MUST stay in step with UploadProviderPhotoRequest's File::image()->max()
+// — when the server cap moved to 20 MB and this one didn't, the browser
+// rejected 8-20 MB phone photos the server would have happily accepted, and
+// the error quoted a limit that was no longer real. The megabyte figure is
+// interpolated into the message from here so the two can't drift again.
+const MAX_UPLOAD_MB = 20;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 const avatarInput = ref(null);
 const bannerInput = ref(null);
@@ -133,16 +142,33 @@ const avatarForm = useForm({ photo: null });
 const bannerForm = useForm({ photo: null });
 const galleryForm = useForm({ photo: null });
 
+// The photo error renders as plain text with no dismiss button, and Inertia
+// keeps form errors around until the next submit — so a single rejection used
+// to sit on screen indefinitely, long after the provider had moved on. Expire
+// it on a timer the way FlashMessage already does for flash messages.
+const PHOTO_ERROR_TIMEOUT_MS = 6000;
+const photoErrorTimers = new WeakMap();
+
+function expirePhotoError(form) {
+    clearTimeout(photoErrorTimers.get(form));
+    photoErrorTimers.set(
+        form,
+        setTimeout(() => form.clearErrors('photo'), PHOTO_ERROR_TIMEOUT_MS),
+    );
+}
+
 function uploadPhoto(form, url) {
     return (event) => {
         const input = event.target;
         const file = input.files?.[0];
         if (!file) return;
 
+        clearTimeout(photoErrorTimers.get(form));
         form.clearErrors();
 
         if (file.size > MAX_UPLOAD_BYTES) {
-            form.setError('photo', t('admin.photoTooLarge'));
+            form.setError('photo', t('admin.photoTooLarge', { max: MAX_UPLOAD_MB }));
+            expirePhotoError(form);
             input.value = '';
             return;
         }
@@ -152,6 +178,9 @@ function uploadPhoto(form, url) {
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
+            // Server-side rejections (bad dimensions, unsupported type) land in
+            // the same slot and need the same expiry.
+            onError: () => expirePhotoError(form),
             onFinish: () => {
                 input.value = '';
             },
@@ -257,6 +286,8 @@ function confirmDeletePhoto() {
                 </h1>
                 <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
             </div>
+
+            <PublicLinkCard :url="publicUrl" :published="profile.published" />
 
             <Collapse
                 v-model="openSections.info"

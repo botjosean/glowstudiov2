@@ -40,22 +40,30 @@ class ServiceController extends Controller
     }
 
     /**
-     * service_type_id is deliberately left untouched here — re-deriving it
-     * from category on every edit would clobber a more specific type an
-     * existing service already carries (e.g. a seeded "Hot Towel Shave"
-     * service categorized as Beard but typed more specifically) just
-     * because the admin changed its price.
+     * service_type_id follows the category, but only when the category itself
+     * changed. Re-deriving it on every edit would clobber a more specific type
+     * an existing service already carries (e.g. a seeded "Hot Towel Shave"
+     * service categorized as Beard but typed more specifically) just because
+     * the admin corrected its price. Leaving it pinned across a genuine
+     * recategorisation is the worse failure though: a service moved to Nails
+     * would keep counting toward "Skin Fade" on the public Home page.
      */
     public function update(ServiceRequest $request, Service $service): RedirectResponse
     {
         $data = $request->validated();
 
-        $service->update([
+        $changes = [
             'name' => $data['name'],
             'duration_minutes' => $data['durationMinutes'],
             'price' => $data['price'],
             'category' => $data['category'],
-        ]);
+        ];
+
+        if ($service->category->value !== $data['category']) {
+            $changes['service_type_id'] = $this->serviceTypeIdFor($data['category']);
+        }
+
+        $service->update($changes);
 
         return to_route('admin.servicios')->with('success', 'admin.serviceUpdated');
     }
@@ -77,6 +85,12 @@ class ServiceController extends Controller
     private function serviceTypeIdFor(string $category): ?int
     {
         $slug = ServiceCategory::from($category)->defaultTypeSlug();
+
+        // Beauty categories map to no catalog type — the service simply stays
+        // typeless rather than borrowing an unrelated barbershop one.
+        if ($slug === null) {
+            return null;
+        }
 
         return ServiceType::where('slug', $slug)->value('id');
     }

@@ -1,12 +1,20 @@
 <script setup>
+import { computed } from 'vue';
 import { ChevronDown } from '@lucide/vue';
 
-defineProps({
+const props = defineProps({
     label: { type: String, default: '' },
-    options: { type: Array, default: () => [] }, // [{ value, label }]
+    // Either a flat [{ value, label }] list or a grouped
+    // [{ label, options: [{ value, label }] }] one. A group with an empty
+    // label renders its options bare, outside any <optgroup>.
+    options: { type: Array, default: () => [] },
 });
 
 const model = defineModel({ type: [String, Number], default: '' });
+
+const groups = computed(() => (props.options.some((option) => Array.isArray(option.options))
+    ? props.options
+    : [{ label: '', options: props.options }]));
 </script>
 
 <template>
@@ -19,7 +27,14 @@ const model = defineModel({ type: [String, Number], default: '' });
                 v-model="model"
                 class="w-full appearance-none rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 pr-10 text-[15px] font-normal text-[var(--text-strong)] focus:border-[var(--text-strong)] focus:outline-none"
             >
-                <option v-for="opt in options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                <template v-for="(group, index) in groups" :key="index">
+                    <optgroup v-if="group.label" :label="group.label">
+                        <option v-for="opt in group.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </optgroup>
+                    <template v-else>
+                        <option v-for="opt in group.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </template>
+                </template>
             </select>
             <ChevronDown
                 :size="16"

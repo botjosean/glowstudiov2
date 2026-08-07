@@ -149,6 +149,9 @@ class DashboardController extends Controller
                 'published' => $provider->published_at !== null,
                 'activeServicesCount' => $provider->services()->active()->count(),
             ],
+            // Same link the Inicio checklist shows — the profile page is where
+            // providers go looking for it when they want to send it to someone.
+            'publicUrl' => route('providers.show', $provider),
         ]);
     }
 

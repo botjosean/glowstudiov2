@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Public;
 
+use App\Enums\ServiceCategory;
 use App\Enums\ServiceIcon;
 use App\Models\Provider;
 use App\Models\ProviderPhoto;
@@ -44,10 +45,29 @@ class ProviderProfileTest extends TestCase
         );
     }
 
-    public function test_service_without_a_type_falls_back_to_the_scissors_icon(): void
+    public function test_service_icon_comes_from_its_category_not_its_catalog_type(): void
     {
+        // Profile.vue looks the icon name up in a map with no fallback, so a
+        // typeless service still has to resolve to a real one — and half the
+        // categories (the beauty ones) never get a catalog type at all.
         $provider = Provider::factory()->published()->create();
-        Service::factory()->for($provider)->create(['service_type_id' => null]);
+        Service::factory()->for($provider)->create([
+            'service_type_id' => null,
+            'category' => ServiceCategory::Nails,
+        ]);
+
+        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+            ->where('provider.services.0.icon', ServiceIcon::Gem->value)
+        );
+    }
+
+    public function test_a_barbershop_service_keeps_the_icon_it_had_before_the_category_move(): void
+    {
+        // Pins that routing icons through ServiceCategory reproduced what the
+        // matching ServiceTypes already carried — no live service changed
+        // appearance when the source of the icon moved.
+        $provider = Provider::factory()->published()->create();
+        Service::factory()->for($provider)->create(['category' => ServiceCategory::Fade]);
 
         $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->where('provider.services.0.icon', ServiceIcon::Scissors->value)

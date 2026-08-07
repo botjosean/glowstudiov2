@@ -1,8 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { Check, ChevronRight, CalendarDays, ExternalLink, MessageCircle } from '@lucide/vue';
+import { Check, ChevronRight, CalendarDays, MessageCircle } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
+import PublicLinkCard from '../../Components/admin/PublicLinkCard.vue';
 
 const props = defineProps({
     providerName: { type: String, required: true },
@@ -73,8 +74,6 @@ const botState = computed(() => {
     if (!props.checklist.published || !props.checklist.hasActiveServices) return 'blocked';
     return 'active';
 });
-
-const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
 </script>
 
 <template>
@@ -88,6 +87,14 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                     {{ allDone ? $t('inicio.readySubtitle') : $t('inicio.welcomeSubtitle') }}
                 </p>
             </div>
+
+            <!--
+                Once the checklist is all green it stops being the reason to
+                open this page, and the link the provider actually sends to
+                clients should be the first thing in reach. Until then the
+                setup steps stay on top and the link waits at the bottom.
+            -->
+            <PublicLinkCard v-if="allDone" :url="publicUrl" :published="checklist.published" />
 
             <div>
                 <div class="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-mute)]">
@@ -202,33 +209,7 @@ const publicPath = computed(() => props.publicUrl.replace(/^https?:\/\//, ''));
                 <ChevronRight :size="16" class="text-[var(--text-faint)]" />
             </Link>
 
-            <a
-                v-if="checklist.published"
-                :href="publicUrl"
-                target="_blank"
-                rel="noopener"
-                class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4 hover:bg-[var(--surface-mute)]"
-            >
-                <div class="min-w-0">
-                    <div class="text-[13px] font-medium text-[var(--text-mute)]">
-                        {{ $t('inicio.publicPageTitle') }}
-                    </div>
-                    <div class="mt-0.5 truncate text-[15px] font-semibold text-[var(--text-strong)]">{{ publicPath }}</div>
-                </div>
-                <span class="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-[var(--green-text)]">
-                    {{ $t('inicio.publicPageView') }}
-                    <ExternalLink :size="14" />
-                </span>
-            </a>
-            <div
-                v-else
-                class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4"
-            >
-                <div class="text-[13px] font-medium text-[var(--text-mute)]">
-                    {{ $t('inicio.publicPageTitle') }}
-                </div>
-                <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('inicio.publicPageHidden') }}</div>
-            </div>
+            <PublicLinkCard v-if="!allDone" :url="publicUrl" :published="checklist.published" />
         </div>
     </AdminLayout>
 </template>

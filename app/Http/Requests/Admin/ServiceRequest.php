@@ -31,7 +31,7 @@ class ServiceRequest extends FormRequest
             // max:80 mirrors string('name', 80); a 81-char name would 500 without this.
             'name' => ['required', 'string', 'min:2', 'max:80'],
             // between + multiple_of mirrors services_duration_chk exactly.
-            'durationMinutes' => ['required', 'integer', 'between:5,180', 'multiple_of:5'],
+            'durationMinutes' => ['required', 'integer', 'between:5,360', 'multiple_of:5'],
             'price' => ['required', 'integer', 'min:0', 'max:10000'],
             // Rule::enum mirrors services_category_chk.
             'category' => ['required', Rule::enum(ServiceCategory::class)],

@@ -77,13 +77,15 @@ class Service extends Model
     }
 
     /**
-     * A service without a catalog type (icon lives on ServiceType) falls
-     * back to the default icon rather than rendering nothing client-side.
+     * Driven by the category the provider picked, not by the catalog
+     * ServiceType: the category is the only one of the two they actually
+     * choose, and half the categories (the beauty ones) have no catalog type
+     * at all. Always resolves, so Profile.vue never renders a blank slot.
      */
     protected function icon(): Attribute
     {
         return Attribute::make(
-            get: fn (): ServiceIcon => $this->serviceType?->icon ?? ServiceIcon::default(),
+            get: fn (): ServiceIcon => $this->category->icon(),
         );
     }
 }

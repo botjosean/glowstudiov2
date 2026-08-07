@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\ServiceCategory;
+use App\Enums\ServiceIcon;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Models\ServiceType;
@@ -77,6 +79,53 @@ class ServiceManagementTest extends TestCase
         $this->assertSame($specificType->id, $service->fresh()->service_type_id);
     }
 
+    public function test_a_six_hour_service_is_accepted(): void
+    {
+        // 3 h was the old ceiling and a balayage already sat exactly on it;
+        // a keratin treatment or a full set of lash extensions runs past.
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/servicios', $this->validPayload(['durationMinutes' => 360]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(360, Service::sole()->duration_minutes);
+    }
+
+    public function test_a_beauty_category_is_accepted_and_stays_typeless(): void
+    {
+        $this->seed(ServiceTypeSeeder::class);
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/servicios', $this->validPayload(['name' => 'Acrylic nails', 'category' => 'nails']))
+            ->assertSessionHasNoErrors();
+
+        $service = Service::sole();
+        $this->assertSame(ServiceCategory::Nails, $service->category);
+        // The shipped catalog is barbershop-only; borrowing one of its types
+        // would make a nail service count toward it on the public Home page.
+        $this->assertNull($service->service_type_id);
+        $this->assertSame(ServiceIcon::Gem, $service->icon);
+    }
+
+    public function test_recategorising_moves_the_service_off_its_old_catalog_type(): void
+    {
+        $this->seed(ServiceTypeSeeder::class);
+        $provider = Provider::factory()->published()->create();
+        $skinFade = ServiceType::where('slug', 'skin-fade')->firstOrFail();
+        $service = Service::factory()->for($provider)->create([
+            'category' => 'fade',
+            'service_type_id' => $skinFade->id,
+        ]);
+
+        $this->actingAs($provider->user)
+            ->put("/admin/servicios/{$service->id}", $this->validPayload(['category' => 'nails']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($service->fresh()->service_type_id);
+    }
+
     public function test_deactivating_a_service(): void
     {
         $provider = Provider::factory()->published()->create();
@@ -107,7 +156,8 @@ class ServiceManagementTest extends TestCase
     public static function invalidPayloads(): iterable
     {
         yield 'duration not a multiple of 5' => [['durationMinutes' => 47], 'durationMinutes'];
-        yield 'duration over max' => [['durationMinutes' => 200], 'durationMinutes'];
+        // The ceiling moved from 3 h to 6 h, so 200 is a legal duration now.
+        yield 'duration over max' => [['durationMinutes' => 365], 'durationMinutes'];
         yield 'duration under min' => [['durationMinutes' => 4], 'durationMinutes'];
         yield 'unknown category' => [['category' => 'mohawk'], 'category'];
         yield 'negative price' => [['price' => -1], 'price'];

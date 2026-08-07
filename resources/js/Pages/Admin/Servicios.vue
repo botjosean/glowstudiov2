@@ -32,12 +32,17 @@ const form = useForm({
     name: '',
     durationMinutes: 45,
     price: 35,
-    category: 'fade',
+    category: 'other',
 });
+
+// "other" rather than a barbershop category: this form is used by nail techs
+// and stylists too, and defaulting them into "Fade" was the exact complaint
+// that started this work.
+const BLANK_SERVICE = { name: '', durationMinutes: 45, price: 35, category: 'other' };
 
 function openCreate() {
     sheetMode.value = 'create';
-    editingService.value = { name: '', durationMinutes: 45, price: 35, category: 'fade' };
+    editingService.value = { ...BLANK_SERVICE };
     form.clearErrors();
     sheetOpen.value = true;
 }
@@ -49,7 +54,7 @@ function openEdit(service) {
     sheetOpen.value = true;
 }
 
-function handleSave(values) {
+function handleSave(values, keepOpen = false) {
     form.name = values.name;
     form.durationMinutes = values.durationMinutes;
     form.price = values.price;
@@ -59,6 +64,18 @@ function handleSave(values) {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
+            if (keepOpen) {
+                // Hand the sheet a fresh draft rather than closing it. The name
+                // clears — every service needs its own — while duration, price
+                // and category carry over, because someone loading a batch is
+                // normally working through variations of the same thing. No
+                // returnToInicio() here: bouncing back to the checklist is the
+                // exact interruption this button exists to avoid.
+                editingService.value = { ...values, name: '' };
+
+                return;
+            }
+
             sheetOpen.value = false;
             if (sheetMode.value === 'create') {
                 returnToInicio();
