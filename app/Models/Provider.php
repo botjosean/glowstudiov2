@@ -78,6 +78,57 @@ class Provider extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    /**
+     * @return HasMany<ProviderBusinessHour, $this>
+     */
+    public function businessHours(): HasMany
+    {
+        return $this->hasMany(ProviderBusinessHour::class)->orderBy('weekday');
+    }
+
+    /**
+     * @return HasMany<ProviderTimeOff, $this>
+     */
+    public function timeOff(): HasMany
+    {
+        return $this->hasMany(ProviderTimeOff::class)->orderBy('starts_on');
+    }
+
+    /**
+     * The working window for a given local date, or null when the provider
+     * takes no appointments that day — either the weekday is closed or the
+     * date falls inside a time-off block.
+     *
+     * Falls back to the provider's own columns when no row exists for the
+     * weekday. That is not dead code: a provider created before its seven rows
+     * are written (or by a seeder that skips them) must keep its schedule
+     * rather than silently going dark on every day of the week.
+     *
+     * @return array{0: int, 1: int}|null [startMinute, endMinute]
+     */
+    public function workingWindowOn(CarbonImmutable $localDate): ?array
+    {
+        $date = $localDate->startOfDay();
+
+        $isOff = $this->relationLoaded('timeOff')
+            ? $this->timeOff->contains(fn (ProviderTimeOff $off) => $date->betweenIncluded($off->starts_on, $off->ends_on))
+            : $this->timeOff()->whereDate('starts_on', '<=', $date)->whereDate('ends_on', '>=', $date)->exists();
+
+        if ($isOff) {
+            return null;
+        }
+
+        $hours = $this->relationLoaded('businessHours')
+            ? $this->businessHours->firstWhere('weekday', $date->dayOfWeek)
+            : $this->businessHours()->where('weekday', $date->dayOfWeek)->first();
+
+        if ($hours === null) {
+            return [$this->work_start_minute, $this->work_end_minute];
+        }
+
+        return $hours->is_open ? [$hours->work_start_minute, $hours->work_end_minute] : null;
+    }
+
     #[Scope]
     protected function published(Builder $query): void
     {
@@ -97,5 +148,32 @@ class Provider extends Model
     public function currentTime(): CarbonImmutable
     {
         return CarbonImmutable::now($this->timezone);
+    }
+
+    /**
+     * Every new provider starts with all seven days open on the window its own
+     * columns carry, which is what the panel edits from. Done on the model
+     * rather than at the one registration call site so a provider created by a
+     * seeder, a factory or a future flow can never exist without a schedule.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (self $provider): void {
+            // The work columns carry database defaults, and registration
+            // creates a provider without naming them — so in memory they are
+            // still null here. Without this reload the seven rows are written
+            // with a null window, the insert fails, and the whole registration
+            // transaction rolls back.
+            $provider->refresh();
+
+            $provider->businessHours()->createMany(
+                array_map(fn (int $weekday) => [
+                    'weekday' => $weekday,
+                    'is_open' => true,
+                    'work_start_minute' => $provider->work_start_minute,
+                    'work_end_minute' => $provider->work_end_minute,
+                ], range(0, 6))
+            );
+        });
     }
 }

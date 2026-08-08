@@ -134,7 +134,12 @@ class ChatModel
                 throw AssistantUnavailable::transient('The model provider failed upstream: '.$error);
             }
 
-            throw AssistantUnavailable::permanent('The model returned no assistant message.');
+            // Same reasoning as the empty generation in Coordinator: a 200 with
+            // neither a message nor an error is far more often a provider blip
+            // than a response this parser will never understand, and the job's
+            // reply claim makes a wasted retry cost a minute rather than a
+            // duplicate message.
+            throw AssistantUnavailable::transient('The model returned no assistant message.');
         }
 
         return $message;

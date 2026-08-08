@@ -19,6 +19,11 @@ use Illuminate\Support\Collection;
  * which they do here. Both strategies need the same overlap filter, so the
  * grid is strictly more available without being more complex.
  *
+ * The working window comes from the provider's per-weekday schedule, and a
+ * closed weekday or a dated time-off block yields no slots at all. Because
+ * CreateAppointment revalidates through this same method inside its lock, a
+ * closed day is enforced on creation too — not merely hidden in the picker.
+ *
  * Not supported: overnight schedules (work_end < work_start).
  */
 class GenerateAvailableSlots
@@ -41,19 +46,33 @@ class GenerateAvailableSlots
     ): array {
         $duration = $service->duration_minutes;
         $buffer = $provider->buffer_minutes;
-        $workStart = $provider->work_start_minute;
-        $workEnd = $provider->work_end_minute;
         $lunchStart = $provider->lunch_start_minute;
         $lunchEnd = $provider->lunch_end_minute;
-
-        if ($workEnd <= $workStart || $workStart + $duration > $workEnd) {
-            return [];
-        }
 
         $localDate = $localDate->startOfDay();
         $today = $provider->currentTime()->startOfDay();
 
+        // The cheap rejections run before any schedule lookup: forMonth() calls
+        // this once per day, and resolving a window for a date already out of
+        // the horizon would be work thrown away thirty times over.
         if ($localDate->lt($today) || $localDate->gt($today->addDays(self::HORIZON_DAYS))) {
+            return [];
+        }
+
+        // Loaded once rather than per call — forMonth() would otherwise issue
+        // two queries for each of ~30 days to answer a single month view.
+        $provider->loadMissing(['businessHours', 'timeOff']);
+
+        $window = $provider->workingWindowOn($localDate);
+
+        // Closed weekday, or a day inside a holiday block.
+        if ($window === null) {
+            return [];
+        }
+
+        [$workStart, $workEnd] = $window;
+
+        if ($workEnd <= $workStart || $workStart + $duration > $workEnd) {
             return [];
         }
 

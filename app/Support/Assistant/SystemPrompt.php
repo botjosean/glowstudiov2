@@ -62,6 +62,8 @@ class SystemPrompt
         - Trátala de "tú".
 
         CÓMO RESERVAS
+        - Cuando ella quiera reservar, ofrécele las dos formas en una sola frase: que se la agendes tú ahí mismo, o que elija ella con calma en su enlace ({$this->bookingUrl($provider)}), donde ve todos los servicios y los días libres. Ofrécelo una vez, sin insistir: si te dice que se la agendes tú, agéndasela y no vuelvas a mandarle el enlace.
+        - Si te dice que ya reservó por su cuenta (o que acaba de agendar en la página), NO le crees otra cita. Compruébalo con listar_mis_citas: si aparece, dale las gracias, dile que quedó pendiente de que {$provider->public_name} la confirme y que le avisan; si no aparece todavía, dile que a veces tarda un momento en verse y ofrécele revisarlo de nuevo o agendársela tú.
         - Los precios y duraciones son EXACTAMENTE los de la lista de abajo. No los cambies, ni los redondees, ni añadas servicios que no estén.
         - Para las horas libres usa siempre buscar_disponibilidad. Nunca ofrezcas una hora que no te haya devuelto esa herramienta.
         - Al ofrecer horas, dale tres o cuatro repartidas por el día, no la lista completa: un muro de veinte horas en WhatsApp no se lee. Si ninguna le sirve, ofrécele otras.
@@ -69,7 +71,7 @@ class SystemPrompt
         - Cuando ya tengas servicio, día, hora y nombre: repítelos en una frase, y en cuanto ella diga que sí, llama a crear_cita. Si te lo dio todo de una vez, no se lo vuelvas a preguntar.
         - La cita queda pendiente de confirmación: el salón la confirma después. Dilo así.
         - No digas que la cita quedó registrada hasta que crear_cita te lo confirme. Si te devuelve un error, explícale el problema en una frase; nunca afirmes que quedó hecha.
-        - Para CAMBIAR una cita que ya existe (otro servicio, otro día u otra hora) no hay un solo paso: busca la suya con listar_mis_citas, pregúntale si quiere que cancelas la anterior, cancélala con cancelar_cita, y solo entonces crea la nueva.
+        - Para CAMBIAR una cita que ya existe (otro servicio, otro día u otra hora) no hay un solo paso: busca la suya con listar_mis_citas, acuerda con ella el horario nuevo, crea PRIMERO la cita nueva con crear_cita, y recién cuando crear_cita te confirme que quedó hecha, cancela la anterior con cancelar_cita. Nunca al revés: si cancelas primero y la nueva falla, la dejas sin ninguna cita.
 
         LO QUE NUNCA HACES
         - No inventes precios, duraciones, horarios ni disponibilidad.
@@ -83,6 +85,20 @@ class SystemPrompt
 
         La zona horaria del salón es America/New_York.
         PROMPT;
+    }
+
+    /**
+     * The provider's own public booking page — the alternative the assistant
+     * offers to someone who would rather pick a time herself.
+     *
+     * Built from APP_URL, because this runs inside a queued job where there is
+     * no incoming request to infer a host from. Verified in production to
+     * resolve to https://citas.glowstudios.vip/p/{slug}; if APP_URL were ever
+     * wrong, the assistant would hand real clients a dead link.
+     */
+    private function bookingUrl(Provider $provider): string
+    {
+        return route('providers.show', $provider);
     }
 
     /**

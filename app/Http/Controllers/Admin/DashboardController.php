@@ -39,6 +39,12 @@ class DashboardController extends Controller
             'checklist' => [
                 'profileComplete' => filled($provider->bio)
                     && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line)),
+                // The grid on the public profile is three across, so six is
+                // what makes it read as two full rows instead of a ragged one.
+                // Counted rather than booleaned so the step can say how many
+                // are still missing.
+                'photoCount' => $provider->photos()->count(),
+                'photosNeeded' => Provider::MAX_GALLERY_PHOTOS,
                 'hasActiveServices' => $provider->services()->active()->exists(),
                 'whatsappConnected' => $provider->whatsapp_phone_number_id !== null,
                 'published' => $provider->published_at !== null,
@@ -112,15 +118,34 @@ class DashboardController extends Controller
     {
         $provider = $request->user()->provider;
 
+        $provider->load(['businessHours', 'timeOff']);
+
         return Inertia::render('Admin/Horario', [
             'providerName' => $provider->public_name,
             'schedule' => [
-                'workStart' => $provider->work_start_minute,
-                'workEnd' => $provider->work_end_minute,
                 'lunchStart' => $provider->lunch_start_minute,
                 'lunchEnd' => $provider->lunch_end_minute,
                 'bufferMinutes' => $provider->buffer_minutes,
+                // Always seven, built from the range rather than from the rows,
+                // so a provider whose rows are somehow incomplete still gets a
+                // full week to edit instead of a form missing a day.
+                'days' => array_map(function (int $weekday) use ($provider) {
+                    $hours = $provider->businessHours->firstWhere('weekday', $weekday);
+
+                    return [
+                        'weekday' => $weekday,
+                        'isOpen' => $hours?->is_open ?? true,
+                        'workStart' => $hours?->work_start_minute ?? $provider->work_start_minute,
+                        'workEnd' => $hours?->work_end_minute ?? $provider->work_end_minute,
+                    ];
+                }, range(0, 6)),
             ],
+            'timeOff' => $provider->timeOff->map(fn ($off) => [
+                'id' => $off->id,
+                'startsOn' => $off->starts_on->toDateString(),
+                'endsOn' => $off->ends_on->toDateString(),
+                'reason' => $off->reason,
+            ])->values()->all(),
         ]);
     }
 

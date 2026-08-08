@@ -1,27 +1,25 @@
 <script setup>
-import { computed, onMounted } from 'vue';
-import { useForm } from '@inertiajs/vue3';
-import { Clock4, UtensilsCrossed, Timer, Info } from '@lucide/vue';
+import { computed, onMounted, ref } from 'vue';
+import { useForm, router } from '@inertiajs/vue3';
+import { Clock4, UtensilsCrossed, Timer, Info, CalendarOff, Plus, Trash2, OctagonX } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Select from '../../Components/ui/Select.vue';
+import Input from '../../Components/ui/Input.vue';
 import { useFormat } from '../../composables/useFormat';
+import { usePreferences } from '../../composables/usePreferences';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
-    schedule: {
-        type: Object,
-        default: () => ({
-            workStart: 9 * 60,
-            workEnd: 20 * 60,
-            lunchStart: 13 * 60,
-            lunchEnd: 14 * 60,
-            bufferMinutes: 15,
-        }),
-    },
+    schedule: { type: Object, required: true },
+    // { lunchStart, lunchEnd, bufferMinutes, days: [{ weekday, isOpen, workStart, workEnd }] }
+    timeOff: { type: Array, default: () => [] },
+    // [{ id, startsOn, endsOn, reason }]
 });
 
 const { formatTime, formatDuration } = useFormat();
+const { locale } = usePreferences();
+const { returnToInicio } = useOnboardingReturn();
 
 // The Inicio checklist's "review your schedule" step has no server-side
 // signal (defaults always exist), so opening this page is what completes it.
@@ -29,12 +27,26 @@ onMounted(() => {
     localStorage.setItem('glow:scheduleReviewed', '1');
 });
 
-const { returnToInicio } = useOnboardingReturn();
-
-const form = useForm({ ...props.schedule });
+const form = useForm({
+    lunchStart: props.schedule.lunchStart,
+    lunchEnd: props.schedule.lunchEnd,
+    bufferMinutes: props.schedule.bufferMinutes,
+    days: props.schedule.days.map((day) => ({ ...day })),
+});
 
 function submit() {
     form.put('/admin/horario', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
+}
+
+/**
+ * Day names come from the platform rather than from fourteen translation keys,
+ * so they follow whatever language the panel is in without a second list to
+ * keep in step. 2026-08-09 is a Sunday, which makes weekday 0 land on Sunday
+ * exactly as Carbon numbers it server-side.
+ */
+function dayName(weekday) {
+    return new Date(Date.UTC(2026, 7, 9 + weekday))
+        .toLocaleDateString(locale.value === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', timeZone: 'UTC' });
 }
 
 const timeOptions = computed(() =>
@@ -51,10 +63,70 @@ const bufferOptions = computed(() =>
     })),
 );
 
-const workStartLabel = computed(() => formatTime(Math.floor(form.workStart / 60), form.workStart % 60));
-const workEndLabel = computed(() => formatTime(Math.floor(form.workEnd / 60), form.workEnd % 60));
-const lunchStartLabel = computed(() => formatTime(Math.floor(form.lunchStart / 60), form.lunchStart % 60));
-const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), form.lunchEnd % 60));
+const label = (minutes) => formatTime(Math.floor(minutes / 60), minutes % 60);
+
+const openDays = computed(() => form.days.filter((day) => day.isOpen));
+
+/** Editing the same two selects seven times is the slowest part of this page. */
+function applyFirstOpenDayToAll() {
+    const source = openDays.value[0];
+    if (!source) return;
+
+    form.days.forEach((day) => {
+        if (day.isOpen) {
+            day.workStart = source.workStart;
+            day.workEnd = source.workEnd;
+        }
+    });
+}
+
+const scheduleError = computed(() => {
+    const keys = Object.keys(form.errors).filter((key) => key.startsWith('days') || key.startsWith('lunch') || key.startsWith('buffer'));
+    return keys.length ? form.errors[keys[0]] : '';
+});
+
+// ------------------------------------------------------- parar la agenda
+const pausing = ref(false);
+
+/** Las fechas las decide el servidor, con el reloj del salón, no el del navegador. */
+function pauseAgenda(days) {
+    pausing.value = true;
+    router.post('/admin/horario/parar', { days }, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => { pausing.value = false; },
+    });
+}
+
+// ------------------------------------------------------------ time off
+const timeOffForm = useForm({ startsOn: '', endsOn: '', reason: '' });
+const removing = ref(null);
+
+function addTimeOff() {
+    timeOffForm.post('/admin/horario/ausencias', {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => timeOffForm.reset(),
+    });
+}
+
+function removeTimeOff(id) {
+    removing.value = id;
+    router.delete(`/admin/horario/ausencias/${id}`, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => { removing.value = null; },
+    });
+}
+
+function timeOffLabel(off) {
+    const format = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(
+        locale.value === 'es' ? 'es-ES' : 'en-US',
+        { day: 'numeric', month: 'short' },
+    );
+
+    return off.startsOn === off.endsOn ? format(off.startsOn) : `${format(off.startsOn)} – ${format(off.endsOn)}`;
+}
 </script>
 
 <template>
@@ -69,20 +141,93 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
                 </p>
             </div>
 
+            <!--
+                Deliberately the first thing on the page: when this is needed
+                it is needed in seconds, from a phone, probably while something
+                has already gone wrong.
+            -->
+            <div class="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-hover)] p-4">
+                <div class="mb-3 flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--danger-border)]">
+                        <OctagonX :size="16" class="text-[var(--danger)]" />
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.agendaPauseTitle') }}</div>
+                        <div class="text-[12px] font-normal leading-relaxed text-[var(--text-mute)]">{{ $t('admin.agendaPauseHint') }}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button
+                        type="button"
+                        :disabled="pausing"
+                        class="rounded-xl border border-[var(--danger-border)] bg-[var(--surface)] py-3 text-[14px] font-semibold text-[var(--danger)] disabled:opacity-50"
+                        @click="pauseAgenda(1)"
+                    >
+                        {{ $t('admin.agendaPauseToday') }}
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="pausing"
+                        class="rounded-xl border border-[var(--danger-border)] bg-[var(--surface)] py-3 text-[14px] font-semibold text-[var(--danger)] disabled:opacity-50"
+                        @click="pauseAgenda(2)"
+                    >
+                        {{ $t('admin.agendaPauseTomorrow') }}
+                    </button>
+                </div>
+            </div>
+
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
                 <div class="mb-3 flex items-center gap-2.5">
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--chip-bg)]">
                         <Clock4 :size="16" class="text-[var(--chip-fg)]" />
                     </div>
-                    <div>
-                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.workday') }}</div>
-                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.workdayHint') }}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.workdays') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.workdaysHint') }}</div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <Select v-model="form.workStart" :label="$t('admin.startTime')" :options="timeOptions" />
-                    <Select v-model="form.workEnd" :label="$t('admin.endTime')" :options="timeOptions" />
+
+                <div class="flex flex-col divide-y divide-[var(--surface-mute)]">
+                    <div v-for="day in form.days" :key="day.weekday" class="py-3 first:pt-0 last:pb-0">
+                        <div class="flex items-center justify-between gap-3">
+                            <span
+                                class="text-[15px] capitalize"
+                                :class="day.isOpen ? 'font-semibold text-[var(--text-strong)]' : 'font-medium text-[var(--text-faint)]'"
+                                >{{ dayName(day.weekday) }}</span
+                            >
+                            <button
+                                type="button"
+                                role="switch"
+                                :aria-checked="day.isOpen"
+                                :aria-label="dayName(day.weekday)"
+                                class="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+                                :class="day.isOpen ? 'bg-[var(--btn-green)]' : 'bg-[var(--border-strong)]'"
+                                @click="day.isOpen = !day.isOpen"
+                            >
+                                <span
+                                    class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
+                                    :class="day.isOpen ? 'left-6' : 'left-1'"
+                                />
+                            </button>
+                        </div>
+                        <div v-if="day.isOpen" class="mt-2.5 grid grid-cols-2 gap-3">
+                            <Select v-model="day.workStart" :label="$t('admin.startTime')" :options="timeOptions" />
+                            <Select v-model="day.workEnd" :label="$t('admin.endTime')" :options="timeOptions" />
+                        </div>
+                        <div v-else class="mt-1 text-[13px] font-normal text-[var(--text-faint)]">
+                            {{ $t('admin.dayClosed') }}
+                        </div>
+                    </div>
                 </div>
+
+                <button
+                    v-if="openDays.length > 1"
+                    type="button"
+                    class="mt-3 w-full rounded-xl border border-[var(--border-strong)] py-2.5 text-[13px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
+                    @click="applyFirstOpenDayToAll"
+                >
+                    {{ $t('admin.applyToAllDays', { hours: `${label(openDays[0].workStart)} – ${label(openDays[0].workEnd)}` }) }}
+                </button>
             </div>
 
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
@@ -117,22 +262,19 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
             <div class="flex items-start gap-2.5 rounded-2xl border border-[var(--green-border)] bg-[var(--green-soft)] p-4">
                 <Info :size="16" class="mt-0.5 shrink-0 text-[var(--green-text)]" />
                 <div class="text-[13px] font-normal leading-relaxed text-[var(--green-deep)]">
-                    {{ $t('admin.scheduleSummaryPrefix') }}
-                    <span class="font-bold">{{ workStartLabel }} {{ $t('admin.to') }} {{ workEndLabel }}</span
-                    >, {{ $t('admin.scheduleSummaryLunch') }}
-                    <span class="font-bold">{{ lunchStartLabel }} {{ $t('admin.to') }} {{ lunchEndLabel }}</span>
-                    {{ $t('admin.scheduleSummaryAnd') }}
-                    <span class="font-bold">{{ formatDuration(form.bufferMinutes) }}</span>
-                    {{ $t('admin.scheduleSummaryBetween') }}
+                    <template v-if="openDays.length === 0">{{ $t('admin.scheduleSummaryClosed') }}</template>
+                    <template v-else>
+                        {{ $t('admin.scheduleSummaryDays', { days: openDays.length }) }},
+                        {{ $t('admin.scheduleSummaryLunch') }}
+                        <span class="font-bold">{{ label(form.lunchStart) }} {{ $t('admin.to') }} {{ label(form.lunchEnd) }}</span>
+                        {{ $t('admin.scheduleSummaryAnd') }}
+                        <span class="font-bold">{{ formatDuration(form.bufferMinutes) }}</span>
+                        {{ $t('admin.scheduleSummaryBetween') }}
+                    </template>
                 </div>
             </div>
 
-            <p
-                v-if="form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes"
-                class="text-[13px] font-normal text-[var(--danger)]"
-            >
-                {{ form.errors.workStart || form.errors.workEnd || form.errors.lunchStart || form.errors.lunchEnd || form.errors.bufferMinutes }}
-            </p>
+            <p v-if="scheduleError" class="text-[13px] font-normal text-[var(--danger)]">{{ scheduleError }}</p>
 
             <button
                 type="button"
@@ -142,6 +284,77 @@ const lunchEndLabel = computed(() => formatTime(Math.floor(form.lunchEnd / 60), 
             >
                 {{ form.processing ? $t('common.saving') : $t('admin.saveChanges') }}
             </button>
+
+            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
+                <div class="mb-3 flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--amber-soft)]">
+                        <CalendarOff :size="16" class="text-[var(--amber-text)]" />
+                    </div>
+                    <div>
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.timeOffTitle') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.timeOffHint') }}</div>
+                    </div>
+                </div>
+
+                <div v-if="timeOff.length" class="mb-3 flex flex-col gap-2">
+                    <div
+                        v-for="off in timeOff"
+                        :key="off.id"
+                        class="flex items-center justify-between gap-3 rounded-xl border border-[var(--surface-mute)] bg-[var(--surface)] px-3 py-2.5"
+                    >
+                        <div class="min-w-0">
+                            <div class="text-[14px] font-semibold text-[var(--text-strong)]">{{ timeOffLabel(off) }}</div>
+                            <div v-if="off.reason" class="truncate text-[12px] font-normal text-[var(--text-mute)]">{{ off.reason }}</div>
+                        </div>
+                        <button
+                            type="button"
+                            :disabled="removing === off.id"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--surface-mute)] disabled:opacity-50"
+                            :aria-label="$t('admin.timeOffRemove')"
+                            @click="removeTimeOff(off.id)"
+                        >
+                            <Trash2 :size="14" class="text-[var(--danger)]" />
+                        </button>
+                    </div>
+                </div>
+                <p v-else class="mb-3 text-[13px] font-normal text-[var(--text-faint)]">{{ $t('admin.timeOffEmpty') }}</p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex flex-col gap-2">
+                        <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.timeOffFrom') }}</span>
+                        <input
+                            v-model="timeOffForm.startsOn"
+                            type="date"
+                            class="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[15px] text-[var(--text-strong)] focus:border-[var(--text-strong)] focus:outline-none"
+                        />
+                    </label>
+                    <label class="flex flex-col gap-2">
+                        <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.timeOffTo') }}</span>
+                        <input
+                            v-model="timeOffForm.endsOn"
+                            type="date"
+                            class="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[15px] text-[var(--text-strong)] focus:border-[var(--text-strong)] focus:outline-none"
+                        />
+                    </label>
+                </div>
+                <div class="mt-3">
+                    <Input v-model="timeOffForm.reason" :label="$t('admin.timeOffReason')" :placeholder="$t('admin.timeOffReasonPlaceholder')" />
+                </div>
+
+                <p v-if="timeOffForm.errors.startsOn || timeOffForm.errors.endsOn" class="mt-2 text-[13px] font-normal text-[var(--danger)]">
+                    {{ timeOffForm.errors.startsOn || timeOffForm.errors.endsOn }}
+                </p>
+
+                <button
+                    type="button"
+                    :disabled="timeOffForm.processing || !timeOffForm.startsOn || !timeOffForm.endsOn"
+                    class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-50"
+                    @click="addTimeOff"
+                >
+                    <Plus :size="15" />
+                    {{ timeOffForm.processing ? $t('common.saving') : $t('admin.timeOffAdd') }}
+                </button>
+            </div>
         </div>
     </AdminLayout>
 </template>

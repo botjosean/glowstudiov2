@@ -21,7 +21,7 @@ class StoreProviderImage
     {
         $image = ImageManager::imagick()
             ->read($file->getPathname())
-            ->cover($variant->width(), $variant->height());
+            ->cover($variant->width(), $variant->height(), $variant->cropPosition());
 
         $encoded = $image->toWebp(quality: 82);
 

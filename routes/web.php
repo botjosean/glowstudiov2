@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AppointmentStatusController;
+use App\Http\Controllers\Admin\BioSuggestionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ProfilePhotoController;
@@ -80,9 +81,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
 
     Route::get('/horario', [DashboardController::class, 'horario'])->name('horario');
     Route::put('/horario', [ScheduleController::class, 'update'])->name('horario.update');
+    // Time off carries an {id} but no ->can(): the controller resolves it
+    // through the caller's own provider, so another provider's block is a 404
+    // rather than a 403 and cannot be probed for.
+    Route::post('/horario/parar', [ScheduleController::class, 'pause'])->name('horario.parar');
+    Route::post('/horario/ausencias', [ScheduleController::class, 'storeTimeOff'])->name('horario.ausencias.store');
+    Route::delete('/horario/ausencias/{timeOff}', [ScheduleController::class, 'destroyTimeOff'])
+        ->whereNumber('timeOff')->name('horario.ausencias.destroy');
 
     Route::get('/perfil', [DashboardController::class, 'perfil'])->name('perfil');
     Route::put('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
+    // Throttled because every call costs a model request: a suggestion is a
+    // convenience, not something worth letting one account hammer.
+    Route::post('/perfil/biografia', BioSuggestionController::class)
+        ->middleware('throttle:10,1')->name('perfil.biografia');
     Route::patch('/perfil/publicacion', [ProfileController::class, 'updatePublication'])->name('perfil.publication');
 
     // POST, not PUT/PATCH: Inertia can't send files over PUT/PATCH — it

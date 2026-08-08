@@ -121,7 +121,13 @@ class Coordinator
                 $answer = trim((string) ($assistant['content'] ?? ''));
 
                 if ($answer === '') {
-                    throw AssistantUnavailable::permanent('The model answered with neither text nor a tool call.');
+                    // Transient, not permanent: an empty generation is the one
+                    // failure that reliably clears on a second attempt, and
+                    // treating it as final sent a client to a human on the
+                    // model's first bad roll. The retry is free of the usual
+                    // danger — RespondToWhatsAppMessage claims the reply scope
+                    // before sending, so a re-run cannot deliver twice.
+                    throw AssistantUnavailable::transient('The model answered with neither text nor a tool call.');
                 }
 
                 return $answer;

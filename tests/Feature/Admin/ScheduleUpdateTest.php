@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Actions\Booking\GenerateAvailableSlots;
 use App\Models\Appointment;
 use App\Models\Provider;
 use App\Models\Service;
@@ -14,11 +15,23 @@ class ScheduleUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * All seven days always travel together. The workStart/workEnd shortcut
+     * applies one window to every day so the cases below stay readable.
+     */
     private function validPayload(array $overrides = []): array
     {
+        $workStart = $overrides['workStart'] ?? 540;
+        $workEnd = $overrides['workEnd'] ?? 1200;
+        unset($overrides['workStart'], $overrides['workEnd']);
+
         return array_merge([
-            'workStart' => 540,
-            'workEnd' => 1200,
+            'days' => array_map(fn (int $weekday) => [
+                'weekday' => $weekday,
+                'isOpen' => true,
+                'workStart' => $workStart,
+                'workEnd' => $workEnd,
+            ], range(0, 6)),
             'lunchStart' => 780,
             'lunchEnd' => 840,
             'bufferMinutes' => 15,
@@ -104,6 +117,78 @@ class ScheduleUpdateTest extends TestCase
         ]));
 
         $this->assertNull(session('warning'));
+    }
+
+    public function test_closing_a_weekday_removes_its_slots(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-01 00:00:00', 'America/New_York'));
+
+        $provider = Provider::factory()->withSchedule(540, 1200, 0, 0, 15)->published()->create();
+        $service = Service::factory()->for($provider)->create(['duration_minutes' => 60]);
+        $sunday = CarbonImmutable::parse('2026-08-09'); // a Sunday
+
+        $slots = app(GenerateAvailableSlots::class);
+        $this->assertNotEmpty($slots->handle($provider, $service, $sunday));
+
+        $days = array_map(fn (int $weekday) => [
+            'weekday' => $weekday,
+            'isOpen' => $weekday !== 0, // 0 is Sunday, in Carbon's numbering
+            'workStart' => 540,
+            'workEnd' => 1200,
+        ], range(0, 6));
+
+        $this->actingAs($provider->user)
+            ->put('/admin/horario', $this->validPayload(['days' => $days]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([], $slots->handle($provider->fresh(), $service, $sunday));
+        $this->assertNotEmpty($slots->handle($provider->fresh(), $service, $sunday->addDay()));
+    }
+
+    public function test_blocked_dates_take_the_whole_range_off_the_calendar(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-01 00:00:00', 'America/New_York'));
+
+        $provider = Provider::factory()->withSchedule(540, 1200, 0, 0, 15)->published()->create();
+        $service = Service::factory()->for($provider)->create(['duration_minutes' => 60]);
+        $slots = app(GenerateAvailableSlots::class);
+
+        $this->actingAs($provider->user)->post('/admin/horario/ausencias', [
+            'startsOn' => '2026-08-10',
+            'endsOn' => '2026-08-12',
+            'reason' => 'Vacaciones',
+        ])->assertSessionHasNoErrors();
+
+        foreach (['2026-08-10', '2026-08-11', '2026-08-12'] as $blocked) {
+            $this->assertSame([], $slots->handle($provider->fresh(), $service, CarbonImmutable::parse($blocked)), $blocked);
+        }
+
+        // The days on either side of the block are untouched.
+        $this->assertNotEmpty($slots->handle($provider->fresh(), $service, CarbonImmutable::parse('2026-08-13')));
+    }
+
+    public function test_a_provider_cannot_delete_another_providers_blocked_dates(): void
+    {
+        $mine = Provider::factory()->published()->create();
+        $theirs = Provider::factory()->published()->create();
+        $block = $theirs->timeOff()->create(['starts_on' => '2026-09-01', 'ends_on' => '2026-09-05']);
+
+        // 404, not 403: a block that isn't yours must be indistinguishable from
+        // one that never existed, or the ids can be probed.
+        $this->actingAs($mine->user)
+            ->delete("/admin/horario/ausencias/{$block->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('provider_time_off', ['id' => $block->id]);
+    }
+
+    public function test_a_new_provider_starts_with_all_seven_days_open(): void
+    {
+        $provider = Provider::factory()->withSchedule(600, 1080, 0, 0, 15)->create();
+
+        $this->assertCount(7, $provider->businessHours);
+        $this->assertTrue($provider->businessHours->every(fn ($day) => $day->is_open));
+        $this->assertTrue($provider->businessHours->every(fn ($day) => $day->work_start_minute === 600));
     }
 
     public function test_a_provider_cannot_change_another_providers_schedule(): void

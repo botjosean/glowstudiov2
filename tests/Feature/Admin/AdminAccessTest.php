@@ -80,7 +80,7 @@ class AdminAccessTest extends TestCase
         Provider::factory()->withSchedule(0, 1440, 0, 0, 0)->published()->create();
 
         $this->actingAs($mine->user)->get('/admin/horario')->assertInertia(
-            fn ($page) => $page->where('schedule.workStart', 600)->where('schedule.bufferMinutes', 30)
+            fn ($page) => $page->where('schedule.days.0.workStart', 600)->where('schedule.bufferMinutes', 30)
         );
     }
 }

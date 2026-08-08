@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
-import { Camera, Ban, Plus } from '@lucide/vue';
+import { Camera, Ban, Plus, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Input from '../../Components/ui/Input.vue';
@@ -10,6 +10,7 @@ import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import Collapse from '../../Components/ui/Collapse.vue';
 import PublicLinkCard from '../../Components/admin/PublicLinkCard.vue';
+import BioSuggesterSheet from '../../Components/admin/BioSuggesterSheet.vue';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 const props = defineProps({
@@ -42,16 +43,19 @@ function submit() {
 const sectionDone = computed(() => ({
     info: Boolean(props.profile.publicName) && Boolean(props.profile.bio),
     ubicacion: Boolean(props.profile.isMobile ? props.profile.serviceArea : props.profile.addressLine),
-    fotos: props.profile.gallery.length > 0,
+    fotos: props.profile.gallery.length >= props.profile.maxGallery,
     publicacion: props.profile.published,
 }));
 
 const page = usePage();
 
 function initialOpenSection() {
-    if (page.url.includes('abrir=publicacion')) return 'publicacion';
     const order = ['info', 'ubicacion', 'fotos', 'publicacion'];
-    return order.find((key) => !sectionDone.value[key]) ?? null;
+    // ?abrir=<seccion> gana sobre "la primera incompleta": el checklist manda
+    // a la persona a una sección concreta y abrirle otra sería desorientarla.
+    const asked = order.find((key) => page.url.includes(`abrir=${key}`));
+
+    return asked ?? order.find((key) => !sectionDone.value[key]) ?? null;
 }
 
 const openSections = reactive({
@@ -192,6 +196,8 @@ const onAvatarSelected = uploadPhoto(avatarForm, '/admin/perfil/avatar');
 const onBannerSelected = uploadPhoto(bannerForm, '/admin/perfil/portada');
 const onGallerySelected = uploadPhoto(galleryForm, '/admin/perfil/galeria');
 
+const bioSheetOpen = ref(false);
+
 const deleteConfirmOpen = ref(false);
 const deleteProcessing = ref(false);
 const photoToDelete = ref(null);
@@ -314,6 +320,14 @@ function confirmDeletePhoto() {
                     </div>
                     <div>
                         <Textarea v-model="form.bio" :label="$t('admin.bio')" :rows="4" />
+                        <button
+                            type="button"
+                            class="mt-2 flex items-center gap-1.5 rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[13px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
+                            @click="bioSheetOpen = true"
+                        >
+                            <Sparkles :size="14" />
+                            {{ form.bio ? $t('admin.bioAiRedo') : $t('admin.bioAiCta') }}
+                        </button>
                         <p v-if="form.errors.bio" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.bio }}</p>
                     </div>
                 </div>
@@ -439,5 +453,6 @@ function confirmDeletePhoto() {
             variant="danger"
             @confirm="confirmDeletePhoto"
         />
+        <BioSuggesterSheet v-model="bioSheetOpen" @use="(text) => { form.bio = text; }" />
     </AdminLayout>
 </template>

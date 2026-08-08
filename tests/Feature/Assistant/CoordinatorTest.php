@@ -218,6 +218,45 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * An empty generation was terminal, so the model's first bad roll sent the
+     * client to a human. It clears on a second attempt far more often than not,
+     * and RespondToWhatsAppMessage claims the reply scope before sending, so
+     * the retry cannot deliver the same answer twice.
+     */
+    public function test_an_empty_generation_is_retryable(): void
+    {
+        Http::fake([
+            'api.kapso.ai/*' => Http::response(['data' => []]),
+            'openrouter.ai/*' => Http::response([
+                'choices' => [['message' => ['role' => 'assistant', 'content' => '']]],
+            ]),
+        ]);
+
+        try {
+            $this->coordinator()->reply($this->message('hola'), $this->provider());
+            $this->fail('Expected the empty generation to surface.');
+        } catch (AssistantUnavailable $exception) {
+            $this->assertTrue($exception->retryable);
+        }
+    }
+
+    /** A 200 carrying neither a message nor an error is a provider blip, not a shape this parser will never learn. */
+    public function test_a_200_with_no_message_is_retryable(): void
+    {
+        Http::fake([
+            'api.kapso.ai/*' => Http::response(['data' => []]),
+            'openrouter.ai/*' => Http::response(['choices' => []]),
+        ]);
+
+        try {
+            $this->coordinator()->reply($this->message('hola'), $this->provider());
+            $this->fail('Expected the malformed body to surface.');
+        } catch (AssistantUnavailable $exception) {
+            $this->assertTrue($exception->retryable);
+        }
+    }
+
+    /**
      * History is a convenience, not a dependency: Kapso being unreachable must
      * not cost the client an answer.
      */

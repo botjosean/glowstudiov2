@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { Check, ChevronRight, CalendarDays, MessageCircle } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import PublicLinkCard from '../../Components/admin/PublicLinkCard.vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
     providerName: { type: String, required: true },
@@ -14,6 +15,8 @@ const props = defineProps({
     summary: { type: Object, required: true },
     // { todayCount, pendingCount }
 });
+
+const { t } = useI18n();
 
 // "Reviewed the schedule" has no server-side signal (the schedule always
 // exists, with defaults) — a local mark set by the Horario page is the only
@@ -28,6 +31,19 @@ const steps = computed(() => [
         titleKey: 'inicio.stepProfile',
         hintKey: 'inicio.stepProfileHint',
         href: '/admin/perfil?desde=inicio',
+    },
+    {
+        // Its own step, not folded into "complete your profile": a half-filled
+        // photo grid is the difference between a page that looks like a
+        // business and one that looks abandoned, and it needs to be asked for
+        // explicitly or nobody finishes it.
+        key: 'photos',
+        done: props.checklist.photoCount >= props.checklist.photosNeeded,
+        titleKey: 'inicio.stepPhotos',
+        hint: props.checklist.photoCount === 0
+            ? t('inicio.stepPhotosHint', { total: props.checklist.photosNeeded })
+            : t('inicio.stepPhotosMissing', { missing: props.checklist.photosNeeded - props.checklist.photoCount }),
+        href: '/admin/perfil?desde=inicio&abrir=fotos',
     },
     {
         key: 'services',
@@ -132,8 +148,8 @@ const botState = computed(() => {
                             :class="step.done ? 'font-semibold text-[var(--text-mute)]' : 'font-bold text-[var(--text-strong)]'"
                             >{{ $t(step.titleKey) }}</span
                         >
-                        <span v-if="step.hintKey && !step.done" class="mt-0.5 block text-[12px] font-normal text-[var(--text-faint)]">{{
-                            $t(step.hintKey)
+                        <span v-if="(step.hint || step.hintKey) && !step.done" class="mt-0.5 block text-[12px] font-normal text-[var(--text-faint)]">{{
+                            step.hint || $t(step.hintKey)
                         }}</span>
                     </span>
                     <ChevronRight

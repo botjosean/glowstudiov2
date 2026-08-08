@@ -124,6 +124,18 @@ class KapsoWebhookController extends Controller
             $queued++;
         }
 
+        // These counts used to travel only in the response body, which nobody
+        // reads once Kapso has it — so a silent bot looked identical whether it
+        // was broken or correctly staying quiet. Logged only when non-zero, so
+        // ordinary traffic stays out of the file.
+        if ($notAllowed > 0 || $throttled > 0) {
+            Log::info('Inbound WhatsApp messages were not queued.', [
+                'not_allowed' => $notAllowed,
+                'throttled' => $throttled,
+                'queued' => $queued,
+            ]);
+        }
+
         return response()->json([
             'status' => 'accepted',
             'queued' => $queued,
