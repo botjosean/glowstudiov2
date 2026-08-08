@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Models\User;
 use App\Support\Format;
+use App\Support\ReservedSlugs;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -48,7 +49,8 @@ class CreateNewUser implements CreatesNewUsers
         // Field names are camelCase because that's what SignUp.vue sends;
         // error bags land on errors.fullName / errors.confirmPassword etc.
         Validator::make($input, [
-            'username' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[A-Za-z0-9._]+$/', Rule::unique(User::class)],
+            'username' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[A-Za-z0-9._]+$/',
+                Rule::notIn(ReservedSlugs::all()), Rule::unique(User::class)],
             'fullName' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'digits:10', Rule::unique(User::class)],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)],

@@ -19,12 +19,12 @@ class ProviderProfileTest extends TestCase
     {
         $provider = Provider::factory()->unpublished()->create(['slug' => 'hidden']);
 
-        $this->get("/p/{$provider->slug}")->assertNotFound();
+        $this->get("/{$provider->slug}")->assertNotFound();
     }
 
     public function test_nonexistent_slug_404s(): void
     {
-        $this->get('/p/does-not-exist')->assertNotFound();
+        $this->get('/does-not-exist')->assertNotFound();
     }
 
     public function test_location_title_and_subtitle_are_never_empty_without_area_or_address(): void
@@ -39,7 +39,7 @@ class ProviderProfileTest extends TestCase
             'address_line' => null,
         ]);
 
-        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+        $this->get("/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->where('provider.location.title', fn ($title) => filled($title))
             ->where('provider.location.subtitle', fn ($subtitle) => filled($subtitle))
         );
@@ -56,7 +56,7 @@ class ProviderProfileTest extends TestCase
             'category' => ServiceCategory::Nails,
         ]);
 
-        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+        $this->get("/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->where('provider.services.0.icon', ServiceIcon::Gem->value)
         );
     }
@@ -69,7 +69,7 @@ class ProviderProfileTest extends TestCase
         $provider = Provider::factory()->published()->create();
         Service::factory()->for($provider)->create(['category' => ServiceCategory::Fade]);
 
-        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+        $this->get("/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->where('provider.services.0.icon', ServiceIcon::Scissors->value)
         );
     }
@@ -82,7 +82,7 @@ class ProviderProfileTest extends TestCase
         ]);
         ProviderPhoto::factory()->for($provider)->create(['url' => 'https://example.com/1.jpg', 'position' => 0]);
 
-        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+        $this->get("/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->where('provider.gallery.0', 'https://example.com/1.jpg')
             ->where('provider.social.whatsapp', 'https://wa.me/13055550100')
             ->missing('provider.social.instagram')
@@ -95,7 +95,7 @@ class ProviderProfileTest extends TestCase
         Service::factory()->for($provider)->create(['is_active' => true]);
         Service::factory()->for($provider)->inactive()->create();
 
-        $this->get("/p/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
+        $this->get("/{$provider->slug}")->assertInertia(fn (Assert $page) => $page
             ->has('provider.services', 1)
         );
     }

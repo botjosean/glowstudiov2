@@ -24,7 +24,7 @@ class SystemPromptTest extends TestCase
         $prompt = app(SystemPrompt::class)->for($provider);
 
         $this->assertStringContainsString(route('providers.show', $provider), $prompt);
-        $this->assertStringContainsString('/p/pati', $prompt);
+        $this->assertStringContainsString('/pati', $prompt);
     }
 
     public function test_the_prompt_never_leaks_another_providers_link(): void

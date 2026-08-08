@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Models\User;
 use App\Support\Format;
+use App\Support\ReservedSlugs;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -50,6 +51,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'username' => [
                 'required', 'string', 'min:3', 'max:30', 'regex:/^[A-Za-z0-9._]+$/',
+                Rule::notIn(ReservedSlugs::all()),
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'publicName' => ['required', 'string', 'min:2', 'max:80'],

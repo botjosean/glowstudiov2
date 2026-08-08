@@ -22,7 +22,11 @@ Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::inertia('/terminos', 'Public/Terminos')->name('terms');
 Route::inertia('/privacidad', 'Public/Privacidad')->name('privacy');
 Route::get('/proveedores', [PublicController::class, 'providers'])->name('providers');
-Route::get('/p/{provider}', [PublicController::class, 'profile'])->name('providers.show');
+// Los enlaces viejos siguen vivos: los que las profesionales ya mandaron por
+// WhatsApp y los publicados en glowstudios.vip apuntan aquí. 301 permanente
+// para que buscadores y clientes de chat aprendan la forma nueva.
+Route::get('/p/{provider:slug}', fn (string $provider) => redirect()->route('providers.show', $provider, 301))
+    ->name('providers.show.legacy');
 Route::get('/reservar/{provider}/{service}', [PublicController::class, 'booking'])
     ->scopeBindings()
     ->name('booking');
@@ -119,3 +123,10 @@ Route::prefix('admin-general')->middleware(['auth', 'verified', EnsureUserIsSupe
     Route::delete('/citas/{appointment}', [SuperadminController::class, 'destroyAppointment'])
         ->name('superadmin.appointments.destroy');
 });
+
+// AL FINAL, siempre. Un perfil vive en la raíz (/pati), así que este comodín
+// captura todo lo que ninguna ruta anterior reclamó. Registrado último, una
+// ruta real nunca puede quedar tapada por un nombre de usuario; ReservedSlugs
+// impide además que alguien se registre con uno de esos nombres y termine con
+// un perfil inalcanzable.
+Route::get('/{provider}', [PublicController::class, 'profile'])->name('providers.show');
