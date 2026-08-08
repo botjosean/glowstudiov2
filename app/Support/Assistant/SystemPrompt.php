@@ -122,13 +122,26 @@ class SystemPrompt
 
             $from = Format::clock($hours?->work_start_minute ?? $provider->work_start_minute);
             $to = Format::clock($hours?->work_end_minute ?? $provider->work_end_minute);
-            $open[] = "{$name} de {$from} a {$to}";
+            $open[$name] = "{$from} a {$to}";
         }
 
         $lines = ['HORARIO'];
-        $lines[] = $open === []
-            ? 'Ahora mismo no se atiende ningún día. No ofrezcas ninguna cita.'
-            : 'Se atiende: '.implode('; ', $open).'.';
+
+        if ($open === []) {
+            $lines[] = 'Ahora mismo no se atiende ningún día. No ofrezcas ninguna cita.';
+        } elseif (count(array_unique($open)) === 1) {
+            // Spelling out seven identical days produced a wall of text the
+            // assistant then repeated verbatim to clients, against its own
+            // "short WhatsApp messages" rule. Same hours every day is one line.
+            $todos = count($open) === 7 ? 'todos los días' : implode(', ', array_keys($open));
+            $lines[] = 'Se atiende '.$todos.' de '.reset($open).'.';
+        } else {
+            $lines[] = 'Se atiende: '.implode('; ', array_map(
+                fn (string $name, string $rango) => "{$name} de {$rango}",
+                array_keys($open),
+                $open,
+            )).'.';
+        }
 
         if ($closed !== []) {
             $lines[] = 'No se atiende: '.implode(', ', $closed).'.';

@@ -67,6 +67,18 @@ class SystemPromptTest extends TestCase
         $this->assertStringContainsString('No se atiende: domingo', $prompt);
     }
 
+    public function test_identical_hours_every_day_collapse_to_one_line(): void
+    {
+        // Spelling out seven identical days made the assistant repeat a wall of
+        // text to clients, against its own "short WhatsApp messages" rule.
+        $provider = Provider::factory()->withSchedule(10 * 60, 20 * 60, 0, 0, 15)->published()->create();
+
+        $prompt = app(SystemPrompt::class)->for($provider);
+
+        $this->assertStringContainsString('Se atiende todos los días de 10:00 a 20:00', $prompt);
+        $this->assertStringNotContainsString('lunes de 10:00', $prompt);
+    }
+
     public function test_blocked_dates_reach_the_prompt(): void
     {
         $provider = Provider::factory()->published()->create();
