@@ -50,4 +50,40 @@ class SystemPromptTest extends TestCase
         $this->assertStringNotContainsString('Servicio retirado', $prompt);
         $this->assertStringNotContainsString('De otra profesional', $prompt);
     }
+
+    public function test_the_prompt_states_the_real_working_days_and_hours(): void
+    {
+        // The gap this closes: with no schedule in the prompt, "what days are
+        // you open?" had no answer. One model went silent, another invented
+        // "Tuesday to Saturday, 9 to 6" for a salon that opens at 11 daily.
+        $provider = Provider::factory()->withSchedule(11 * 60, 22 * 60, 0, 0, 30)->published()->create();
+        $provider->businessHours()->where('weekday', 0)->update(['is_open' => false]);
+
+        $prompt = app(SystemPrompt::class)->for($provider->fresh());
+
+        $this->assertStringContainsString('HORARIO', $prompt);
+        $this->assertStringContainsString('11:00', $prompt);
+        $this->assertStringContainsString('22:00', $prompt);
+        $this->assertStringContainsString('No se atiende: domingo', $prompt);
+    }
+
+    public function test_blocked_dates_reach_the_prompt(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $provider->timeOff()->create([
+            'starts_on' => now()->addDays(3)->toDateString(),
+            'ends_on' => now()->addDays(5)->toDateString(),
+            'reason' => 'Vacaciones',
+        ]);
+
+        $this->assertStringContainsString('Cerrado además estos días', app(SystemPrompt::class)->for($provider));
+    }
+
+    public function test_a_fully_closed_week_tells_the_assistant_to_offer_nothing(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $provider->businessHours()->update(['is_open' => false]);
+
+        $this->assertStringContainsString('no se atiende ningún día', app(SystemPrompt::class)->for($provider->fresh()));
+    }
 }

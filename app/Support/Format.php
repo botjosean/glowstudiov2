@@ -21,6 +21,18 @@ class Format
     }
 
     /**
+     * Minutes from local midnight as a wall clock: 660 -> "11:00".
+     *
+     * 24-hour on purpose. This one is read by the assistant, not by a person
+     * with a time-format preference, and "11:00 a 22:00" leaves no room for
+     * the am/pm mistake that "11:00 a 10:00" invites.
+     */
+    public static function clock(int $minutes): string
+    {
+        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+
+    /**
      * "3055550199" -> "(305) 555-0199"
      */
     public static function usPhone(string $digits): string

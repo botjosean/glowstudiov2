@@ -39,6 +39,7 @@ class SystemPrompt
         return implode("\n\n", array_filter([
             $this->rules($provider),
             $this->catalogue($provider),
+            $this->schedule($provider),
             $this->location($provider),
             $this->ownerNotes(),
             // Last, and deliberately: this is the only part that changes, so
@@ -85,6 +86,78 @@ class SystemPrompt
 
         La zona horaria del salón es America/New_York.
         PROMPT;
+    }
+
+    /**
+     * The days and hours the provider actually works, plus any dates she has
+     * blocked off.
+     *
+     * This was missing for a long time and it cost more than it looked. Asked
+     * "what days are you open?", the assistant had nothing: one model went
+     * silent — which used to send the client straight to a human — and another
+     * filled the hole by inventing "Tuesday to Saturday, 9 to 6" for a salon
+     * that opens at 11 every day. Both failures were the same missing fact.
+     *
+     * Availability for a specific date still comes from buscar_disponibilidad;
+     * this is only so the assistant can answer the general question truthfully
+     * and stop offering days the salon is closed.
+     */
+    private function schedule(Provider $provider): string
+    {
+        $provider->loadMissing(['businessHours', 'timeOff']);
+
+        $days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        $open = [];
+        $closed = [];
+
+        foreach ($days as $weekday => $name) {
+            $hours = $provider->businessHours->firstWhere('weekday', $weekday);
+            $isOpen = $hours?->is_open ?? true;
+
+            if (! $isOpen) {
+                $closed[] = $name;
+
+                continue;
+            }
+
+            $from = Format::clock($hours?->work_start_minute ?? $provider->work_start_minute);
+            $to = Format::clock($hours?->work_end_minute ?? $provider->work_end_minute);
+            $open[] = "{$name} de {$from} a {$to}";
+        }
+
+        $lines = ['HORARIO'];
+        $lines[] = $open === []
+            ? 'Ahora mismo no se atiende ningún día. No ofrezcas ninguna cita.'
+            : 'Se atiende: '.implode('; ', $open).'.';
+
+        if ($closed !== []) {
+            $lines[] = 'No se atiende: '.implode(', ', $closed).'.';
+        }
+
+        if ($provider->lunch_start_minute < $provider->lunch_end_minute) {
+            $lines[] = sprintf(
+                'Pausa de %s a %s, no se agenda en ese rato.',
+                Format::clock($provider->lunch_start_minute),
+                Format::clock($provider->lunch_end_minute),
+            );
+        }
+
+        $upcoming = $provider->timeOff
+            ->filter(fn ($off) => $off->ends_on->gte($provider->currentTime()->startOfDay()))
+            ->take(5)
+            ->map(fn ($off) => $off->starts_on->isSameDay($off->ends_on)
+                ? $off->starts_on->translatedFormat('j \d\e F')
+                : $off->starts_on->translatedFormat('j \d\e F').' al '.$off->ends_on->translatedFormat('j \d\e F'));
+
+        if ($upcoming->isNotEmpty()) {
+            $lines[] = 'Cerrado además estos días: '.$upcoming->implode('; ').'.';
+        }
+
+        $lines[] = 'Si te preguntan qué días u horas se atiende, responde con esto y nada más. '
+            .'Para saber si una fecha concreta tiene hueco, usa siempre buscar_disponibilidad: '
+            .'estar dentro del horario no significa que quede libre.';
+
+        return implode("\n", $lines);
     }
 
     /**
