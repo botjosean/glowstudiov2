@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { MapPin } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
+import GlowMark from '../../Components/ui/GlowMark.vue';
 import { serviceIcons } from '../../icons';
 
 const props = defineProps({
@@ -164,7 +165,7 @@ const props = defineProps({
         <div class="border-t border-[var(--surface-mute)] bg-[var(--surface-alt)] px-4 py-6 text-center">
             <span class="text-[13px] font-medium tracking-wide text-[var(--text-faint)]">
                 {{ $t('profile.footerCta') }}
-                <span class="text-[var(--text-heading)]">{{ $t('app.name') }} 💈</span>
+                <span class="inline-flex items-center gap-1.5 align-middle text-[var(--text-heading)]">{{ $t('app.name') }} <GlowMark :size="16" /></span>
             </span>
         </div>
     </PublicLayout>

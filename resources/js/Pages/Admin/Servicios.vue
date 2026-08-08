@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Pencil, Ban, Plus, RotateCcw, Scissors } from '@lucide/vue';
+import { Pencil, Ban, Plus, RotateCcw, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
@@ -135,7 +135,7 @@ function activate(service) {
     <AdminLayout :provider-name="providerName">
         <div v-if="services.length === 0" class="flex flex-col items-center px-8 pb-10 pt-16 text-center">
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-mute)]">
-                <Scissors :size="28" class="text-[var(--text-faint)]" />
+                <Sparkles :size="28" class="text-[var(--text-faint)]" />
             </div>
             <h1 class="mt-5 text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('admin.servicesEmptyTitle') }}

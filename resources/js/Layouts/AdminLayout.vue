@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { House, CalendarDays, Scissors, Clock, User, Settings, ArrowLeft } from '@lucide/vue';
+import { House, CalendarDays, Sparkles, Clock, User, Settings, ArrowLeft } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -20,7 +20,7 @@ const showBanner = computed(() => onboarding.value && currentPath.value !== '/ad
 const navItems = [
     { href: '/admin/inicio', icon: House, key: 'nav.home' },
     { href: '/admin/citas', icon: CalendarDays, key: 'nav.appointments' },
-    { href: '/admin/servicios', icon: Scissors, key: 'nav.services' },
+    { href: '/admin/servicios', icon: Sparkles, key: 'nav.services' },
     { href: '/admin/horario', icon: Clock, key: 'nav.schedule' },
     { href: '/admin/perfil', icon: User, key: 'nav.profile' },
 ];

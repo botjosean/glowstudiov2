@@ -69,7 +69,7 @@ defineProps({
             <div class="flex flex-col gap-3.5 rounded-[18px] border-[1.5px] border-[var(--green-border)] bg-[var(--green-soft)] p-[18px]">
                 <div class="flex items-start gap-3">
                     <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--btn-green)]">
-                        <component :is="serviceIcons.scissors" :size="20" class="text-white" />
+                        <component :is="serviceIcons.sparkles" :size="20" class="text-white" />
                     </div>
                     <div>
                         <div class="text-[15px] font-bold tracking-tight text-[var(--green-deep)]">

@@ -13,7 +13,7 @@ import {
     MessageCircle,
     ChevronRight,
     Store,
-    Scissors,
+    Sparkles,
     CalendarClock,
     FileText,
     ShieldCheck,
@@ -48,7 +48,7 @@ const whatsappPromptOptions = computed(() => [
 
 const businessLinks = [
     { href: '/admin/perfil', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
-    { href: '/admin/servicios', icon: Scissors, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
+    { href: '/admin/servicios', icon: Sparkles, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
     { href: '/admin/horario', icon: CalendarClock, titleKey: 'nav.schedule', hintKey: 'admin.settingsScheduleHint' },
 ];
 
