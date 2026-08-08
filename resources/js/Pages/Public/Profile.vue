@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { MapPin } from '@lucide/vue';
+import { MapPin, ChevronRight } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import GlowMark from '../../Components/ui/GlowMark.vue';
 import { serviceIcons } from '../../icons';
@@ -99,15 +99,29 @@ const props = defineProps({
         </div>
 
         <div class="px-6 pt-4">
-            <div class="flex items-start gap-3.5 rounded-2xl border border-[var(--loc-border)] bg-[var(--loc-bg)] p-4">
+            <!--
+                Con dirección real la tarjeta entera es tocable y abre el mapa
+                que la persona tenga puesto. Sin dirección (a domicilio) no hay
+                adónde llevarla, así que se queda como texto.
+            -->
+            <component
+                :is="provider.location.mapUrl ? 'a' : 'div'"
+                v-bind="provider.location.mapUrl ? { href: provider.location.mapUrl, target: '_blank', rel: 'noopener' } : {}"
+                class="flex items-center gap-3.5 rounded-2xl border border-[var(--loc-border)] bg-[var(--loc-bg)] p-4"
+                :class="provider.location.mapUrl && 'transition-colors hover:border-[var(--loc-text)]'"
+            >
                 <div class="shrink-0 rounded-xl bg-[var(--loc-chip)] p-2.5">
                     <MapPin :size="20" class="text-[var(--loc-text)]" />
                 </div>
-                <div>
+                <div class="min-w-0 flex-1">
                     <div class="text-[15px] font-semibold text-[var(--loc-title)]">{{ provider.location.title }}</div>
-                    <div class="mt-0.5 text-[13px] font-normal text-[var(--loc-text)]">{{ provider.location.subtitle }}</div>
+                    <div class="mt-0.5 text-[13px] font-normal leading-relaxed text-[var(--loc-text)]">{{ provider.location.subtitle }}</div>
                 </div>
-            </div>
+                <span v-if="provider.location.mapUrl" class="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[var(--loc-text)]">
+                    {{ $t('profile.openMap') }}
+                    <ChevronRight :size="14" />
+                </span>
+            </component>
         </div>
 
         <div v-if="provider.gallery.length" class="px-6 pt-8">
@@ -135,30 +149,29 @@ const props = defineProps({
                 {{ $t('profile.bookAppointment') }}
             </div>
             <div class="flex flex-col gap-3">
-                <div
+                <!--
+                    La tarjeta entera es el enlace. Antes había dos bloques
+                    oscuros por fila —el azulejo del ícono y el botón— peleando
+                    por la atención, y un nombre largo empujaba el botón y
+                    rompía la línea. Ahora el nombre tiene todo el ancho, el
+                    precio manda, y el ícono es una marca discreta al margen.
+                -->
+                <Link
                     v-for="service in provider.services"
                     :key="service.id"
-                    class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                    :href="`/reservar/${provider.slug}/${service.id}`"
+                    class="flex items-center gap-3.5 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--text-faint)]"
                 >
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--chip-bg)]">
-                            <component :is="serviceIcons[service.icon]" :size="20" class="text-[var(--chip-fg)]" />
-                        </div>
-                        <div>
-                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ service.name }}</div>
-                            <div class="mt-1 flex items-center gap-1.5 text-[13px] font-normal text-[var(--text-mute)]">
-                                {{ service.duration }}
-                                <span class="text-[var(--text-faint)]">•</span>
-                                <span class="font-bold text-[var(--text-strong)]">${{ service.price }}</span>
-                            </div>
-                        </div>
+                    <component :is="serviceIcons[service.icon]" :size="18" class="shrink-0 text-[var(--text-faint)]" />
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-semibold leading-snug text-[var(--text-strong)]">{{ service.name }}</div>
+                        <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ service.duration }}</div>
                     </div>
-                    <Link
-                        :href="`/reservar/${provider.slug}/${service.id}`"
-                        class="rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-[13px] font-medium text-white hover:bg-[var(--btn-hover)]"
-                        >{{ $t('profile.book') }}</Link
-                    >
-                </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span class="text-[17px] font-bold tabular-nums text-[var(--text-strong)]">${{ service.price }}</span>
+                        <ChevronRight :size="16" class="text-[var(--text-faint)]" />
+                    </div>
+                </Link>
             </div>
         </div>
 

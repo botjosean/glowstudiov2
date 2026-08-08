@@ -27,6 +27,19 @@ class SetLocaleFromCookie
 
         if (in_array($locale, self::SUPPORTED_LOCALES, true)) {
             App::setLocale($locale);
+
+            return $next($request);
+        }
+
+        // No cookie yet — first visit, or someone who never touched the
+        // language switch. Fall back to the device's own language instead of
+        // APP_LOCALE, which is why a Spanish-speaking client landing on a
+        // profile saw the location card announce "In-studio service".
+        // An explicit choice still wins: this only runs when there is none.
+        $preferred = $request->getPreferredLanguage(self::SUPPORTED_LOCALES);
+
+        if ($preferred !== null) {
+            App::setLocale($preferred);
         }
 
         return $next($request);

@@ -209,7 +209,14 @@ class PublicController extends Controller
             default => __('provider.address_after_confirmation'),
         };
 
-        return ['title' => $title, 'subtitle' => $subtitle];
+        // El formato oficial de Google Maps: en el teléfono abre la app de
+        // mapas que la persona tenga puesta, y en escritorio abre el sitio.
+        // Solo con dirección real: a domicilio no hay adónde llevar a nadie.
+        $mapUrl = ! $provider->is_mobile && $provider->address_line !== null
+            ? 'https://www.google.com/maps/search/?api=1&query='.urlencode($provider->address_line)
+            : null;
+
+        return ['title' => $title, 'subtitle' => $subtitle, 'mapUrl' => $mapUrl];
     }
 
     private function parseDateParam(?string $date, string $timezone, CarbonImmutable $today): CarbonImmutable

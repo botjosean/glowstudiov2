@@ -269,7 +269,8 @@
         "tapToEnlarge": "Toca para ampliar",
         "bookAppointment": "Reservar una cita",
         "book": "Reservar",
-        "footerCta": "Citas rápidas con"
+        "footerCta": "Citas rápidas con",
+        "openMap": "Abrir mapa"
     },
     "common": {
         "cancel": "Cancelar",

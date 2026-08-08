@@ -269,7 +269,8 @@
         "tapToEnlarge": "Tap to enlarge",
         "bookAppointment": "Book an appointment",
         "book": "Book",
-        "footerCta": "Quick appointments with"
+        "footerCta": "Quick appointments with",
+        "openMap": "Open map"
     },
     "common": {
         "cancel": "Cancel",
