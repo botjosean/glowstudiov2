@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { X, Check, Ban, Plus } from '@lucide/vue';
+import { X, Ban, Plus, RotateCcw } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
-import Input from '../ui/Input.vue';
-import Select from '../ui/Select.vue';
+import OutlinedInput from '../ui/OutlinedInput.vue';
+import OutlinedSelect from '../ui/OutlinedSelect.vue';
 import Chip from '../ui/Chip.vue';
 import { useFormat } from '../../composables/useFormat';
 
@@ -16,7 +16,7 @@ const props = defineProps({
 });
 
 const open = defineModel({ type: Boolean, default: false });
-const emit = defineEmits(['save', 'delete']);
+const emit = defineEmits(['save', 'delete', 'activate']);
 
 const { t } = useI18n();
 const { formatDuration } = useFormat();
@@ -100,28 +100,34 @@ function save(keepOpen = false) {
 
 <template>
     <BottomSheet v-model="open">
-        <div class="mb-5 flex items-center justify-between">
+        <div class="mb-6 flex items-center justify-between">
             <div>
-                <div class="text-lg font-bold text-[var(--text-strong)]">
+                <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ mode === 'create' ? $t('admin.newService') : $t('admin.editService') }}
                 </div>
-                <div v-if="mode === 'edit'" class="mt-0.5 text-[12px] font-medium text-[var(--text-faint)]">{{ service.name }}</div>
+                <div v-if="mode === 'edit'" class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">{{ service.name }}</div>
             </div>
             <button
                 type="button"
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)]"
+                :aria-label="$t('common.close')"
+                class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-mute)] hover:bg-[var(--border-strong)]"
                 @click="open = false"
             >
                 <X :size="16" class="text-[var(--text-mute)]" />
             </button>
         </div>
 
-        <div class="mb-4">
-            <Input v-model="form.name" :label="$t('admin.serviceName')" :placeholder="$t('admin.serviceNamePlaceholder')" />
-            <p v-if="errors.name" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.name }}</p>
-        </div>
+        <OutlinedInput
+            id="service-name"
+            v-model="form.name"
+            class="mb-5"
+            :label="$t('admin.serviceName')"
+            :placeholder="$t('admin.serviceNamePlaceholder')"
+            :error="errors.name"
+            clearable
+        />
 
-        <div class="mb-4">
+        <div class="mb-5">
             <span class="mb-2 block text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.duration') }}</span>
             <div class="flex flex-wrap gap-2">
                 <Chip
@@ -137,74 +143,80 @@ function save(keepOpen = false) {
                 </Chip>
             </div>
             <div v-if="showCustomDuration" class="mt-3">
-                <Select v-model="form.durationMinutes" :options="durationOptions" />
-                <div class="mt-1.5 text-[10px] font-semibold text-[var(--text-faint)]">{{ $t('admin.durationHint') }}</div>
+                <OutlinedSelect
+                    id="service-duration"
+                    v-model="form.durationMinutes"
+                    :label="$t('admin.duration')"
+                    :options="durationOptions"
+                />
+                <div class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.durationHint') }}</div>
             </div>
             <p v-if="errors.durationMinutes" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.durationMinutes }}</p>
         </div>
 
-        <div class="mb-6 grid grid-cols-2 gap-3">
-            <label class="flex flex-col gap-2">
-                <span class="text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.price') }}</span>
-                <div class="flex items-center gap-1 rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5">
-                    <span class="text-[15px] font-semibold text-[var(--text-faint)]">$</span>
-                    <input
-                        v-model.number="form.price"
-                        type="number"
-                        inputmode="numeric"
-                        min="0"
-                        step="1"
-                        class="w-full bg-transparent text-[15px] font-semibold text-[var(--text-strong)] focus:outline-none"
-                    />
-                </div>
-                <p v-if="errors.price" class="text-[13px] font-normal text-[var(--danger)]">{{ errors.price }}</p>
-            </label>
-            <div>
-                <Select v-model="form.category" :label="$t('admin.category')" :options="categoryOptions" />
-                <p v-if="errors.category" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.category }}</p>
-            </div>
+        <div class="mb-2 grid grid-cols-2 items-start gap-3">
+            <OutlinedInput
+                id="service-price"
+                v-model.number="form.price"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                step="1"
+                prefix="$"
+                :label="$t('admin.price')"
+                :error="errors.price"
+            />
+            <OutlinedSelect
+                id="service-category"
+                v-model="form.category"
+                :label="$t('admin.category')"
+                :options="categoryOptions"
+                :error="errors.category"
+            />
         </div>
 
-        <div class="flex gap-3">
+        <div class="mt-6 flex flex-col gap-2.5">
             <button
                 type="button"
                 :disabled="processing"
-                class="w-2/5 rounded-xl bg-[var(--surface-mute)] py-3.5 text-[15px] font-semibold text-[var(--text-body)] hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                @click="open = false"
-            >
-                {{ $t('common.cancel') }}
-            </button>
-            <button
-                type="button"
-                :disabled="processing"
-                class="flex w-3/5 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-green)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-green-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="save()"
             >
-                <Check :size="15" />
                 {{ processing ? $t('common.saving') : mode === 'create' ? $t('admin.saveService') : $t('admin.saveChanges') }}
             </button>
+
+            <button
+                v-if="mode === 'create'"
+                type="button"
+                :disabled="processing"
+                class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3.5 text-[14px] font-semibold text-[var(--text-strong)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
+                @click="save(true)"
+            >
+                <Plus :size="15" />
+                {{ $t('admin.saveAndAddAnother') }}
+            </button>
+
+            <button
+                v-if="mode === 'edit' && service.isActive !== false"
+                type="button"
+                :disabled="processing"
+                class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[14px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                @click="emit('delete')"
+            >
+                <Ban :size="15" />
+                {{ $t('admin.deactivateService') }}
+            </button>
+
+            <button
+                v-if="mode === 'edit' && service.isActive === false"
+                type="button"
+                :disabled="processing"
+                class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3.5 text-[14px] font-semibold text-[var(--text-strong)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
+                @click="emit('activate')"
+            >
+                <RotateCcw :size="15" />
+                {{ $t('admin.activateService') }}
+            </button>
         </div>
-
-        <button
-            v-if="mode === 'create'"
-            type="button"
-            :disabled="processing"
-            class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3.5 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
-            @click="save(true)"
-        >
-            <Plus :size="15" />
-            {{ $t('admin.saveAndAddAnother') }}
-        </button>
-
-        <button
-            v-if="mode === 'edit'"
-            type="button"
-            :disabled="processing"
-            class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger-border)] py-3.5 text-[14px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-            @click="emit('delete')"
-        >
-            <Ban :size="15" />
-            {{ $t('admin.deactivateService') }}
-        </button>
     </BottomSheet>
 </template>

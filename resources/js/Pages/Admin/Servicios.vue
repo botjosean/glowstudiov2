@@ -1,12 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Pencil, Ban, Plus, RotateCcw, Sparkles } from '@lucide/vue';
+import { Plus, Sparkles, ChevronRight } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import Badge from '../../Components/ui/Badge.vue';
+import { categoryIcons } from '../../icons';
 import { useFormat } from '../../composables/useFormat';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
@@ -23,6 +24,10 @@ const { returnToInicio } = useOnboardingReturn();
 const sheetOpen = ref(false);
 const sheetMode = ref('create');
 const editingService = ref(null);
+
+function iconFor(category) {
+    return categoryIcons[category] ?? categoryIcons.other;
+}
 
 // The submission vehicle — ServiceFormSheet manages its own draft state
 // internally and emits the final values on @save; this form just posts
@@ -126,86 +131,97 @@ function confirmDeactivate() {
     });
 }
 
-function activate(service) {
-    router.patch(`/admin/servicios/${service.id}/activar`, {}, { preserveScroll: true, preserveState: true });
+// From ServiceFormSheet's @activate (edit mode on an inactive service):
+// reactivating needs no confirmation — it only restores visibility.
+function activateFromSheet() {
+    sheetOpen.value = false;
+    router.patch(`/admin/servicios/${editingService.value.id}/activar`, {}, {
+        preserveScroll: true,
+        preserveState: true,
+    });
 }
 </script>
 
 <template>
     <AdminLayout :provider-name="providerName">
         <div v-if="services.length === 0" class="flex flex-col items-center px-8 pb-10 pt-16 text-center">
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-mute)]">
-                <Sparkles :size="28" class="text-[var(--text-faint)]" />
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--gold-soft)]">
+                <Sparkles :size="28" class="text-[var(--gold)]" />
             </div>
             <h1 class="mt-5 text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('admin.servicesEmptyTitle') }}
             </h1>
-            <p class="mt-2 max-w-[280px] text-sm font-medium leading-relaxed text-[var(--text-mute)]">
+            <p class="mt-2 max-w-[280px] text-[15px] font-normal leading-relaxed text-[var(--text-mute)]">
                 {{ $t('admin.servicesEmptyBody') }}
             </p>
             <button
                 type="button"
-                class="mt-6 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+                class="mt-7 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)]"
                 @click="openCreate"
             >
                 {{ $t('admin.servicesEmptyCta') }}
             </button>
         </div>
 
-        <div v-else class="relative flex flex-col gap-3 p-4">
-            <div class="px-1 pb-1 pt-2">
-                <h1 class="text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
+        <div v-else class="relative px-4 pb-4">
+            <div class="pb-2 pt-5">
+                <h1 class="text-[24px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                     {{ $t('admin.servicesTitle') }}
                 </h1>
-                <p class="mt-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.servicesSubtitle') }}</p>
+                <p class="mt-1 text-[15px] font-normal text-[var(--text-mute)]">{{ $t('admin.servicesSubtitle') }}</p>
             </div>
-            <div
-                v-for="service in services"
-                :key="service.id"
-                class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                :class="!service.isActive && 'opacity-60'"
-            >
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[15px] font-semibold text-[var(--text-strong)]">{{ service.name }}</span>
-                        <Badge v-if="!service.isActive" variant="closed">{{ $t('admin.serviceInactive') }}</Badge>
-                    </div>
-                    <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">
-                        {{ formatDuration(service.durationMinutes) }} · ${{ service.price }}
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button
-                        type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--surface-mute)]"
-                        @click="openEdit(service)"
-                    >
-                        <Pencil :size="14" class="text-[var(--text-mute)]" />
-                    </button>
-                    <button
-                        v-if="service.isActive"
-                        type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--surface-mute)]"
-                        @click="askDeactivate(service)"
-                    >
-                        <Ban :size="14" class="text-[var(--danger)]" />
-                    </button>
-                    <button
-                        v-else
-                        type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--surface-mute)]"
-                        @click="activate(service)"
-                    >
-                        <RotateCcw :size="14" class="text-[var(--green-text)]" />
-                    </button>
-                </div>
+
+            <div class="divide-y divide-[var(--surface-mute)]">
+                <button
+                    v-for="service in services"
+                    :key="service.id"
+                    type="button"
+                    class="flex w-full items-center gap-3.5 py-4 text-left hover:bg-[var(--surface-alt)]"
+                    @click="openEdit(service)"
+                >
+                    <component
+                        :is="iconFor(service.category)"
+                        :size="20"
+                        :stroke-width="1.8"
+                        class="shrink-0"
+                        :class="service.isActive ? 'text-[var(--text-mute)]' : 'text-[var(--text-faint)]'"
+                    />
+                    <span class="min-w-0 flex-1">
+                        <span class="flex items-center gap-2">
+                            <span
+                                class="truncate text-[15px] font-semibold"
+                                :class="service.isActive ? 'text-[var(--text-strong)]' : 'text-[var(--text-faint)]'"
+                            >
+                                {{ service.name }}
+                            </span>
+                            <Badge v-if="!service.isActive" variant="closed">{{ $t('admin.serviceInactive') }}</Badge>
+                        </span>
+                        <span class="mt-0.5 block text-[13px] font-normal text-[var(--text-mute)]">
+                            {{ formatDuration(service.durationMinutes) }}
+                        </span>
+                    </span>
+                    <span class="flex shrink-0 items-center gap-1.5">
+                        <span
+                            class="text-[15px] font-bold"
+                            :class="service.isActive ? 'text-[var(--text-strong)]' : 'text-[var(--text-faint)]'"
+                        >
+                            ${{ service.price }}
+                        </span>
+                        <ChevronRight :size="16" class="text-[var(--text-faint)]" />
+                    </span>
+                </button>
             </div>
         </div>
 
+        <!-- Fixed on every viewport; on wide screens the right offset pins it
+             to the centered 480px column's edge instead of the viewport's,
+             because no positioned ancestor exists inside <main> for an
+             absolute FAB to anchor to. -->
         <button
             v-if="services.length > 0"
             type="button"
-            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:absolute"
+            :aria-label="$t('admin.servicesEmptyCta')"
+            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
             @click="openCreate"
         >
             <Plus :size="22" class="text-white" />
@@ -219,6 +235,7 @@ function activate(service) {
             :processing="form.processing"
             @save="handleSave"
             @delete="requestDeactivateFromSheet"
+            @activate="activateFromSheet"
         />
 
         <ConfirmDialog

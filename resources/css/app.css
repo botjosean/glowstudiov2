@@ -46,6 +46,10 @@
     --amber-soft: #fef3c7;
     --amber-border: #f5d28a;
     --amber-text: #92400e;
+    --gold-soft: #faf3e3;
+    --gold-border: #eed9a8;
+    --gold: #b3852f;
+    --gold-text: #8a6a25;
 }
 
 [data-theme='dark'] {
@@ -86,16 +90,31 @@
     --amber-soft: #422f0d;
     --amber-border: #92400e;
     --amber-text: #fbbf24;
+    --gold-soft: #2a2210;
+    --gold-border: #5a4a20;
+    --gold: #e3c26d;
+    --gold-text: #e8c877;
 }
 
 html {
     background: var(--bg-canvas);
 }
 
-/* Keyboard-only focus ring; pointer interactions stay clean. */
+/* Keyboard-only focus ring; pointer interactions stay clean. Ink instead of
+   green: color only carries meaning here, and focus is not a success state.
+   Text fields opt out because they mark focus with their own border — and
+   this rule is unlayered, so no Tailwind utility in the markup can override
+   it; the exception has to live here. Checkboxes and radios keep the ring:
+   they have no border change of their own. */
 :focus-visible {
-    outline: 2px solid var(--green-text);
+    outline: 2px solid var(--text-strong);
     outline-offset: 2px;
+}
+
+input:not([type='checkbox']):not([type='radio']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: none;
 }
 
 body {
