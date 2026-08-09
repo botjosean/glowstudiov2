@@ -62,8 +62,12 @@ class SystemPromptTest extends TestCase
         $prompt = app(SystemPrompt::class)->for($provider->fresh());
 
         $this->assertStringContainsString('HORARIO', $prompt);
-        $this->assertStringContainsString('11:00', $prompt);
-        $this->assertStringContainsString('22:00', $prompt);
+        // 12-hour with the suffix spelled out: the assistant repeats this
+        // verbatim to clients, so military time here becomes military time
+        // on WhatsApp — which is exactly the complaint that changed it.
+        $this->assertStringContainsString('11:00 AM', $prompt);
+        $this->assertStringContainsString('10:00 PM', $prompt);
+        $this->assertStringNotContainsString('22:00', $prompt);
         $this->assertStringContainsString('No se atiende: domingo', $prompt);
     }
 
@@ -75,8 +79,42 @@ class SystemPromptTest extends TestCase
 
         $prompt = app(SystemPrompt::class)->for($provider);
 
-        $this->assertStringContainsString('Se atiende todos los días de 10:00 a 20:00', $prompt);
+        $this->assertStringContainsString('Se atiende todos los días de 10:00 AM a 8:00 PM', $prompt);
         $this->assertStringNotContainsString('lunes de 10:00', $prompt);
+    }
+
+    public function test_the_prompt_never_mentions_lunch(): void
+    {
+        // The owner does not want the assistant narrating when the
+        // professional eats. The availability tool already refuses lunch
+        // slots, so a time inside lunch is simply "not available" — the
+        // prompt must not give the assistant the words to explain why.
+        // Distinctive :15 offsets so the assertion cannot collide with the
+        // work window or with anything in negocio.md.
+        $provider = Provider::factory()
+            ->withSchedule(10 * 60, 20 * 60, 13 * 60 + 15, 14 * 60 + 15, 15)
+            ->published()
+            ->create();
+
+        $prompt = app(SystemPrompt::class)->for($provider);
+
+        $this->assertStringNotContainsString('Pausa', $prompt);
+        $this->assertStringNotContainsString('1:15 PM', $prompt);
+        $this->assertStringNotContainsString('2:15 PM', $prompt);
+    }
+
+    public function test_earlier_than_opening_asks_for_human_coordination(): void
+    {
+        // Early appointments can happen, but only agreed directly with the
+        // professional — the assistant offers the possibility and escalates,
+        // never books outside the schedule itself.
+        $provider = Provider::factory()->published()->create(['public_name' => 'Patricia']);
+
+        $prompt = app(SystemPrompt::class)->for($provider);
+
+        $this->assertStringContainsString('más temprana que la apertura', $prompt);
+        $this->assertStringContainsString('coordinándolo directamente con Patricia', $prompt);
+        $this->assertStringContainsString('Nunca crees tú una cita fuera del horario', $prompt);
     }
 
     public function test_blocked_dates_reach_the_prompt(): void

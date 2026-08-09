@@ -21,15 +21,21 @@ class Format
     }
 
     /**
-     * Minutes from local midnight as a wall clock: 660 -> "11:00".
+     * Minutes from local midnight as a 12-hour wall clock: 660 -> "11:00 AM".
      *
-     * 24-hour on purpose. This one is read by the assistant, not by a person
-     * with a time-format preference, and "11:00 a 22:00" leaves no room for
-     * the am/pm mistake that "11:00 a 10:00" invites.
+     * 12-hour with the suffix always spelled out. An earlier version was
+     * 24-hour "because only the assistant reads it" — but the prompt tells the
+     * assistant to repeat the schedule verbatim, so clients were receiving
+     * military time. The explicit AM/PM keeps the string unambiguous without
+     * asking the model to convert anything.
      */
     public static function clock(int $minutes): string
     {
-        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+        $hour = intdiv($minutes, 60) % 24;
+        $suffix = $hour >= 12 ? 'PM' : 'AM';
+        $hour12 = $hour % 12 === 0 ? 12 : $hour % 12;
+
+        return sprintf('%d:%02d %s', $hour12, $minutes % 60, $suffix);
     }
 
     /**

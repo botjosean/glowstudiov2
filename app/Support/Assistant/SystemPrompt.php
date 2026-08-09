@@ -68,6 +68,7 @@ class SystemPrompt
         - Los precios y duraciones son EXACTAMENTE los de la lista de abajo. No los cambies, ni los redondees, ni añadas servicios que no estén.
         - Para las horas libres usa siempre buscar_disponibilidad. Nunca ofrezcas una hora que no te haya devuelto esa herramienta.
         - Al ofrecer horas, dale tres o cuatro repartidas por el día, no la lista completa: un muro de veinte horas en WhatsApp no se lee. Si ninguna le sirve, ofrécele otras.
+        - Las horas dilas siempre en formato de 12 horas con AM o PM: "2:30 PM", nunca "14:30". Las herramientas trabajan por dentro en formato 24 h — buscar_disponibilidad te devuelve "14:30" y crear_cita espera "14:30" —; esa conversión la haces tú y la clienta nunca la ve.
         - Necesitas el nombre y apellido de la clienta. Pregúntaselo si no lo tienes.
         - Cuando ya tengas servicio, día, hora y nombre: repítelos en una frase, y en cuanto ella diga que sí, llama a crear_cita. Si te lo dio todo de una vez, no se lo vuelvas a preguntar.
         - La cita queda pendiente de confirmación: el salón la confirma después. Dilo así.
@@ -147,13 +148,10 @@ class SystemPrompt
             $lines[] = 'No se atiende: '.implode(', ', $closed).'.';
         }
 
-        if ($provider->lunch_start_minute < $provider->lunch_end_minute) {
-            $lines[] = sprintf(
-                'Pausa de %s a %s, no se agenda en ese rato.',
-                Format::clock($provider->lunch_start_minute),
-                Format::clock($provider->lunch_end_minute),
-            );
-        }
+        // Lunch is deliberately absent: buscar_disponibilidad already refuses
+        // those slots, and the owner does not want the assistant narrating
+        // when the professional eats. A time that falls in lunch simply
+        // "no está disponible", like any other taken slot.
 
         $upcoming = $provider->timeOff
             ->filter(fn ($off) => $off->ends_on->gte($provider->currentTime()->startOfDay()))
@@ -165,6 +163,10 @@ class SystemPrompt
         if ($upcoming->isNotEmpty()) {
             $lines[] = 'Cerrado además estos días: '.$upcoming->implode('; ').'.';
         }
+
+        $lines[] = 'Si te pide una hora más temprana que la apertura (por ejemplo 7:00 AM u 8:00 AM), '
+            ."no la agendes tú: dile que a veces se puede coordinándolo directamente con {$provider->public_name}, "
+            .'y usa solicitar_atencion_humana para que se lo confirmen. Nunca crees tú una cita fuera del horario.';
 
         $lines[] = 'Si te preguntan qué días u horas se atiende, responde con esto y nada más. '
             .'Para saber si una fecha concreta tiene hueco, usa siempre buscar_disponibilidad: '

@@ -34,6 +34,32 @@ const form = useForm({
     days: props.schedule.days.map((day) => ({ ...day })),
 });
 
+// Lunch is optional: the rest of the stack already treats an empty window
+// (lunchStart === lunchEnd) as "no lunch" — validation allows it (gte) and
+// GenerateAvailableSlots skips the filter — so the switch only collapses the
+// window to 0–0, remembering the last real one to restore on re-enable.
+const lunchEnabled = ref(props.schedule.lunchStart < props.schedule.lunchEnd);
+const lastLunch = {
+    start: lunchEnabled.value ? props.schedule.lunchStart : 13 * 60,
+    end: lunchEnabled.value ? props.schedule.lunchEnd : 14 * 60,
+};
+
+function toggleLunch() {
+    if (lunchEnabled.value) {
+        lastLunch.start = form.lunchStart;
+        lastLunch.end = form.lunchEnd;
+        form.lunchStart = 0;
+        form.lunchEnd = 0;
+        lunchEnabled.value = false;
+
+        return;
+    }
+
+    form.lunchStart = lastLunch.start;
+    form.lunchEnd = lastLunch.end;
+    lunchEnabled.value = true;
+}
+
 function submit() {
     form.put('/admin/horario', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
 }
@@ -235,14 +261,31 @@ function timeOffLabel(off) {
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--loc-chip)]">
                         <UtensilsCrossed :size="16" class="text-[var(--loc-text)]" />
                     </div>
-                    <div>
+                    <div class="min-w-0 flex-1">
                         <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.lunch') }}</div>
                         <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.lunchHint') }}</div>
                     </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        :aria-checked="lunchEnabled"
+                        :aria-label="$t('admin.lunch')"
+                        class="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+                        :class="lunchEnabled ? 'bg-[var(--btn-green)]' : 'bg-[var(--border-strong)]'"
+                        @click="toggleLunch"
+                    >
+                        <span
+                            class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
+                            :class="lunchEnabled ? 'left-6' : 'left-1'"
+                        />
+                    </button>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div v-if="lunchEnabled" class="grid grid-cols-2 gap-3">
                     <Select v-model="form.lunchStart" :label="$t('admin.startTime')" :options="timeOptions" />
                     <Select v-model="form.lunchEnd" :label="$t('admin.endTime')" :options="timeOptions" />
+                </div>
+                <div v-else class="text-[13px] font-normal text-[var(--text-faint)]">
+                    {{ $t('admin.lunchOff') }}
                 </div>
             </div>
 
@@ -265,8 +308,11 @@ function timeOffLabel(off) {
                     <template v-if="openDays.length === 0">{{ $t('admin.scheduleSummaryClosed') }}</template>
                     <template v-else>
                         {{ $t('admin.scheduleSummaryDays', { days: openDays.length }) }},
-                        {{ $t('admin.scheduleSummaryLunch') }}
-                        <span class="font-bold">{{ label(form.lunchStart) }} {{ $t('admin.to') }} {{ label(form.lunchEnd) }}</span>
+                        <template v-if="lunchEnabled">
+                            {{ $t('admin.scheduleSummaryLunch') }}
+                            <span class="font-bold">{{ label(form.lunchStart) }} {{ $t('admin.to') }} {{ label(form.lunchEnd) }}</span>
+                        </template>
+                        <span v-else class="font-bold">{{ $t('admin.scheduleSummaryNoLunch') }}</span>
                         {{ $t('admin.scheduleSummaryAnd') }}
                         <span class="font-bold">{{ formatDuration(form.bufferMinutes) }}</span>
                         {{ $t('admin.scheduleSummaryBetween') }}

@@ -55,6 +55,22 @@ class ScheduleUpdateTest extends TestCase
         $this->assertSame('admin.scheduleUpdated', session('success'));
     }
 
+    public function test_an_empty_lunch_window_means_no_lunch_and_is_accepted(): void
+    {
+        // The panel's "no lunch" switch submits lunchStart === lunchEnd; the
+        // slot generator disables its lunch filter for that shape, so this is
+        // the one representation the whole stack agrees on.
+        $provider = Provider::factory()->withSchedule(540, 1200, 780, 840, 15)->published()->create();
+
+        $response = $this->actingAs($provider->user)
+            ->put('/admin/horario', $this->validPayload(['lunchStart' => 0, 'lunchEnd' => 0]));
+
+        $response->assertSessionHasNoErrors();
+        $provider->refresh();
+        $this->assertSame(0, $provider->lunch_start_minute);
+        $this->assertSame(0, $provider->lunch_end_minute);
+    }
+
     /**
      * @return iterable<string, array{0: array<string, mixed>}>
      */

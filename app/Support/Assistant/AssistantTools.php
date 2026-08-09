@@ -409,7 +409,7 @@ class AssistantTools
             $appointment->service_name,
             $context->provider->public_name,
             $localStart->format('d/m/Y'),
-            $localStart->format('H:i'),
+            $localStart->format('g:i A'),
             Format::duration($appointment->duration_minutes),
             $appointment->price,
         );
