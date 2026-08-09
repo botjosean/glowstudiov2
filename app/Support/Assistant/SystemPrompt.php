@@ -2,6 +2,7 @@
 
 namespace App\Support\Assistant;
 
+use App\Enums\AppointmentStatus;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Support\Format;
@@ -34,7 +35,7 @@ class SystemPrompt
      */
     private const OWNER_NOTES = 'negocio.md';
 
-    public function for(Provider $provider): string
+    public function for(Provider $provider, ?string $clientPhone = null): string
     {
         return implode("\n\n", array_filter([
             $this->rules($provider),
@@ -42,10 +43,70 @@ class SystemPrompt
             $this->schedule($provider),
             $this->location($provider),
             $this->ownerNotes(),
-            // Last, and deliberately: this is the only part that changes, so
+            // Deliberately near the end: this changes once a day, so
             // everything above it stays a cacheable prefix all day.
             $this->today($provider),
+            // And this one changes per client, which is why it goes dead
+            // last — after it nothing is shared, before it everything is.
+            $this->knownClient($provider, $clientPhone),
         ]));
+    }
+
+    /**
+     * What the salon already knows about the person writing, looked up by
+     * her WhatsApp number — the same key the tools scope by.
+     *
+     * This exists because professionals book appointments by hand from the
+     * panel's agenda: when that client later writes, the assistant should
+     * greet her by name and know her appointment instead of interrogating
+     * someone the salon already served. Server-verified data, not model
+     * memory — the assistant cannot get the name wrong by guessing.
+     */
+    private function knownClient(Provider $provider, ?string $clientPhone): ?string
+    {
+        $digits = Format::digitsOnly((string) $clientPhone);
+
+        if (strlen($digits) !== 10) {
+            return null;
+        }
+
+        $appointments = $provider->appointments()
+            ->where('client_phone', $digits)
+            ->orderByDesc('starts_at')
+            ->limit(10)
+            ->get();
+
+        if ($appointments->isEmpty()) {
+            return null;
+        }
+
+        $name = $appointments->first()->client_name;
+
+        $lines = ['CLIENTA CONOCIDA (verificada por su número de WhatsApp, dato del sistema — confiable)'];
+        $lines[] = "Quien te escribe es {$name}. Salúdala por su nombre con naturalidad y NO le pidas el nombre para reservar: ya lo tienes.";
+
+        $upcoming = $appointments
+            ->filter(fn ($appointment) => $appointment->starts_at->gte(now())
+                && in_array($appointment->status, [AppointmentStatus::Pending, AppointmentStatus::Confirmed], true))
+            ->sortBy('starts_at')
+            ->take(3);
+
+        foreach ($upcoming as $appointment) {
+            $local = $appointment->starts_at->setTimezone($provider->timezone);
+            $lines[] = sprintf(
+                '- Tiene cita: %s el %s a las %s (%s).',
+                $appointment->service_name,
+                $local->locale('es')->isoFormat('dddd D [de] MMMM'),
+                $local->format('g:i A'),
+                $appointment->status === AppointmentStatus::Confirmed ? 'confirmada' : 'pendiente de confirmar',
+            );
+        }
+
+        if ($upcoming->isEmpty()) {
+            $lines[] = 'No tiene citas próximas, pero ya ha reservado antes con el salón.';
+        }
+
+        return implode("\n", $lines);
     }
 
     private function rules(Provider $provider): string
@@ -69,7 +130,7 @@ class SystemPrompt
         - Para las horas libres usa siempre buscar_disponibilidad. Nunca ofrezcas una hora que no te haya devuelto esa herramienta.
         - Al ofrecer horas, dale tres o cuatro repartidas por el día, no la lista completa: un muro de veinte horas en WhatsApp no se lee. Si ninguna le sirve, ofrécele otras.
         - Las horas dilas siempre en formato de 12 horas con AM o PM: "2:30 PM", nunca "14:30". Las herramientas trabajan por dentro en formato 24 h — buscar_disponibilidad te devuelve "14:30" y crear_cita espera "14:30" —; esa conversión la haces tú y la clienta nunca la ve.
-        - Necesitas el nombre y apellido de la clienta. Pregúntaselo si no lo tienes.
+        - Necesitas el nombre y apellido de la clienta. Si ya la conoces (sección CLIENTA CONOCIDA, o aparece en listar_mis_citas), usa ese nombre y no se lo vuelvas a pedir; pregúntaselo solo si de verdad no lo tienes.
         - Cuando ya tengas servicio, día, hora y nombre: repítelos en una frase, y en cuanto ella diga que sí, llama a crear_cita. Si te lo dio todo de una vez, no se lo vuelvas a preguntar.
         - La cita queda pendiente de confirmación: el salón la confirma después. Dilo así.
         - No digas que la cita quedó registrada hasta que crear_cita te lo confirme. Si te devuelve un error, explícale el problema en una frase; nunca afirmes que quedó hecha.

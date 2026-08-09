@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { CalendarDays } from '@lucide/vue';
+import { CalendarDays, Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
 import AppointmentDetailSheet from '../../Components/admin/AppointmentDetailSheet.vue';
+import CreateAppointmentSheet from '../../Components/admin/CreateAppointmentSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import WhatsAppPromptSheet from '../../Components/admin/WhatsAppPromptSheet.vue';
 import { useFormat } from '../../composables/useFormat';
@@ -16,23 +17,48 @@ const props = defineProps({
     appointments: { type: Array, required: true },
     // [{ id, clientName, clientPhone, clientPhoneDigits, service, provider,
     //    durationMinutes, price, status, startsAt (UTC ISO string) }]
+    services: { type: Array, default: () => [] },
+    // [{ id, name, durationMinutes, price }] — for the create sheet.
 });
 
 const { t } = useI18n();
 const { formatDuration, formatTime, formatDayLabel, formatDateTimeLabel } = useFormat();
-const { whatsappPrompt } = usePreferences();
+const { whatsappPrompt, locale } = usePreferences();
 
 const tabs = [
-    { value: 'today', key: 'admin.tabToday' },
+    { value: 'agenda', key: 'admin.tabAgenda' },
     { value: 'pending', key: 'admin.tabPending' },
     { value: 'closed', key: 'admin.tabClosed' },
     { value: 'cancelled', key: 'admin.tabCancelled' },
 ];
 
-const activeTab = ref('today');
+const activeTab = ref('agenda');
+
+// The agenda's day strip: today plus the next 13 days, tappable. Two weeks
+// covers how far ahead a walk-in salon actually books by hand; anything
+// further keeps living on the public page.
+const selectedDate = ref(new Date());
+const selectedKey = computed(() => selectedDate.value.toDateString());
+
+const stripDays = computed(() => {
+    const jsLocale = locale.value === 'es' ? 'es-ES' : 'en-US';
+
+    return Array.from({ length: 14 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+
+        return {
+            date,
+            key: date.toDateString(),
+            dow: date.toLocaleDateString(jsLocale, { weekday: 'short' }).replace('.', ''),
+            num: date.getDate(),
+            isToday: i === 0,
+        };
+    });
+});
 
 // startsAt is UTC; `new Date(...)` renders it in the viewer's local time,
-// which is what dateLabel/timeLabel/isToday should reflect.
+// which is what dateLabel/timeLabel/dateKey should reflect.
 const enrichedAppointments = computed(() =>
     props.appointments.map((appt) => {
         const date = new Date(appt.startsAt);
@@ -40,25 +66,49 @@ const enrichedAppointments = computed(() =>
             ...appt,
             duration: formatDuration(appt.durationMinutes),
             isToday: date.toDateString() === new Date().toDateString(),
+            dateKey: date.toDateString(),
             dateLabel: formatDateTimeLabel(date),
             timeLabel: formatTime(date.getHours(), date.getMinutes()),
         };
     }),
 );
 
-const todayGroupLabel = computed(() => `${t('booking.legendToday')} · ${formatDayLabel(new Date())}`);
+const dayGroupLabel = computed(() => formatDayLabel(selectedDate.value));
 
 const counts = computed(() => ({
-    today: enrichedAppointments.value.filter((a) => a.isToday).length,
+    agenda: enrichedAppointments.value.filter((a) => a.isToday && a.status !== 'cancelled').length,
     pending: enrichedAppointments.value.filter((a) => a.status === 'pending').length,
     closed: enrichedAppointments.value.filter((a) => a.status === 'closed').length,
     cancelled: enrichedAppointments.value.filter((a) => a.status === 'cancelled').length,
 }));
 
+// The day view shows everything that still occupies (or occupied) the day;
+// cancelled ones only clutter it and keep their own tab.
 const filtered = computed(() => {
-    if (activeTab.value === 'today') return enrichedAppointments.value.filter((a) => a.isToday);
+    if (activeTab.value === 'agenda') {
+        return enrichedAppointments.value
+            .filter((a) => a.dateKey === selectedKey.value && a.status !== 'cancelled')
+            .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+    }
     return enrichedAppointments.value.filter((a) => a.status === activeTab.value);
 });
+
+const createOpen = ref(false);
+
+// A phone was captured → offer to notify her by WhatsApp right away, same
+// flow as confirming a pending appointment. Without a phone the prompt
+// guard drops it silently.
+function handleCreated(created) {
+    openWaPrompt({
+        clientName: created.clientName,
+        clientPhone: created.clientPhone,
+        phoneDigits: created.phoneDigits,
+        service: created.service,
+        provider: props.providerName,
+        startsAt: created.startsAt,
+        variant: 'confirmed',
+    });
+}
 
 const badgeVariant = { confirmed: 'confirmed', pending: 'pending', cancelled: 'cancelled', closed: 'closed' };
 const statusKey = {
@@ -208,25 +258,45 @@ function confirmCancel() {
                     >
                     <span
                         class="text-[9px] font-bold"
-                        :class="tab.value === 'pending' ? 'text-[#d97706]' : tab.value === 'today' ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'"
+                        :class="tab.value === 'pending' ? 'text-[#d97706]' : tab.value === 'agenda' ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'"
                         >{{ counts[tab.value] }}</span
                     >
+                </button>
+            </div>
+
+            <div v-if="activeTab === 'agenda'" class="-mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1">
+                <button
+                    v-for="day in stripDays"
+                    :key="day.key"
+                    type="button"
+                    class="flex w-11 shrink-0 flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors"
+                    :class="selectedKey === day.key
+                        ? 'bg-[var(--chip-bg)] text-[var(--chip-fg)]'
+                        : 'text-[var(--text-mute)] hover:bg-[var(--surface-mute)]'"
+                    @click="selectedDate = day.date"
+                >
+                    <span class="text-[10px] font-medium uppercase">{{ day.dow }}</span>
+                    <span class="text-[15px] font-bold" :class="selectedKey !== day.key && 'text-[var(--text-strong)]'">{{ day.num }}</span>
+                    <span
+                        class="h-1 w-1 rounded-full"
+                        :class="day.isToday ? (selectedKey === day.key ? 'bg-[var(--chip-fg)]' : 'bg-[var(--text-strong)]') : 'bg-transparent'"
+                    />
                 </button>
             </div>
         </div>
 
         <div class="flex flex-col gap-3 p-4">
-            <div v-if="activeTab === 'today' && filtered.length" class="text-[13px] font-medium text-[var(--text-mute)]">
-                {{ todayGroupLabel }}
+            <div v-if="activeTab === 'agenda' && filtered.length" class="text-[13px] font-medium capitalize text-[var(--text-mute)]">
+                {{ dayGroupLabel }}
             </div>
 
-            <template v-if="activeTab === 'today'">
+            <template v-if="activeTab === 'agenda'">
                 <div v-if="filtered.length === 0" class="flex flex-col items-center px-8 pb-6 pt-10 text-center">
                     <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--surface-mute)]">
                         <CalendarDays :size="24" class="text-[var(--text-faint)]" />
                     </div>
-                    <p class="mt-4 text-base font-bold text-[var(--text-strong)]">{{ $t('admin.noAppointmentsToday') }}</p>
-                    <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.noAppointmentsTodayHint') }}</p>
+                    <p class="mt-4 text-base font-bold text-[var(--text-strong)]">{{ $t('admin.dayEmpty') }}</p>
+                    <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.dayEmptyHint') }}</p>
                 </div>
                 <button
                     v-for="appt in filtered"
@@ -276,6 +346,25 @@ function confirmCancel() {
                 </p>
             </template>
         </div>
+
+        <!-- Fixed on every viewport; on wide screens the right offset pins it
+             to the centered 480px column's edge (same pattern as Servicios). -->
+        <button
+            v-if="activeTab === 'agenda' && services.length > 0"
+            type="button"
+            :aria-label="$t('admin.addAppointment')"
+            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
+            @click="createOpen = true"
+        >
+            <Plus :size="22" class="text-white" />
+        </button>
+
+        <CreateAppointmentSheet
+            v-model="createOpen"
+            :services="services"
+            :date="selectedDate"
+            @created="handleCreated"
+        />
 
         <AppointmentDetailSheet
             v-model="sheetOpen"

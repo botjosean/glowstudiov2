@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AppointmentStatusController;
 use App\Http\Controllers\Admin\BioSuggestionController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ManualAppointmentController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ProfilePhotoController;
 use App\Http\Controllers\Admin\ScheduleController;
@@ -72,6 +73,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'appointment')->name('citas.confirm');
     Route::patch('/citas/{appointment}/cancelar', [AppointmentStatusController::class, 'cancel'])
         ->can('update', 'appointment')->name('citas.cancel');
+    Route::get('/citas/horas', [ManualAppointmentController::class, 'slots'])->name('citas.slots');
+    Route::post('/citas', [ManualAppointmentController::class, 'store'])->name('citas.store');
 
     Route::get('/servicios', [DashboardController::class, 'servicios'])->name('servicios');
     Route::post('/servicios', [ServiceController::class, 'store'])

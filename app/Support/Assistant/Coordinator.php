@@ -104,7 +104,7 @@ class Coordinator
         }
 
         $messages = [
-            ['role' => 'system', 'content' => $this->prompt->for($provider)],
+            ['role' => 'system', 'content' => $this->prompt->for($provider, $message->fromPhone)],
             ...$this->history($turns, $message),
             ['role' => 'user', 'content' => $message->text],
         ];

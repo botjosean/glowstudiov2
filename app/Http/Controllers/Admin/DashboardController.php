@@ -73,6 +73,14 @@ class DashboardController extends Controller
 
         return Inertia::render('Admin/Citas', [
             'providerName' => $provider->public_name,
+            // For the create-appointment sheet: what she can book by hand.
+            'services' => $provider->services()->active()->orderBy('position')->orderBy('id')
+                ->get()->map(fn (Service $service) => [
+                    'id' => $service->id,
+                    'name' => $service->name,
+                    'durationMinutes' => $service->duration_minutes,
+                    'price' => $service->price,
+                ])->values()->all(),
             'appointments' => $appointments->map(fn (Appointment $appointment) => [
                 'id' => $appointment->id,
                 'clientName' => $appointment->client_name,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Assistant;
 
+use App\Models\Appointment;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Support\Assistant\SystemPrompt;
@@ -135,5 +136,50 @@ class SystemPromptTest extends TestCase
         $provider->businessHours()->update(['is_open' => false]);
 
         $this->assertStringContainsString('no se atiende ningún día', app(SystemPrompt::class)->for($provider->fresh()));
+    }
+
+    public function test_a_client_with_appointments_is_recognized_by_phone(): void
+    {
+        // Professionals book walk-ins by hand from the agenda; when that
+        // client writes on WhatsApp, the assistant must greet her by name
+        // and know her appointment instead of interrogating her again.
+        $provider = Provider::factory()->published()->create();
+        Appointment::factory()->for($provider)->confirmed()->create([
+            'client_name' => 'Sandra Ríos',
+            'client_phone' => '4045550123',
+            'service_name' => 'Balayage',
+        ]);
+
+        $prompt = app(SystemPrompt::class)->for($provider, '14045550123');
+
+        $this->assertStringContainsString('CLIENTA CONOCIDA', $prompt);
+        $this->assertStringContainsString('Sandra Ríos', $prompt);
+        $this->assertStringContainsString('Balayage', $prompt);
+        $this->assertStringContainsString('confirmada', $prompt);
+    }
+
+    public function test_an_unknown_phone_adds_no_client_block(): void
+    {
+        // "Quien te escribe es" is the block's own opening — the rules section
+        // legitimately names "sección CLIENTA CONOCIDA", so asserting on that
+        // marker would always fail.
+        $provider = Provider::factory()->published()->create();
+
+        $this->assertStringNotContainsString('Quien te escribe es', app(SystemPrompt::class)->for($provider, '14045550199'));
+        $this->assertStringNotContainsString('Quien te escribe es', app(SystemPrompt::class)->for($provider));
+    }
+
+    public function test_recognition_never_leaks_across_providers(): void
+    {
+        // The same phone may be a client of two professionals; each prompt
+        // must only carry the appointments of the provider being written to.
+        $mine = Provider::factory()->published()->create();
+        $theirs = Provider::factory()->published()->create();
+        Appointment::factory()->for($theirs)->confirmed()->create([
+            'client_name' => 'Clienta Ajena',
+            'client_phone' => '4045550123',
+        ]);
+
+        $this->assertStringNotContainsString('Clienta Ajena', app(SystemPrompt::class)->for($mine, '14045550123'));
     }
 }
