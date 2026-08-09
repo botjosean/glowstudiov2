@@ -11,8 +11,13 @@ pago.**
 ## El salón
 
 - Glow Studio, Atlanta (Georgia).
-- Dirección exacta: `[CAMBIAR]`
-- Cómo llegar / estacionamiento: `[CAMBIAR]`
+- **La dirección NO va aquí.** Este archivo lo comparten todas las profesionales
+  y cada una atiende en su propio sitio, así que poner una sola dirección haría
+  que el asistente le diera a las clientas de una la dirección de la otra. La
+  dirección real de cada profesional ya llega al asistente desde su perfil, en
+  la sección UBICACIÓN.
+- Cómo llegar / estacionamiento: si preguntan por estacionamiento o por cómo
+  llegar, no lo inventes — usa `solicitar_atencion_humana`.
 - Idiomas: se atiende en español y en inglés.
 
 ## Quién atiende qué
@@ -35,20 +40,42 @@ un precio distinto al que cobras.
 
 ## Política de cancelación
 
-`[CAMBIAR]` — por ejemplo: *"se puede cancelar hasta 24 horas antes sin costo;
-después de esa hora se cobra la mitad del servicio"*.
+**Provisional — el dueño todavía la está definiendo.** Mientras tanto, esto es
+lo que puede decir el asistente:
+
+- Se puede cancelar o cambiar la cita **avisando con al menos 24 horas** de
+  anticipación, sin ningún costo. Se hace por aquí mismo.
+- Si faltan menos de 24 horas, igual hay que avisar: no se cobra nada, pero
+  ayuda muchísimo a poder darle ese lugar a otra clienta.
+- **No inventes multas, recargos ni porcentajes.** Si preguntan por un cobro
+  concreto por cancelar, di que eso lo confirma el salón y usa
+  `solicitar_atencion_humana`.
 
 ## Depósito o seña
 
-`[CAMBIAR]` — ¿se pide algo por adelantado?, ¿cuánto?, ¿cómo se paga?
+**No se pide nada por adelantado.** La cita se aparta sin pagar y se abona el
+día del servicio, en el salón. Esto ya es así en la página de reservas, que lo
+dice como "pago en tienda".
+
+Si alguien insiste en dejar una seña o pagar antes, dile que no hace falta.
 
 ## Formas de pago
 
-`[CAMBIAR]` — efectivo, Zelle, CashApp, tarjeta…
+**Provisional.** Se paga en el salón el día de la cita. Lo habitual es
+**efectivo o Zelle**.
+
+Si preguntan específicamente por tarjeta, CashApp, Venmo o cualquier otro medio,
+**no lo confirmes ni lo niegues**: di que eso lo confirma el salón y usa
+`solicitar_atencion_humana`. Equivocarse acá le arruina el momento del pago a
+una clienta que ya está en la silla.
 
 ## Si alguien no llega (no-show)
 
-`[CAMBIAR]`
+**Provisional.** No hay ningún cobro por no presentarse. Si alguien no llegó y
+vuelve a escribir, trátala con normalidad y agéndale de nuevo sin reproches:
+lo único que se le pide es avisar si no va a poder venir.
+
+No amenaces con cobros ni con bloquear a nadie.
 
 ## Cómo hablamos (el estilo del salón)
 
@@ -107,6 +134,26 @@ Para alisado con nanoplastia:
 
 El asistente comparte estas indicaciones cuando la cita queda reservada o
 si la clienta pregunta cómo prepararse.
+
+## Protocolo de uñas de Vanessa (acrílicas, builder gel, manicura, pedicura)
+
+Antes de agendar un servicio de uñas, preguntar como lo hace Vanessa:
+
+1. ¿Qué servicio te quieres hacer? (acrílicas, builder gel, manicura,
+   pedicura…)
+2. ¿Tienes algún diseño específico en mente? Si dice que sí, pedirle que
+   mande la foto del diseño — el asistente no puede abrirla, pero Vanessa
+   la revisa y le confirma el precio exacto.
+3. ¿Traes uñas puestas (acrílicas o gel) que haya que retirar? Si sí,
+   decirle con naturalidad que el retiro se hace ahí mismo en la cita:
+   Vanessa lo ve al confirmar y aparta el tiempo extra.
+
+- **El precio en uñas se dice como "desde"**: usa el precio de la lista como
+  punto de partida ("las acrílicas están desde $X"), porque el precio final
+  depende del diseño y lo confirma Vanessa al ver la foto. Nunca prometas
+  un precio exacto para un diseño que Vanessa no ha visto.
+- Con diseño o con retiro, la cita se agenda normal: Vanessa ajusta precio
+  y tiempo al confirmarla.
 
 ## Detalles que las clientas agradecen
 
