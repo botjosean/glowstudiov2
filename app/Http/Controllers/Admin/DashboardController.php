@@ -93,6 +93,8 @@ class DashboardController extends Controller
                 'durationMinutes' => $appointment->duration_minutes,
                 'price' => $appointment->price,
                 'status' => $appointment->status->value,
+                'atHome' => $appointment->at_home,
+                'clientAddress' => $appointment->client_address,
                 // Raw UTC — the frontend formats it with the viewer's
                 // language and 12h/24h preference (both client-only).
                 'startsAt' => $appointment->starts_at->toIso8601String(),
@@ -117,6 +119,7 @@ class DashboardController extends Controller
                 'price' => $service->price,
                 'category' => $service->category->value,
                 'isActive' => $service->is_active,
+                'homeAvailable' => $service->home_available,
                 'upcomingCount' => (int) $service->upcoming_count,
             ])->values()->all(),
         ]);
@@ -170,6 +173,7 @@ class DashboardController extends Controller
                 'email' => $request->user()->email,
                 'bio' => $provider->bio,
                 'isMobile' => $provider->is_mobile,
+                'homeService' => $provider->home_service,
                 'serviceArea' => $provider->service_area,
                 'addressLine' => $provider->address_line,
                 'bannerPhoto' => MediaUrl::resolve($provider->banner_photo_url),

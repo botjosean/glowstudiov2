@@ -50,6 +50,12 @@ class StoreAppointmentRequest extends FormRequest
             'time' => ['required', 'date_format:H:i'],
             'fullName' => ['required', 'string', 'min:2', 'max:120'],
             'phone' => ['required', 'digits:10'],
+            // Home service: only meaningful when the service allows it (the
+            // controller enforces eligibility — a rule here would leak which
+            // combinations exist). The address is where she will be served,
+            // so a home request without one is unactionable.
+            'atHome' => ['sometimes', 'boolean'],
+            'address' => ['nullable', 'string', 'max:200', 'required_if:atHome,true'],
         ];
     }
 }

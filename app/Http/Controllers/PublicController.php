@@ -112,6 +112,9 @@ class PublicController extends Controller
                     'name' => $service->name,
                     'duration' => $service->duration_label,
                     'price' => $service->price,
+                    // Badge only in "both" mode: for a pure-mobile provider
+                    // everything already happens at the client's place.
+                    'homeAvailable' => $service->home_available && $provider->home_service && ! $provider->is_mobile,
                 ])->values()->all(),
             ],
         ]);
@@ -135,6 +138,9 @@ class PublicController extends Controller
                 'name' => $service->name,
                 'price' => $service->price,
             ],
+            // The where-selector appears only when the provider has a studio
+            // AND goes out AND this exact service is marked home-eligible.
+            'homeOption' => $service->home_available && $provider->home_service && ! $provider->is_mobile,
             'selectedDate' => $selectedDate->toDateString(),
             'slots' => collect($slots->handle($provider, $service, $selectedDate))
                 ->map(fn (int $minute) => ['h' => intdiv($minute, 60), 'm' => $minute % 60])
@@ -216,7 +222,15 @@ class PublicController extends Controller
             ? 'https://www.google.com/maps/search/?api=1&query='.urlencode($provider->address_line)
             : null;
 
-        return ['title' => $title, 'subtitle' => $subtitle, 'mapUrl' => $mapUrl];
+        // "Both" mode: the studio stays the headline; home service is an
+        // extra line, always tagged as subject to prior coordination.
+        $homeNote = $provider->home_service && ! $provider->is_mobile
+            ? ($provider->service_area !== null
+                ? __('provider.home_note_area', ['area' => $provider->service_area])
+                : __('provider.home_note'))
+            : null;
+
+        return ['title' => $title, 'subtitle' => $subtitle, 'mapUrl' => $mapUrl, 'homeNote' => $homeNote];
     }
 
     private function parseDateParam(?string $date, string $timezone, CarbonImmutable $today): CarbonImmutable

@@ -58,6 +58,10 @@ class UpdateProfileRequest extends FormRequest
             'phone' => ['required', 'digits:10'],
             'bio' => ['nullable', 'string', 'max:1000'],
             'isMobile' => ['required', 'boolean'],
+            // "Also serves at the client's place" on top of having a studio.
+            // `sometimes`: pre-deploy bundles don't send it and their saves
+            // must not reset it (the controller guards on key presence).
+            'homeService' => ['sometimes', 'boolean'],
             'serviceArea' => ['nullable', 'string', 'max:120'],
             'addressLine' => ['nullable', 'string', 'max:160'],
         ];

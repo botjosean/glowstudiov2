@@ -35,6 +35,10 @@ class ServiceRequest extends FormRequest
             'price' => ['required', 'integer', 'min:0', 'max:10000'],
             // Rule::enum mirrors services_category_chk.
             'category' => ['required', Rule::enum(ServiceCategory::class)],
+            // `sometimes` on purpose: a browser holding the pre-deploy JS
+            // bundle doesn't send this field, and its save must not fail —
+            // the controllers only touch home_available when the key exists.
+            'homeAvailable' => ['sometimes', 'boolean'],
         ];
     }
 }

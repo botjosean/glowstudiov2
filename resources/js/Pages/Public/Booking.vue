@@ -8,6 +8,9 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps({
     provider: { type: Object, required: true }, // { slug, name }
     service: { type: Object, required: true }, // { id, name, price }
+    // True only when the provider has a studio AND travels AND this service
+    // is marked home-eligible — the server decides, the UI just obeys.
+    homeOption: { type: Boolean, default: false },
     selectedDate: { type: String, required: true }, // 'YYYY-MM-DD', "today" in the provider's timezone
     slots: { type: Array, required: true }, // [{ h, m }] free slots for selectedDate
     monthAvailability: { type: Object, required: true }, // { 'YYYY-MM-DD': freeSlotCount }
@@ -130,6 +133,8 @@ const bookingForm = useForm({
     time: '',
     fullName: '',
     phone: '',
+    atHome: false,
+    address: '',
 });
 
 function closeToProfile() {
@@ -346,6 +351,45 @@ function submitBooking() {
                     </div>
                 </div>
 
+                <div v-if="homeOption" class="mb-4">
+                    <div class="mb-2 text-[13px] font-medium text-[var(--text-mute)]">
+                        {{ $t('booking.whereQuestion') }}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            class="rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+                            :class="!bookingForm.atHome
+                                ? 'border-transparent bg-[var(--chip-bg)] text-[var(--chip-fg)]'
+                                : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-body)]'"
+                            @click="bookingForm.atHome = false"
+                        >
+                            {{ $t('booking.atStudio') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+                            :class="bookingForm.atHome
+                                ? 'border-transparent bg-[var(--chip-bg)] text-[var(--chip-fg)]'
+                                : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-body)]'"
+                            @click="bookingForm.atHome = true"
+                        >
+                            {{ $t('booking.atHome') }}
+                        </button>
+                    </div>
+                    <template v-if="bookingForm.atHome">
+                        <textarea
+                            v-model="bookingForm.address"
+                            rows="2"
+                            :placeholder="$t('booking.homeAddressPlaceholder')"
+                            class="mt-3 w-full resize-none rounded-xl border border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3 text-[15px] font-semibold text-[var(--text-strong)] placeholder:font-medium placeholder:text-[var(--text-faint)] focus:outline-none"
+                        />
+                        <p class="mt-1.5 text-[12px] font-normal leading-relaxed text-[var(--text-faint)]">
+                            {{ $t('booking.homeCoordinationNote', { provider: provider.name }) }}
+                        </p>
+                    </template>
+                </div>
+
                 <div class="mb-4">
                     <div class="mb-2 text-[13px] font-medium text-[var(--text-mute)]">
                         {{ $t('booking.fullName') }}
@@ -398,10 +442,10 @@ function submitBooking() {
                 </div>
 
                 <p
-                    v-if="bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone"
+                    v-if="bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone || bookingForm.errors.address || bookingForm.errors.atHome"
                     class="mb-3 text-[13px] font-normal text-[var(--danger)]"
                 >
-                    {{ bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone }}
+                    {{ bookingForm.errors.time || bookingForm.errors.fullName || bookingForm.errors.phone || bookingForm.errors.address || bookingForm.errors.atHome }}
                 </p>
 
                 <div class="flex gap-3">
@@ -437,6 +481,9 @@ function submitBooking() {
                         {{ $t('booking.submittedWith') }}
                         <span class="font-bold text-[var(--text-heading)]">{{ provider.name }}</span>
                         {{ $t('booking.submittedPending') }}
+                    </p>
+                    <p v-if="bookingForm.atHome" class="mx-auto mt-3 max-w-[280px] text-[13px] font-semibold text-[var(--loc-title)]">
+                        {{ $t('booking.confirmedAtHome') }}
                     </p>
                     <div class="mx-auto my-6 max-w-[320px] rounded-2xl border border-[var(--green-border)] bg-[var(--green-soft)] p-4 text-left">
                         <div class="flex gap-2.5">

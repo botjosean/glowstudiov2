@@ -31,8 +31,10 @@ class CreateAppointment
         CarbonImmutable $localStart,
         string $clientName,
         string $phoneDigits,
+        bool $atHome = false,
+        ?string $clientAddress = null,
     ): Appointment {
-        return DB::transaction(function () use ($provider, $service, $localStart, $clientName, $phoneDigits) {
+        return DB::transaction(function () use ($provider, $service, $localStart, $clientName, $phoneDigits, $atHome, $clientAddress) {
             // Serializes bookings per provider — the portable guarantee
             // against double-booking. The Postgres exclusion constraint on
             // `appointments` is defense in depth, caught below.
@@ -59,6 +61,8 @@ class CreateAppointment
                     'starts_at' => $localStart->utc(),
                     'ends_at' => $localStart->addMinutes($service->duration_minutes)->utc(),
                     'status' => AppointmentStatus::Pending->value,
+                    'at_home' => $atHome,
+                    'client_address' => $clientAddress,
                 ]);
             } catch (QueryException $e) {
                 // 23P01 = exclusion_violation. The row lock above should make

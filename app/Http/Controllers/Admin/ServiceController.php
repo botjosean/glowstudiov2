@@ -34,6 +34,7 @@ class ServiceController extends Controller
             'category' => $data['category'],
             'position' => $position,
             'is_active' => true,
+            'home_available' => $data['homeAvailable'] ?? false,
         ]);
 
         return to_route('admin.servicios')->with('success', 'admin.serviceCreated');
@@ -58,6 +59,12 @@ class ServiceController extends Controller
             'price' => $data['price'],
             'category' => $data['category'],
         ];
+
+        // Only when the client sent it — a stale pre-deploy bundle that
+        // omits the field must not silently switch home service off.
+        if (array_key_exists('homeAvailable', $data)) {
+            $changes['home_available'] = $data['homeAvailable'];
+        }
 
         if ($service->category->value !== $data['category']) {
             $changes['service_type_id'] = $this->serviceTypeIdFor($data['category']);

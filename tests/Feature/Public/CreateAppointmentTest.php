@@ -338,4 +338,74 @@ class CreateAppointmentTest extends TestCase
 
         $response->assertStatus(429);
     }
+
+    public function test_a_home_visit_books_pending_with_the_address(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-01 00:00:00', 'America/New_York'));
+
+        $provider = Provider::factory()->published()->create(['home_service' => true, 'is_mobile' => false]);
+        $service = Service::factory()->for($provider)->create(['home_available' => true]);
+
+        $response = $this->post("/reservar/{$provider->slug}/{$service->id}", [
+            'date' => $provider->currentTime()->addDay()->toDateString(),
+            'time' => '09:00',
+            'fullName' => 'Jane Client',
+            'phone' => '(305) 555-0123',
+            'atHome' => true,
+            'address' => '742 Evergreen Terrace, Apt 2',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $appointment = Appointment::sole();
+        $this->assertTrue($appointment->at_home);
+        $this->assertSame('742 Evergreen Terrace, Apt 2', $appointment->client_address);
+        $this->assertSame(AppointmentStatus::Pending, $appointment->status);
+    }
+
+    public function test_a_home_visit_requires_an_address(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-01 00:00:00', 'America/New_York'));
+
+        $provider = Provider::factory()->published()->create(['home_service' => true, 'is_mobile' => false]);
+        $service = Service::factory()->for($provider)->create(['home_available' => true]);
+
+        $this->post("/reservar/{$provider->slug}/{$service->id}", [
+            'date' => $provider->currentTime()->addDay()->toDateString(),
+            'time' => '09:00',
+            'fullName' => 'Jane Client',
+            'phone' => '(305) 555-0123',
+            'atHome' => true,
+        ])->assertSessionHasErrors('address');
+
+        $this->assertSame(0, Appointment::count());
+    }
+
+    /**
+     * The per-service safety switch is the entire point: a crafted POST must
+     * not force a home visit onto a service the professional never marked,
+     * nor onto a provider who doesn't travel at all.
+     */
+    public function test_a_home_visit_is_rejected_when_service_or_provider_never_offered_it(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-01 00:00:00', 'America/New_York'));
+
+        $homeProvider = Provider::factory()->published()->create(['home_service' => true, 'is_mobile' => false]);
+        $unmarkedService = Service::factory()->for($homeProvider)->create(['home_available' => false]);
+
+        $studioProvider = Provider::factory()->published()->create(['home_service' => false, 'is_mobile' => false]);
+        $markedService = Service::factory()->for($studioProvider)->create(['home_available' => true]);
+
+        foreach ([[$homeProvider, $unmarkedService], [$studioProvider, $markedService]] as [$provider, $service]) {
+            $this->post("/reservar/{$provider->slug}/{$service->id}", [
+                'date' => $provider->currentTime()->addDay()->toDateString(),
+                'time' => '09:00',
+                'fullName' => 'Jane Client',
+                'phone' => '(305) 555-0123',
+                'atHome' => true,
+                'address' => 'Somewhere 123',
+            ])->assertSessionHasErrors('atHome');
+        }
+
+        $this->assertSame(0, Appointment::count());
+    }
 }

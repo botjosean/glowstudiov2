@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'provider_id', 'service_type_id', 'name', 'duration_minutes', 'price', 'category', 'position', 'is_active',
+    'home_available',
 ])]
 class Service extends Model
 {
@@ -36,6 +37,7 @@ class Service extends Model
             'price' => 'int',
             'position' => 'int',
             'is_active' => 'bool',
+            'home_available' => 'bool',
         ];
     }
 

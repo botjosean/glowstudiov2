@@ -182,4 +182,33 @@ class SystemPromptTest extends TestCase
 
         $this->assertStringNotContainsString('Clienta Ajena', app(SystemPrompt::class)->for($mine, '14045550123'));
     }
+
+    public function test_home_capable_services_are_marked_only_in_both_mode(): void
+    {
+        // "Both" mode: marked services carry the home note and the location
+        // section teaches the escalation rule. Studio-only providers must
+        // never see the words — nothing for the model to negotiate with.
+        $both = Provider::factory()->published()->create([
+            'home_service' => true, 'is_mobile' => false, 'address_line' => 'Calle 1 #2-3', 'service_area' => 'Brookhaven',
+        ]);
+        Service::factory()->for($both)->create(['name' => 'Manicure Deluxe', 'home_available' => true]);
+        Service::factory()->for($both)->create(['name' => 'Corte Clasico', 'home_available' => false]);
+
+        $prompt = app(SystemPrompt::class)->for($both);
+
+        $this->assertMatchesRegularExpression('/Manicure Deluxe.*se puede a domicilio, previa coordinación/', $prompt);
+        $this->assertDoesNotMatchRegularExpression('/Corte Clasico.*se puede a domicilio/', $prompt);
+        $this->assertStringContainsString('ÚNICAMENTE previa coordinación', $prompt);
+        $this->assertStringContainsString('en la zona de Brookhaven', $prompt);
+
+        $studio = Provider::factory()->published()->create([
+            'home_service' => false, 'is_mobile' => false, 'address_line' => 'Calle 9 #9-9',
+        ]);
+        Service::factory()->for($studio)->create(['name' => 'Manicure Deluxe', 'home_available' => true]);
+
+        $studioPrompt = app(SystemPrompt::class)->for($studio);
+
+        $this->assertStringNotContainsString('se puede a domicilio', $studioPrompt);
+        $this->assertStringNotContainsString('ÚNICAMENTE previa coordinación', $studioPrompt);
+    }
 }

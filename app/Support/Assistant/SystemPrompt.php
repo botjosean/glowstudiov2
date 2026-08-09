@@ -272,12 +272,17 @@ class SystemPrompt
             return "SERVICIOS\nEsta profesional todavía no tiene servicios publicados. No inventes ninguno: dile a la clienta que en un momento le confirma una persona del salón y usa solicitar_atencion_humana.";
         }
 
+        // Marked only in "both" mode: a pure-mobile provider is already all
+        // home visits, and a studio-only provider must never see the words.
+        $marksHome = $provider->home_service && ! $provider->is_mobile;
+
         $lines = $services->map(fn (Service $service): string => sprintf(
-            '- %s — $%d — %s (servicio_id: %d)',
+            '- %s — $%d — %s (servicio_id: %d)%s',
             $service->name,
             $service->price,
             Format::duration($service->duration_minutes),
             $service->id,
+            $marksHome && $service->home_available ? ' — se puede a domicilio, previa coordinación' : '',
         ))->implode("\n");
 
         return "SERVICIOS (usa el servicio_id al llamar a las herramientas)\n".$lines;
@@ -301,9 +306,24 @@ class SystemPrompt
                 : "UBICACIÓN\nEste servicio es a domicilio, en la zona de: {$provider->service_area}.";
         }
 
-        return $provider->address_line === null
-            ? null
-            : "UBICACIÓN\nLa dirección del salón es: {$provider->address_line}.";
+        if ($provider->address_line === null) {
+            return null;
+        }
+
+        $location = "UBICACIÓN\nLa dirección del salón es: {$provider->address_line}.";
+
+        // "Both" mode: home service exists but ONLY for marked services and
+        // ONLY coordinated by the professional herself — the assistant
+        // informs and escalates, never books it (crear_cita is studio-only).
+        if ($provider->home_service) {
+            $zona = $provider->service_area !== null ? " en la zona de {$provider->service_area}" : '';
+            $location .= "\nAlgunos servicios (los marcados en la lista) también se ofrecen a domicilio{$zona}, "
+                ."ÚNICAMENTE previa coordinación con {$provider->public_name}. Si te piden a domicilio: dilo así, "
+                .'usa solicitar_atencion_humana para que lo coordinen, y NUNCA crees tú esa cita — crear_cita '
+                .'reserva siempre en el salón. Los servicios sin esa marca no se hacen a domicilio; no lo negocies.';
+        }
+
+        return $location;
     }
 
     /**

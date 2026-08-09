@@ -29,6 +29,7 @@ const form = useForm({
     phone: props.profile.phone,
     bio: props.profile.bio,
     isMobile: props.profile.isMobile,
+    homeService: props.profile.homeService,
     serviceArea: props.profile.serviceArea,
     addressLine: props.profile.addressLine,
 });
@@ -42,7 +43,11 @@ function submit() {
 // checklist's "publish" step (?abrir=publicacion) opens that one instead.
 const sectionDone = computed(() => ({
     info: Boolean(props.profile.publicName) && Boolean(props.profile.bio),
-    ubicacion: Boolean(props.profile.isMobile ? props.profile.serviceArea : props.profile.addressLine),
+    ubicacion: Boolean(props.profile.isMobile
+        ? props.profile.serviceArea
+        : (props.profile.homeService
+            ? props.profile.addressLine && props.profile.serviceArea
+            : props.profile.addressLine)),
     fotos: props.profile.gallery.length >= props.profile.maxGallery,
     publicacion: props.profile.published,
 }));
@@ -97,12 +102,17 @@ const publishOptions = computed(() => [
 const locationOptions = computed(() => [
     { value: 'studio', label: t('admin.locationStudio') },
     { value: 'mobile', label: t('admin.locationMobile') },
+    { value: 'both', label: t('admin.locationBoth') },
 ]);
 
+// Three honest modes over two booleans: studio (F/F), mobile-only (T/-),
+// both (F/T). Which services actually go out is a per-service switch in
+// Servicios — this only says the professional is willing to travel at all.
 const locationValue = computed({
-    get: () => (form.isMobile ? 'mobile' : 'studio'),
+    get: () => (form.isMobile ? 'mobile' : form.homeService ? 'both' : 'studio'),
     set: (value) => {
         form.isMobile = value === 'mobile';
+        form.homeService = value === 'both';
     },
 });
 
@@ -342,19 +352,22 @@ function confirmDeletePhoto() {
                 <ToggleGroup v-model="locationValue" :options="locationOptions" />
                 <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.locationHint') }}</p>
 
-                <div class="mt-3">
+                <div class="mt-3 flex flex-col gap-3">
                     <Input
-                        v-if="form.isMobile"
-                        v-model="form.serviceArea"
-                        :label="$t('admin.serviceArea')"
-                        :placeholder="$t('admin.serviceAreaPlaceholder')"
-                    />
-                    <Input
-                        v-else
+                        v-if="!form.isMobile"
                         v-model="form.addressLine"
                         :label="$t('admin.addressLine')"
                         :placeholder="$t('admin.addressLinePlaceholder')"
                     />
+                    <Input
+                        v-if="form.isMobile || form.homeService"
+                        v-model="form.serviceArea"
+                        :label="$t('admin.serviceArea')"
+                        :placeholder="$t('admin.serviceAreaPlaceholder')"
+                    />
+                    <p v-if="form.homeService && !form.isMobile" class="text-[12px] font-normal text-[var(--text-faint)]">
+                        {{ $t('admin.locationBothHint') }}
+                    </p>
                     <p v-if="form.errors.serviceArea" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                         {{ form.errors.serviceArea }}
                     </p>

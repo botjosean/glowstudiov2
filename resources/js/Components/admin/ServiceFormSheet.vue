@@ -10,7 +10,7 @@ import { useFormat } from '../../composables/useFormat';
 
 const props = defineProps({
     mode: { type: String, default: 'create' }, // create | edit
-    service: { type: Object, default: () => ({ name: '', durationMinutes: 45, price: 35, category: 'other' }) },
+    service: { type: Object, default: () => ({ name: '', durationMinutes: 45, price: 35, category: 'other', homeAvailable: false }) },
     errors: { type: Object, default: () => ({}) },
     processing: { type: Boolean, default: false },
 });
@@ -37,7 +37,7 @@ const QUICK_DURATIONS = [30, 45, 60, 90, 120, 180];
 const showCustomDuration = ref(false);
 
 function syncDraft(service) {
-    form.value = { ...service };
+    form.value = { homeAvailable: false, ...service };
     showCustomDuration.value = !QUICK_DURATIONS.includes(form.value.durationMinutes);
 }
 
@@ -154,7 +154,7 @@ function save(keepOpen = false) {
             <p v-if="errors.durationMinutes" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.durationMinutes }}</p>
         </div>
 
-        <div class="mb-2 grid grid-cols-2 items-start gap-3">
+        <div class="mb-5 grid grid-cols-2 items-start gap-3">
             <OutlinedInput
                 id="service-price"
                 v-model.number="form.price"
@@ -174,6 +174,20 @@ function save(keepOpen = false) {
                 :error="errors.category"
             />
         </div>
+
+        <!-- Her per-service safety switch: unchecked services are never
+             offered at home by any channel, no matter the profile mode. -->
+        <label class="mb-2 flex items-start gap-2.5">
+            <input
+                v-model="form.homeAvailable"
+                type="checkbox"
+                class="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] accent-[var(--text-strong)]"
+            />
+            <span>
+                <span class="block text-[14px] font-medium text-[var(--text-strong)]">{{ $t('admin.serviceHomeAvailable') }}</span>
+                <span class="block text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.serviceHomeAvailableHint') }}</span>
+            </span>
+        </label>
 
         <div class="mt-6 flex flex-col gap-2.5">
             <button

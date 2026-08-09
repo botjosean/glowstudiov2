@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Plus, Sparkles, ChevronRight } from '@lucide/vue';
+import { Plus, Sparkles, ChevronRight, House } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ServiceFormSheet from '../../Components/admin/ServiceFormSheet.vue';
@@ -38,12 +38,13 @@ const form = useForm({
     durationMinutes: 45,
     price: 35,
     category: 'other',
+    homeAvailable: false,
 });
 
 // "other" rather than a barbershop category: this form is used by nail techs
 // and stylists too, and defaulting them into "Fade" was the exact complaint
 // that started this work.
-const BLANK_SERVICE = { name: '', durationMinutes: 45, price: 35, category: 'other' };
+const BLANK_SERVICE = { name: '', durationMinutes: 45, price: 35, category: 'other', homeAvailable: false };
 
 function openCreate() {
     sheetMode.value = 'create';
@@ -64,6 +65,7 @@ function handleSave(values, keepOpen = false) {
     form.durationMinutes = values.durationMinutes;
     form.price = values.price;
     form.category = values.category;
+    form.homeAvailable = values.homeAvailable ?? false;
 
     const options = {
         preserveScroll: true,
@@ -196,8 +198,13 @@ function activateFromSheet() {
                             </span>
                             <Badge v-if="!service.isActive" variant="closed">{{ $t('admin.serviceInactive') }}</Badge>
                         </span>
-                        <span class="mt-0.5 block text-[13px] font-normal text-[var(--text-mute)]">
+                        <span class="mt-0.5 flex items-center gap-1 text-[13px] font-normal text-[var(--text-mute)]">
                             {{ formatDuration(service.durationMinutes) }}
+                            <template v-if="service.homeAvailable">
+                                <span aria-hidden="true">·</span>
+                                <House :size="12" :stroke-width="1.8" class="text-[var(--text-faint)]" />
+                                <span class="sr-only">{{ $t('admin.serviceHomeAvailable') }}</span>
+                            </template>
                         </span>
                     </span>
                     <span class="flex shrink-0 items-center gap-1.5">

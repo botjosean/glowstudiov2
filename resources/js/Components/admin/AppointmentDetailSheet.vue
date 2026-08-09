@@ -68,11 +68,19 @@ const statusKey = {
                     <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.duration') }}</span>
                     <span class="text-[14px] font-semibold text-[var(--text-strong)]">{{ appointment.duration }}</span>
                 </div>
-                <div class="flex items-center justify-between py-3">
+                <div class="flex items-center justify-between py-3" :class="appointment.atHome && 'border-b border-[var(--surface-mute)]'">
                     <span class="text-[13px] font-medium text-[var(--text-faint)]">{{ $t('admin.price') }}</span>
                     <span class="text-[14px] font-semibold text-[var(--green-text)]"
                         >${{ appointment.price }} · {{ $t('booking.payInStore') }}</span
                     >
+                </div>
+                <!-- A home visit is the one thing she must not miss when
+                     confirming — confirming IS the prior coordination. -->
+                <div v-if="appointment.atHome" class="py-3">
+                    <span class="block text-[13px] font-bold text-[var(--loc-title)]">{{ $t('admin.atHomeTitle') }}</span>
+                    <span class="mt-0.5 block text-[13px] font-normal leading-relaxed text-[var(--text-body)]">
+                        {{ appointment.clientAddress || $t('admin.atHomeNoAddress') }}
+                    </span>
                 </div>
             </div>
 

@@ -245,7 +245,13 @@
         "bioHl_relaxing": "Relaxing space",
         "bioHl_affordable": "Fair prices",
         "galleryProgress": "{count} of {total} photos",
-        "galleryMissing": "{missing} more and your profile looks complete"
+        "galleryMissing": "{missing} more and your profile looks complete",
+        "locationBoth": "Both",
+        "locationBothHint": "You work at your place and also travel. Which services travel is set one by one in Services.",
+        "serviceHomeAvailable": "Available at client’s place",
+        "serviceHomeAvailableHint": "By prior arrangement only: the client requests it and you confirm. Unchecked, it is never offered at home.",
+        "atHomeTitle": "Home visit — coordinate before confirming",
+        "atHomeNoAddress": "No address on file"
     },
     "nav": {
         "appointments": "Appointments",
@@ -285,7 +291,8 @@
         "bookAppointment": "Book an appointment",
         "book": "Book",
         "footerCta": "Quick appointments with",
-        "openMap": "Open map"
+        "openMap": "Open map",
+        "homeAvailable": "home visit available"
     },
     "common": {
         "cancel": "Cancel",
@@ -364,7 +371,13 @@
         "nextTitle": "What happens next",
         "nextBody": "{provider} will notify you as soon as your appointment is confirmed. No advance payment is required.",
         "done": "Done, thank you",
-        "noSlots": "No free times on this day. Pick another date."
+        "noSlots": "No free times on this day. Pick another date.",
+        "whereQuestion": "Where should we serve you?",
+        "atStudio": "At the studio",
+        "atHome": "At my place",
+        "homeAddressPlaceholder": "Your address (street, number, apt…)",
+        "homeCoordinationNote": "Home visits are by prior arrangement: {provider} confirms your appointment before it is set.",
+        "confirmedAtHome": "You requested a home visit: subject to coordination."
     },
     "inicio": {
         "welcomeTitle": "Set up your business",

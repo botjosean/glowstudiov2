@@ -24,13 +24,20 @@ class ProfileController extends Controller
             'phone' => $data['phone'],
         ]);
 
-        $user->provider->update([
+        $providerChanges = [
             'public_name' => $data['publicName'],
             'bio' => $data['bio'],
             'is_mobile' => $data['isMobile'],
             'service_area' => $data['serviceArea'],
             'address_line' => $data['addressLine'],
-        ]);
+        ];
+
+        // Only when the client sent it — see UpdateProfileRequest.
+        if (array_key_exists('homeService', $data)) {
+            $providerChanges['home_service'] = $data['homeService'];
+        }
+
+        $user->provider->update($providerChanges);
 
         return to_route('admin.perfil')->with('success', 'admin.profileUpdated');
     }

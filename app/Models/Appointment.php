@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'provider_id', 'service_id', 'client_name', 'client_phone',
     'service_name', 'duration_minutes', 'price',
     'starts_at', 'ends_at', 'status', 'confirmed_at', 'cancelled_at',
+    'at_home', 'client_address',
 ])]
 class Appointment extends Model
 {
@@ -41,6 +42,7 @@ class Appointment extends Model
             'status' => AppointmentStatus::class,
             'duration_minutes' => 'int',
             'price' => 'int',
+            'at_home' => 'bool',
         ];
     }
 

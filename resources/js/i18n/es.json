@@ -245,7 +245,13 @@
         "bioHl_relaxing": "Ambiente relajado",
         "bioHl_affordable": "Precios accesibles",
         "galleryProgress": "{count} de {total} fotos",
-        "galleryMissing": "Te faltan {missing} para que tu perfil se vea completo"
+        "galleryMissing": "Te faltan {missing} para que tu perfil se vea completo",
+        "locationBoth": "Ambos",
+        "locationBothHint": "Atendés en tu espacio y también vas a domicilio. Cuáles servicios van a domicilio se marca uno por uno en Servicios.",
+        "serviceHomeAvailable": "Se puede a domicilio",
+        "serviceHomeAvailableHint": "Solo previa coordinación: la clienta lo pide y vos confirmás. Sin marcar, jamás se ofrece a domicilio.",
+        "atHomeTitle": "A domicilio — coordinar antes de confirmar",
+        "atHomeNoAddress": "Sin dirección registrada"
     },
     "nav": {
         "appointments": "Citas",
@@ -285,7 +291,8 @@
         "bookAppointment": "Reservar una cita",
         "book": "Reservar",
         "footerCta": "Citas rápidas con",
-        "openMap": "Abrir mapa"
+        "openMap": "Abrir mapa",
+        "homeAvailable": "a domicilio disponible"
     },
     "common": {
         "cancel": "Cancelar",
@@ -364,7 +371,13 @@
         "nextTitle": "Qué sigue",
         "nextBody": "{provider} te notificará en cuanto confirme tu cita. No se requiere pago por adelantado.",
         "done": "Listo, gracias",
-        "noSlots": "No hay horas libres este día. Elige otra fecha."
+        "noSlots": "No hay horas libres este día. Elige otra fecha.",
+        "whereQuestion": "¿Dónde te atendemos?",
+        "atStudio": "En el local",
+        "atHome": "A domicilio",
+        "homeAddressPlaceholder": "Tu dirección (calle, número, apto…)",
+        "homeCoordinationNote": "A domicilio es previa coordinación: {provider} confirma tu cita antes de que quede fija.",
+        "confirmedAtHome": "Pediste atención a domicilio: queda sujeta a coordinación."
     },
     "inicio": {
         "welcomeTitle": "Configura tu negocio",

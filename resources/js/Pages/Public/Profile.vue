@@ -116,6 +116,9 @@ const props = defineProps({
                 <div class="min-w-0 flex-1">
                     <div class="text-[15px] font-semibold text-[var(--loc-title)]">{{ provider.location.title }}</div>
                     <div class="mt-0.5 text-[13px] font-normal leading-relaxed text-[var(--loc-text)]">{{ provider.location.subtitle }}</div>
+                    <div v-if="provider.location.homeNote" class="mt-1 text-[12px] font-normal leading-relaxed text-[var(--loc-text)]">
+                        {{ provider.location.homeNote }}
+                    </div>
                 </div>
                 <span v-if="provider.location.mapUrl" class="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[var(--loc-text)]">
                     {{ $t('profile.openMap') }}
@@ -165,7 +168,9 @@ const props = defineProps({
                     <component :is="serviceIcons[service.icon]" :size="18" class="shrink-0 text-[var(--text-faint)]" />
                     <div class="min-w-0 flex-1">
                         <div class="text-[15px] font-semibold leading-snug text-[var(--text-strong)]">{{ service.name }}</div>
-                        <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ service.duration }}</div>
+                        <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">
+                            {{ service.duration }}<template v-if="service.homeAvailable"> · {{ $t('profile.homeAvailable') }}</template>
+                        </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
                         <span class="text-[17px] font-bold tabular-nums text-[var(--text-strong)]">${{ service.price }}</span>
