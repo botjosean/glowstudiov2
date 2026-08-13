@@ -7,9 +7,11 @@ use App\Models\Service;
 use App\Support\Assistant\AssistantUnavailable;
 use App\Support\Assistant\Coordinator;
 use App\Support\Kapso\InboundMessage;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CoordinatorTest extends TestCase
@@ -180,6 +182,175 @@ class CoordinatorTest extends TestCase
         $this->expectException(AssistantUnavailable::class);
 
         $this->coordinator()->reply($this->message('hola'), $this->provider());
+    }
+
+    /**
+     * The real failure, reproduced: the model announced a booking twice in a
+     * real conversation (2026-08-12) without ever calling crear_cita. The
+     * guardrail must refuse to relay that text and push the model to either
+     * actually book or ask for what is missing, instead of lying to the
+     * client for free.
+     */
+    public function test_it_refuses_to_relay_a_confirmation_the_model_never_booked(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['name' => 'Corte', 'price' => 45, 'duration_minutes' => 45]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00', 'America/New_York'));
+
+        $this->fakeGroq([
+            $this->text('¡Listo! Cita agendada para el martes a las 10:00 AM.'),
+            $this->toolCall('crear_cita', json_encode([
+                'servicio_id' => $service->id,
+                'fecha' => '2026-08-11',
+                'hora' => '10:00',
+                'nombre_completo' => 'Jose Sosa',
+            ])),
+            $this->text('¡Listo! Cita agendada para el martes a las 10:00 AM.'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('agendame el corte el martes a las 10am, soy jose sosa'), $provider);
+
+        $this->assertSame('¡Listo! Cita agendada para el martes a las 10:00 AM.', $reply);
+        $this->assertDatabaseCount('appointments', 1);
+
+        // Three model calls, not two: the hallucinated first answer must have
+        // been rejected and re-prompted rather than relayed straight through.
+        $this->assertCount(3, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $roles = array_column($request['messages'], 'role');
+
+            return in_array('system', $roles, true)
+                && str_contains(json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '', 'no puedes decir que la cita quedo agendada');
+        });
+
+        $this->travelBack();
+    }
+
+    /**
+     * The other side of the same guardrail: once crear_cita really did
+     * succeed, the model must be free to confirm it in plain declarative
+     * text without being forced into another round.
+     */
+    public function test_a_genuine_confirmation_after_a_real_booking_is_relayed_normally(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['name' => 'Corte', 'price' => 45, 'duration_minutes' => 45]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00', 'America/New_York'));
+
+        $this->fakeGroq([
+            $this->toolCall('crear_cita', json_encode([
+                'servicio_id' => $service->id,
+                'fecha' => '2026-08-11',
+                'hora' => '10:00',
+                'nombre_completo' => 'Jose Sosa',
+            ])),
+            $this->text('¡Listo! Cita agendada para el martes a las 10:00 AM.'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('agendame el corte el martes a las 10am, soy jose sosa'), $provider);
+
+        $this->assertSame('¡Listo! Cita agendada para el martes a las 10:00 AM.', $reply);
+        $this->assertCount(2, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
+
+        $this->travelBack();
+    }
+
+    /**
+     * The exact wording a live dry run of this guardrail let through: past
+     * tense ("quedó"), not the present tense ("queda") the first version of
+     * the regex only checked for.
+     */
+    public function test_it_catches_the_past_tense_phrasing_a_live_run_missed(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['name' => 'Corte', 'price' => 45, 'duration_minutes' => 45]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00', 'America/New_York'));
+
+        $this->fakeGroq([
+            $this->text('De nada, Jose. La cita quedó pendiente de confirmación por parte del salón.'),
+            $this->toolCall('crear_cita', json_encode([
+                'servicio_id' => $service->id,
+                'fecha' => '2026-08-11',
+                'hora' => '10:00',
+                'nombre_completo' => 'Jose Sosa',
+            ])),
+            $this->text('¡Listo! Quedó agendada.'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('si correcto gracias'), $provider);
+
+        $this->assertSame('¡Listo! Quedó agendada.', $reply);
+        $this->assertDatabaseCount('appointments', 1);
+
+        $this->travelBack();
+    }
+
+    /**
+     * Two more real phrasings a 6-client live benchmark surfaced in the same
+     * session: "está pendiente de confirmación" and "tiene una cita ...
+     * pendiente de confirmación" — different verbs than the first fix
+     * covered, same underlying claim.
+     *
+     * @return list<array{0: string}>
+     */
+    public static function unbookedConfirmationPhrasingsProvider(): array
+    {
+        return [
+            ['Tu cita para un corte el martes que viene a las 11 AM está pendiente de confirmación por parte del salón.'],
+            ['Tu sobrino Joseito Sosa tiene una cita para corte clasico el martes que viene a las 11:45 AM, pendiente de confirmacion.'],
+        ];
+    }
+
+    #[DataProvider('unbookedConfirmationPhrasingsProvider')]
+    public function test_it_catches_other_real_phrasings_a_live_run_surfaced(string $hallucinated): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['name' => 'Corte', 'price' => 45, 'duration_minutes' => 45]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00', 'America/New_York'));
+
+        $this->fakeGroq([
+            $this->text($hallucinated),
+            $this->toolCall('crear_cita', json_encode([
+                'servicio_id' => $service->id,
+                'fecha' => '2026-08-11',
+                'hora' => '10:00',
+                'nombre_completo' => 'Jose Sosa',
+            ])),
+            $this->text('¡Listo! Quedó agendada.'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('si correcto gracias'), $provider);
+
+        $this->assertSame('¡Listo! Quedó agendada.', $reply);
+        $this->assertDatabaseCount('appointments', 1);
+
+        $this->travelBack();
+    }
+
+    /**
+     * A proposal awaiting the client's yes must never be mistaken for a
+     * completed booking — that would let the guardrail itself pressure the
+     * model into calling crear_cita before the client actually agreed.
+     */
+    public function test_a_proposal_with_a_question_is_never_treated_as_a_confirmation(): void
+    {
+        $this->fakeGroq([
+            $this->text('Te agendo un corte el martes a las 10:00 AM. ¿Es correcto?'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('quiero un corte el martes a las 10am'), $this->provider());
+
+        $this->assertSame('Te agendo un corte el martes a las 10:00 AM. ¿Es correcto?', $reply);
+        $this->assertCount(1, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
     }
 
     public function test_a_rate_limit_is_retryable_and_honours_the_requested_wait(): void

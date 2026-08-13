@@ -109,8 +109,32 @@ class Coordinator
             ['role' => 'user', 'content' => $message->text],
         ];
 
+        return $this->converse($messages, $context);
+    }
+
+    /**
+     * Runs the tool-calling loop to completion for an already-assembled
+     * message list.
+     *
+     * Split out from reply() so a caller with its own conversation state — a
+     * benchmark harness replaying a scripted conversation without a live
+     * Kapso thread, for instance — can drive the exact same loop, guardrail
+     * included, without a webhook.
+     *
+     * @param  list<array<string, mixed>>  $messages
+     *
+     * @throws AssistantUnavailable
+     */
+    private function converse(array $messages, ToolContext $context): string
+    {
         $definitions = $this->tools->definitions();
         $maxIterations = (int) (config('services.assistant.max_iterations') ?: 6);
+
+        // Whether crear_cita succeeded at any point in *this* reply — the
+        // only thing that licenses the model to tell the client a booking
+        // exists. Reset per call, not per iteration: a booking made two
+        // iterations ago still justifies a confirmation now.
+        $bookingConfirmed = false;
 
         for ($iteration = 1; $iteration <= $maxIterations; $iteration++) {
             $assistant = $this->model->chat($messages, $definitions);
@@ -130,6 +154,28 @@ class Coordinator
                     throw AssistantUnavailable::transient('The model answered with neither text nor a tool call.');
                 }
 
+                if (! $bookingConfirmed && $this->claimsAConfirmedBooking($answer)) {
+                    // Caught for real on 2026-08-12: gemini-2.5-flash-lite told
+                    // a client "¡Listo! Cita agendada..." twice in one
+                    // conversation without ever calling crear_cita — the model
+                    // proposes, the server executes (see AssistantTools), and
+                    // this is that rule violated from the other side: the
+                    // client is told something happened that never reached the
+                    // database. Rather than relay it, push the model to either
+                    // actually book or admit it has not, same as any other
+                    // tool-less turn — bounded by the same iteration limit.
+                    Log::warning('WhatsApp assistant claimed a booking without calling crear_cita this turn; forcing it to actually book.', [
+                        'provider' => $context->provider->slug,
+                    ]);
+
+                    $messages[] = [
+                        'role' => 'system',
+                        'content' => 'No llamaste a crear_cita en este turno, asi que no puedes decir que la cita quedo agendada, confirmada o registrada. Si la clienta ya confirmo servicio, dia, hora y nombre, llama a crear_cita ahora mismo. Si falta algun dato, pideselo primero.',
+                    ];
+
+                    continue;
+                }
+
                 return $answer;
             }
 
@@ -143,7 +189,12 @@ class Coordinator
             ];
 
             foreach ($toolCalls as $call) {
-                $messages[] = $this->execute($call, $context);
+                $executed = $this->execute($call, $context);
+                $messages[] = $executed['message'];
+
+                if ($executed['tool'] === 'crear_cita' && ! $executed['failed']) {
+                    $bookingConfirmed = true;
+                }
             }
         }
 
@@ -151,8 +202,42 @@ class Coordinator
     }
 
     /**
+     * Whether a final, tool-less answer reads as telling the client a booking
+     * is done — "cita agendada", "queda confirmada" and the like — as opposed
+     * to *proposing* one and waiting for a yes ("¿Es correcto?"). A question
+     * is never treated as a claim of completion, because the model is
+     * expected to propose exactly that way before crear_cita is ever called,
+     * and flagging that would force a booking through without the client's
+     * explicit yes.
+     *
+     * A heuristic over the model's own wording, not a substitute for the real
+     * check (whether crear_cita actually ran) — it only decides which answers
+     * are worth holding to that check.
+     */
+    private function claimsAConfirmedBooking(string $answer): bool
+    {
+        if (str_contains($answer, '?')) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/\bcita\b[^.!]{0,60}\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao])\b'
+            .'|\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao])\b[^.!]{0,60}\bcita\b'
+            // "pendiente de confirmación" is AssistantTools' own vocabulary
+            // (see createBooking's `estado`) and the model echoes it verbatim
+            // whether or not it actually called the tool, so it is treated as
+            // a claim on its own — a live benchmark run showed it paired with
+            // "queda", "quedó", "está" and "tiene" in different turns, too
+            // many verbs to chase individually.
+            .'|\bpendiente\s+de\s+confirmaci[oó]n\b'
+            .'|\bqued(?:a|[oó])\s+(?:ya\s+)?(?:registrada|confirmada|agendada)\b/iu',
+            $answer,
+        );
+    }
+
+    /**
      * @param  array<mixed>  $call
-     * @return array<string, mixed> the `tool` message to feed back
+     * @return array{tool: string, failed: bool, message: array<string, mixed>}
      */
     private function execute(array $call, ToolContext $context): array
     {
@@ -161,6 +246,7 @@ class Coordinator
         $arguments = is_array($decoded) ? $decoded : [];
 
         $result = $this->tools->run($name, $arguments, $context);
+        $failed = isset($result['error']);
 
         // The tool name and, when it failed, *why*. Never the arguments or a
         // successful result: those carry the client's name, phone and plans. The
@@ -170,14 +256,18 @@ class Coordinator
         Log::info('WhatsApp assistant ran a tool.', array_filter([
             'tool' => $name,
             'provider' => $context->provider->slug,
-            'failed' => isset($result['error']),
+            'failed' => $failed,
             'why' => $result['error'] ?? null,
         ], static fn ($value): bool => $value !== null));
 
         return [
-            'role' => 'tool',
-            'tool_call_id' => (string) ($call['id'] ?? ''),
-            'content' => json_encode($result, JSON_UNESCAPED_UNICODE) ?: '{}',
+            'tool' => $name,
+            'failed' => $failed,
+            'message' => [
+                'role' => 'tool',
+                'tool_call_id' => (string) ($call['id'] ?? ''),
+                'content' => json_encode($result, JSON_UNESCAPED_UNICODE) ?: '{}',
+            ],
         ];
     }
 
