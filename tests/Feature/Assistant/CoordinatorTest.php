@@ -360,6 +360,35 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * WhatsApp renders one asterisk as bold and shows two literally, so
+     * Markdown from the model reaches the client as visible punctuation.
+     * Caught on `claude-haiku-4.5` minutes after it went live, in two of its
+     * first three answers, despite the prompt asking for one asterisk.
+     */
+    public function test_markdown_bold_is_rewritten_as_whatsapp_bold(): void
+    {
+        $this->fakeGroq([$this->text('El martes que viene es **18 de agosto** ☺️')]);
+
+        $reply = $this->coordinator()->reply($this->message('que fecha es el martes'), $this->provider());
+
+        $this->assertSame('El martes que viene es *18 de agosto* ☺️', $reply);
+    }
+
+    /**
+     * A lone pair of asterisks around nothing, and the ordinary single-asterisk
+     * form, both have to survive untouched — a rewrite that mangles correct
+     * text is worse than the Markdown it was meant to fix.
+     */
+    public function test_it_leaves_text_that_was_already_right_alone(): void
+    {
+        $this->fakeGroq([$this->text('Atendemos *todos los días* de 10:00 AM a 9:00 PM. Precio: ** consultar')]);
+
+        $reply = $this->coordinator()->reply($this->message('horarios'), $this->provider());
+
+        $this->assertSame('Atendemos *todos los días* de 10:00 AM a 9:00 PM. Precio: ** consultar', $reply);
+    }
+
+    /**
      * The regression that made this guard ask the database instead of the
      * wording.
      *

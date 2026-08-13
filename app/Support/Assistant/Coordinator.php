@@ -209,9 +209,11 @@ class Coordinator
                     continue;
                 }
 
-                $reply = $bookedId !== null
-                    ? $this->withTheBookingItActuallyMade($answer, $bookedId, $context)
-                    : $answer;
+                $reply = $this->asWhatsAppText(
+                    $bookedId !== null
+                        ? $this->withTheBookingItActuallyMade($answer, $bookedId, $context)
+                        : $answer,
+                );
 
                 // One line per answered message, so the questions this project
                 // has had to answer by grepping ("is the new model even being
@@ -263,6 +265,26 @@ class Coordinator
         }
 
         throw AssistantUnavailable::permanent("The model kept calling tools past {$maxIterations} rounds.");
+    }
+
+    /**
+     * WhatsApp bold is one asterisk, not two.
+     *
+     * The prompt says so in as many words, and models keep writing Markdown
+     * anyway — `claude-haiku-4.5` did it in two of three answers within
+     * minutes of going live. WhatsApp does not render `**texto**`: the client
+     * sees the asterisks, which reads as a broken robot. The prompt keeps
+     * asking, because a model that writes it right needs no cleanup; but
+     * whether it lands is no longer left to the model, for the same reason
+     * nothing else on this path is.
+     *
+     * Only the unambiguous case is touched. `__` and `##` are left alone:
+     * they have never been seen in a real reply, and a rewrite rule that
+     * fires on text nobody sent is a bug waiting for its first client.
+     */
+    private function asWhatsAppText(string $reply): string
+    {
+        return preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '*$1*', $reply) ?? $reply;
     }
 
     /**
