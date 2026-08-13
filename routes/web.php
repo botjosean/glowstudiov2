@@ -40,6 +40,15 @@ Route::middleware('guest')->group(function () {
     Route::get('/iniciar-sesion', [PublicController::class, 'signIn'])->name('sign-in');
     Route::get('/crear-cuenta', [PublicController::class, 'signUp'])->name('sign-up');
 
+    // Named exactly 'password.request' / 'password.reset': Fortify itself
+    // would register views under these names if config('fortify.views')
+    // were true, and Illuminate's default ResetPassword notification builds
+    // its email link from route('password.reset', ...) regardless of that
+    // setting. The POST targets (password.email / password.update) are
+    // Fortify's own — see FortifyServiceProvider for their responses.
+    Route::get('/olvide-contrasena', [PublicController::class, 'forgotPassword'])->name('password.request');
+    Route::get('/restablecer-contrasena/{token}', [PublicController::class, 'resetPassword'])->name('password.reset');
+
     Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 });

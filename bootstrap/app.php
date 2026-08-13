@@ -8,7 +8,9 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -36,4 +38,23 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Laravel's default here is a bare 429 with no page for Inertia to
+        // render — the login form just sits there looking broken. Converting
+        // it to the same 'identifier' field error SignIn.vue already
+        // displays for wrong credentials makes the lockout visible instead.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if (! $request->routeIs('login.store')) {
+                return null;
+            }
+
+            $seconds = max(1, (int) ($e->getHeaders()['Retry-After'] ?? 60));
+            $minutes = (int) ceil($seconds / 60);
+
+            $message = app()->getLocale() === 'en'
+                ? ($minutes === 1 ? 'Too many attempts. Try again in 1 minute.' : "Too many attempts. Try again in {$minutes} minutes.")
+                : ($minutes === 1 ? 'Demasiados intentos. Probá de nuevo en 1 minuto.' : "Demasiados intentos. Probá de nuevo en {$minutes} minutos.");
+
+            throw ValidationException::withMessages(['identifier' => [$message]]);
+        });
     })->create();

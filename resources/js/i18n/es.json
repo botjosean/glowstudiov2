@@ -301,7 +301,9 @@
         "close": "Cerrar",
         "clear": "Borrar",
         "saving": "Guardando…",
-        "continueWithGoogle": "Continuar con Google"
+        "continueWithGoogle": "Continuar con Google",
+        "showPassword": "Mostrar contraseña",
+        "hidePassword": "Ocultar contraseña"
     },
     "signIn": {
         "title": "Bienvenido de nuevo",
@@ -441,5 +443,22 @@
         "refresh": "Actualizar datos",
         "servicesCount": "sin servicios | 1 servicio | {count} servicios",
         "appointmentsCount": "sin citas | 1 cita | {count} citas"
+    },
+    "forgotPassword": {
+        "title": "Recuperar contraseña",
+        "subtitle": "Escribe el email de tu cuenta y te mandamos un enlace para crear una nueva",
+        "emailLabel": "Email",
+        "submit": "Enviar enlace",
+        "linkSent": "Si ese correo tiene una cuenta, te mandamos un enlace para crear una contraseña nueva. Revisa también spam.",
+        "backToSignIn": "Volver a iniciar sesión"
+    },
+    "resetPassword": {
+        "title": "Crea una contraseña nueva",
+        "subtitle": "Para {email}",
+        "passwordLabel": "Contraseña nueva",
+        "confirmPasswordLabel": "Confirmar contraseña",
+        "submit": "Guardar contraseña",
+        "success": "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
+        "invalidToken": "Ese enlace ya no es válido o venció. Pide uno nuevo."
     }
 }

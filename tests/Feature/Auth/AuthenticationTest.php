@@ -80,10 +80,38 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', ['identifier' => 'patib', 'password' => 'wrong']);
 
-        // The `throttle:login` route middleware trips first and returns a
-        // raw 429, not a redirect with a flashed validation error.
-        $response->assertStatus(429);
+        // The `throttle:login` route middleware trips first with a raw 429.
+        // bootstrap/app.php converts that into the same 'identifier' error
+        // SignIn.vue already renders for wrong credentials, so the lockout
+        // is actually visible instead of the form silently doing nothing.
+        $response->assertSessionHasErrors('identifier');
         $this->assertGuest();
+    }
+
+    public function test_the_rate_limit_message_names_the_wait(): void
+    {
+        User::factory()->create(['username' => 'patib']);
+
+        for ($i = 0; $i < 6; $i++) {
+            $response = $this->withUnencryptedCookie('locale', 'es')->post('/login', ['identifier' => 'patib', 'password' => 'wrong']);
+        }
+
+        $response->assertSessionHasErrors([
+            'identifier' => 'Demasiados intentos. Probá de nuevo en 1 minuto.',
+        ]);
+    }
+
+    public function test_the_rate_limit_message_respects_the_english_locale(): void
+    {
+        User::factory()->create(['username' => 'patib']);
+
+        for ($i = 0; $i < 6; $i++) {
+            $response = $this->withUnencryptedCookie('locale', 'en')->post('/login', ['identifier' => 'patib', 'password' => 'wrong']);
+        }
+
+        $response->assertSessionHasErrors([
+            'identifier' => 'Too many attempts. Try again in 1 minute.',
+        ]);
     }
 
     public function test_can_log_out(): void

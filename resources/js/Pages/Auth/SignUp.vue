@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { Eye, Check } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import Input from '../../Components/ui/Input.vue';
+import PasswordField from '../../Components/ui/PasswordField.vue';
 import Button from '../../Components/ui/Button.vue';
 
 const form = useForm({
@@ -76,47 +76,13 @@ function submit() {
                 </label>
                 <Input v-model="form.email" :label="$t('signUp.emailLabel')" type="email" />
 
-                <label class="flex flex-col gap-2">
-                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
-                        $t('signUp.passwordLabel')
-                    }}</span>
-                    <div
-                        class="flex items-center justify-between rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5"
-                    >
-                        <input
-                            v-model="form.password"
-                            type="password"
-                            class="w-full bg-transparent text-base tracking-[3px] text-[var(--text-strong)] focus:outline-none"
-                        />
-                        <Eye :size="18" class="shrink-0 text-[var(--text-faint)]" />
-                    </div>
-                </label>
+                <PasswordField v-model="form.password" :label="$t('signUp.passwordLabel')" />
 
-                <label class="flex flex-col gap-2">
-                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
-                        $t('signUp.confirmPasswordLabel')
-                    }}</span>
-                    <div
-                        class="flex items-center justify-between rounded-xl border-[1.5px] px-4 py-3.5"
-                        :class="
-                            passwordsMatch
-                                ? 'border-[var(--green-border)] bg-[var(--green-soft)]'
-                                : 'border-[var(--border-strong)] bg-[var(--surface-alt)]'
-                        "
-                    >
-                        <input
-                            v-model="form.confirmPassword"
-                            type="password"
-                            class="w-full bg-transparent text-base tracking-[3px] text-[var(--text-strong)] focus:outline-none"
-                        />
-                        <Check
-                            v-if="passwordsMatch"
-                            :size="18"
-                            class="shrink-0 text-[var(--green-text)]"
-                        />
-                        <Eye v-else :size="18" class="shrink-0 text-[var(--text-faint)]" />
-                    </div>
-                </label>
+                <PasswordField
+                    v-model="form.confirmPassword"
+                    :label="$t('signUp.confirmPasswordLabel')"
+                    :matched="passwordsMatch"
+                />
             </form>
 
             <div class="mt-5 flex items-center gap-2.5">

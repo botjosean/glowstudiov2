@@ -1,8 +1,8 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
-import { Eye } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import Input from '../../Components/ui/Input.vue';
+import PasswordField from '../../Components/ui/PasswordField.vue';
 import Button from '../../Components/ui/Button.vue';
 
 const form = useForm({
@@ -29,21 +29,7 @@ function submit() {
                     {{ form.errors.identifier }}
                 </p>
                 <Input v-model="form.identifier" :label="$t('signIn.identifierLabel')" type="text" />
-                <label class="flex flex-col gap-2">
-                    <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
-                        $t('signIn.passwordLabel')
-                    }}</span>
-                    <div
-                        class="flex items-center justify-between rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5"
-                    >
-                        <input
-                            v-model="form.password"
-                            type="password"
-                            class="w-full bg-transparent text-base tracking-[3px] text-[var(--text-strong)] focus:outline-none"
-                        />
-                        <Eye :size="18" class="shrink-0 text-[var(--text-faint)]" />
-                    </div>
-                </label>
+                <PasswordField v-model="form.password" :label="$t('signIn.passwordLabel')" />
 
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2">
@@ -54,7 +40,9 @@ function submit() {
                         />
                         <span class="text-[13px] font-normal text-[var(--text-body)]">{{ $t('signIn.remember') }}</span>
                     </label>
-                    <span class="text-[13px] font-medium text-[var(--green-text)]">{{ $t('signIn.forgot') }}</span>
+                    <Link href="/olvide-contrasena" class="text-[13px] font-medium text-[var(--green-text)]">{{
+                        $t('signIn.forgot')
+                    }}</Link>
                 </div>
 
                 <div class="mt-2 flex gap-3">

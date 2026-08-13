@@ -160,6 +160,26 @@ class PublicController extends Controller
         return Inertia::render('Auth/SignUp');
     }
 
+    public function forgotPassword(): Response
+    {
+        return Inertia::render('Auth/ForgotPassword');
+    }
+
+    /**
+     * Fortify's own reset-link email points here (named 'password.reset' —
+     * that's the exact name Illuminate\Auth\Notifications\ResetPassword
+     * builds its URL from, see FortifyServiceProvider). The token is never
+     * validated here; POSTing it to /reset-password is what actually checks
+     * it, so an expired or tampered token just fails on submit.
+     */
+    public function resetPassword(Request $request, string $token): Response
+    {
+        return Inertia::render('Auth/ResetPassword', [
+            'token' => $token,
+            'email' => (string) $request->query('email', ''),
+        ]);
+    }
+
     /**
      * The one-time "set a password" step for an account that arrived via
      * Google and doesn't have one. EnsureUserHasPassword is what actually

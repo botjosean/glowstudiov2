@@ -23,9 +23,10 @@ class ReservedSlugs
     private const RESERVED = [
         // Every current top-level path and prefix.
         'admin', 'admin-general', 'ajustes', 'auth', 'citas', 'crear-contrasena',
-        'crear-cuenta', 'horario', 'iniciar-sesion', 'inicio', 'limpiar', 'p',
-        'perfil', 'privacidad', 'proveedores', 'reservar', 'servicios', 'terminos',
-        'verificar-correo',
+        'crear-cuenta', 'forgot-password', 'horario', 'iniciar-sesion', 'inicio',
+        'limpiar', 'olvide-contrasena', 'p', 'perfil', 'privacidad', 'proveedores',
+        'reservar', 'reset-password', 'restablecer-contrasena', 'servicios',
+        'terminos', 'verificar-correo',
         // Paths the app doesn't serve yet but would be confusing or dangerous to
         // hand out: anything that reads like the platform speaking, not a person.
         'api', 'app', 'ayuda', 'blog', 'checkout', 'contacto', 'cuenta', 'dashboard',

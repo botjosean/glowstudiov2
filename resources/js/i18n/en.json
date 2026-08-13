@@ -301,7 +301,9 @@
         "close": "Close",
         "clear": "Clear",
         "saving": "Saving…",
-        "continueWithGoogle": "Continue with Google"
+        "continueWithGoogle": "Continue with Google",
+        "showPassword": "Show password",
+        "hidePassword": "Hide password"
     },
     "signIn": {
         "title": "Welcome back",
@@ -441,5 +443,22 @@
         "refresh": "Refresh data",
         "servicesCount": "no services | 1 service | {count} services",
         "appointmentsCount": "no appointments | 1 appointment | {count} appointments"
+    },
+    "forgotPassword": {
+        "title": "Reset your password",
+        "subtitle": "Enter your account's email and we'll send you a link to create a new one",
+        "emailLabel": "Email",
+        "submit": "Send link",
+        "linkSent": "If that email has an account, we sent a link to create a new password. Check spam too.",
+        "backToSignIn": "Back to sign in"
+    },
+    "resetPassword": {
+        "title": "Create a new password",
+        "subtitle": "For {email}",
+        "passwordLabel": "New password",
+        "confirmPasswordLabel": "Confirm password",
+        "submit": "Save password",
+        "success": "Your password was updated. You can sign in now.",
+        "invalidToken": "That link is no longer valid or has expired. Request a new one."
     }
 }
