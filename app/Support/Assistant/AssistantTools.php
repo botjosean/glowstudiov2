@@ -178,6 +178,7 @@ class AssistantTools
         if ($minutes === []) {
             return [
                 'fecha' => $date->toDateString(),
+                'dia' => $date->locale('es')->isoFormat('dddd'),
                 'horas_disponibles' => [],
                 'aviso' => 'No queda ningún hueco ese día. Ofrécele otro día; no inventes horas.',
             ];
@@ -185,6 +186,10 @@ class AssistantTools
 
         return [
             'fecha' => $date->toDateString(),
+            // Named back so a model that asked for the wrong date reads the
+            // weekday it really queried before offering those hours to the
+            // client — see summarise() for why that keeps being necessary.
+            'dia' => $date->locale('es')->isoFormat('dddd'),
             'servicio' => $service->name,
             'horas_disponibles' => array_map(
                 static fn (int $minute): string => sprintf('%02d:%02d', intdiv($minute, 60), $minute % 60),
@@ -400,14 +405,22 @@ class AssistantTools
      * A full, unambiguous restatement — the thing the assistant must read back
      * before anything is created or cancelled.
      */
+    /**
+     * The weekday is spelled out on purpose. Every model tested on 2026-08-12
+     * mismatched a date to its weekday at some point ("martes 19", a
+     * Wednesday), and this is the cheapest place to correct it: whatever the
+     * model believed when it sent the date, what comes back names the day the
+     * server actually used, in the same message it will speak from.
+     */
     private function summarise(Appointment $appointment, ToolContext $context): string
     {
         $localStart = $appointment->starts_at->setTimezone($context->provider->timezone);
 
         return sprintf(
-            '%s con %s el %s a las %s (%s, $%d)',
+            '%s con %s el %s %s a las %s (%s, $%d)',
             $appointment->service_name,
             $context->provider->public_name,
+            $localStart->locale('es')->isoFormat('dddd'),
             $localStart->format('d/m/Y'),
             $localStart->format('g:i A'),
             Format::duration($appointment->duration_minutes),

@@ -327,16 +327,51 @@ class SystemPrompt
     }
 
     /**
+     * How many days of the calendar to spell out for the model.
+     *
+     * Two full weeks, so "el martes que viene" — seven days out from a Tuesday
+     * — is on the list rather than one day past its end.
+     */
+    private const CALENDAR_DAYS = 14;
+
+    /**
+     * Today, and the calendar the model would otherwise have to work out.
+     *
      * Only the date, never the clock: the date changes once a day so the cached
      * prefix survives the whole day, and slot filtering for "already passed" is
      * the availability tool's job, not the model's.
+     *
+     * The table underneath is here because date arithmetic is the one thing
+     * these models reliably get wrong. Asked for "el martes que viene" they
+     * answered "martes 19" — which was a Wednesday — and every model tested on
+     * 2026-08-12 made some version of that mistake, in a tool whose arguments
+     * are a date string. A wrong day here is not a wrong sentence: it is a real
+     * client standing at the salon door on the wrong morning. Looking the date
+     * up costs the model nothing and costs the prompt one short line per day,
+     * inside the section that already changes daily.
      */
     private function today(Provider $provider): string
     {
         $now = $provider->currentTime();
 
-        return 'HOY es '.$now->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY')
-            .'. Úsalo para entender "mañana", "el viernes" o "la semana que viene". Si dudas de la fecha, pregúntale.';
+        $lines = ['HOY es '.$now->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY').'.'];
+        $lines[] = 'CALENDARIO (úsalo tal cual, no calcules fechas tú):';
+
+        for ($offset = 0; $offset < self::CALENDAR_DAYS; $offset++) {
+            $day = $now->addDays($offset);
+
+            $label = match ($offset) {
+                0 => ' (hoy)',
+                1 => ' (mañana)',
+                default => '',
+            };
+
+            $lines[] = '- '.$day->locale('es')->isoFormat('dddd D [de] MMMM').$label.' = '.$day->format('Y-m-d');
+        }
+
+        $lines[] = 'Si te piden un día que no esté en esta lista, pregúntale la fecha exacta en vez de calcularla.';
+
+        return implode("\n", $lines);
     }
 
     private function ownerNotes(): ?string

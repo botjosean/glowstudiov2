@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Assistant;
 
+use App\Enums\AppointmentStatus;
+use App\Models\Appointment;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Support\Assistant\AssistantUnavailable;
@@ -163,7 +165,11 @@ class CoordinatorTest extends TestCase
                 return false;
             }
 
-            return ! str_contains($request['messages'][0]['content'], 'UBICACIÓN');
+            // Anchored to the heading on its own line, not to the word
+            // anywhere: negocio.md is the owner's file and already refers to
+            // "la sección UBICACIÓN" in prose, which quietly turned this
+            // assertion red without anything in the prompt being wrong.
+            return preg_match('/^UBICACIÓN$/mu', $request['messages'][0]['content']) === 0;
         });
     }
 
@@ -226,7 +232,7 @@ class CoordinatorTest extends TestCase
             $roles = array_column($request['messages'], 'role');
 
             return in_array('system', $roles, true)
-                && str_contains(json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '', 'no puedes decir que la cita quedo agendada');
+                && str_contains(json_encode($request['messages'], JSON_UNESCAPED_UNICODE) ?: '', 'no puedes decirle que quedo agendada');
         });
 
         $this->travelBack();
@@ -282,12 +288,12 @@ class CoordinatorTest extends TestCase
                 'hora' => '10:00',
                 'nombre_completo' => 'Jose Sosa',
             ])),
-            $this->text('¡Listo! Quedó agendada.'),
+            $this->text('¡Listo! Quedó agendada para las 10:00 AM.'),
         ]);
 
         $reply = $this->coordinator()->reply($this->message('si correcto gracias'), $provider);
 
-        $this->assertSame('¡Listo! Quedó agendada.', $reply);
+        $this->assertSame('¡Listo! Quedó agendada para las 10:00 AM.', $reply);
         $this->assertDatabaseCount('appointments', 1);
 
         $this->travelBack();
@@ -325,12 +331,12 @@ class CoordinatorTest extends TestCase
                 'hora' => '10:00',
                 'nombre_completo' => 'Jose Sosa',
             ])),
-            $this->text('¡Listo! Quedó agendada.'),
+            $this->text('¡Listo! Quedó agendada para las 10:00 AM.'),
         ]);
 
         $reply = $this->coordinator()->reply($this->message('si correcto gracias'), $provider);
 
-        $this->assertSame('¡Listo! Quedó agendada.', $reply);
+        $this->assertSame('¡Listo! Quedó agendada para las 10:00 AM.', $reply);
         $this->assertDatabaseCount('appointments', 1);
 
         $this->travelBack();
@@ -351,6 +357,177 @@ class CoordinatorTest extends TestCase
 
         $this->assertSame('Te agendo un corte el martes a las 10:00 AM. ¿Es correcto?', $reply);
         $this->assertCount(1, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
+    }
+
+    /**
+     * The regression that made this guard ask the database instead of the
+     * wording.
+     *
+     * A client asking after an appointment she already has gets a true answer
+     * built from listar_mis_citas or from the prompt's own CLIENTA CONOCIDA
+     * block — crear_cita never runs, and never should. The first version of
+     * the guard blocked exactly these four sentences, which is the single
+     * most ordinary thing a client writes after booking.
+     *
+     * @return list<array{0: string}>
+     */
+    public static function trueStatementsAboutAnExistingAppointmentProvider(): array
+    {
+        return [
+            ['Sí bella, tu cita de Corte está confirmada para el martes a las 10:00 AM. Te esperamos 💛'],
+            ['Tienes una cita agendada el martes a las 10:00 AM con Patricia moreno.'],
+            ['Veo tu cita registrada para el martes a las 10:00 AM.'],
+            ['Tu cita sigue pendiente de confirmación por parte del salón, bella.'],
+        ];
+    }
+
+    #[DataProvider('trueStatementsAboutAnExistingAppointmentProvider')]
+    public function test_a_true_statement_about_an_appointment_she_really_has_is_relayed(string $answer): void
+    {
+        $provider = $this->provider();
+
+        Appointment::factory()->for($provider)->create([
+            'client_phone' => '2056455856',
+            'starts_at' => CarbonImmutable::now()->addDays(2)->setTime(10, 0),
+            'ends_at' => CarbonImmutable::now()->addDays(2)->setTime(10, 40),
+            'status' => AppointmentStatus::Pending->value,
+        ]);
+
+        $this->fakeGroq([$this->text($answer)]);
+
+        $reply = $this->coordinator()->reply($this->message('sigue en pie mi cita'), $provider);
+
+        $this->assertSame($answer, $reply);
+
+        // One model call: no correction round, because nothing was untrue.
+        $this->assertCount(1, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
+    }
+
+    /**
+     * The same sentence is a lie when the appointment does not exist, and the
+     * guard has to tell the two apart by the table, not by the phrasing.
+     */
+    public function test_the_same_wording_is_refused_when_she_has_no_appointment(): void
+    {
+        $this->fakeGroq([
+            $this->text('Tienes una cita agendada el martes a las 10:00 AM con Patricia moreno.'),
+            $this->text('Perdona, todavía no te la he agendado. ¿Te la reservo?'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('sigue en pie mi cita'), $this->provider());
+
+        $this->assertSame('Perdona, todavía no te la he agendado. ¿Te la reservo?', $reply);
+        $this->assertCount(2, Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'chat/completions')));
+    }
+
+    /**
+     * The assistant is told to answer in English when written to in English,
+     * so a Spanish-only guard is a guard with the lights off half the time.
+     */
+    public function test_a_fabricated_booking_in_english_is_refused_too(): void
+    {
+        $this->fakeGroq([
+            $this->text('All set! Your appointment is booked for Tuesday at 10:00 AM.'),
+            $this->text('Sorry, I have not booked it yet. Shall I?'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('book me a haircut tuesday 10am'), $this->provider());
+
+        $this->assertSame('Sorry, I have not booked it yet. Shall I?', $reply);
+    }
+
+    /**
+     * A single question mark used to exempt the whole message, and the model's
+     * habit is to close with one — so the exact shape that started this
+     * incident ("¡Listo! ... ¿Necesitas algo más?") walked straight through.
+     * Judged sentence by sentence now.
+     */
+    public function test_a_fabricated_booking_is_caught_even_when_the_message_ends_in_a_question(): void
+    {
+        $this->fakeGroq([
+            $this->text('¡Listo! Tu cita quedó agendada para el martes a las 10:00 AM. ¿Necesitas algo más?'),
+            $this->text('Perdona, aún no la tengo agendada. ¿Te la reservo?'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('si dale'), $this->provider());
+
+        $this->assertSame('Perdona, aún no la tengo agendada. ¿Te la reservo?', $reply);
+    }
+
+    /**
+     * Cancelling had no guard at all: the model could tell a client her
+     * appointment was gone while it sat in the table blocking a real slot.
+     */
+    public function test_a_cancellation_the_model_never_performed_is_refused(): void
+    {
+        $provider = $this->provider();
+
+        Appointment::factory()->for($provider)->create([
+            'client_phone' => '2056455856',
+            'starts_at' => CarbonImmutable::now()->addDays(2)->setTime(10, 0),
+            'ends_at' => CarbonImmutable::now()->addDays(2)->setTime(10, 40),
+            'status' => AppointmentStatus::Pending->value,
+        ]);
+
+        $this->fakeGroq([
+            $this->text('Listo, tu cita quedó cancelada.'),
+            $this->text('Déjame revisarlo un momento.'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('cancelame la cita'), $provider);
+
+        $this->assertSame('Déjame revisarlo un momento.', $reply);
+        $this->assertDatabaseCount('appointments', 1);
+    }
+
+    /**
+     * The mirror of the fabricated confirmation, seen in the same benchmark:
+     * crear_cita succeeded, the row was in Postgres, and the model answered
+     * with a question — the appointment existed and the client had no way to
+     * know. The facts appended come from the row, not from its prose.
+     */
+    public function test_it_adds_the_real_details_when_the_model_books_but_never_says_when(): void
+    {
+        $provider = $this->provider();
+        $service = Service::factory()->for($provider)->create(['name' => 'Corte', 'price' => 45, 'duration_minutes' => 45]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00', 'America/New_York'));
+
+        $this->fakeGroq([
+            $this->toolCall('crear_cita', json_encode([
+                'servicio_id' => $service->id,
+                'fecha' => '2026-08-11',
+                'hora' => '10:00',
+                'nombre_completo' => 'Jose Sosa',
+            ])),
+            $this->text('¿Necesitas algo más, bella?'),
+        ]);
+
+        $reply = $this->coordinator()->reply($this->message('si correcto, jose sosa'), $provider);
+
+        $this->assertStringContainsString('¿Necesitas algo más, bella?', $reply);
+        $this->assertStringContainsString('Corte el martes 11 de agosto a las 10:00 AM', $reply);
+        $this->assertStringContainsString('Patricia moreno', $reply);
+        $this->assertDatabaseCount('appointments', 1);
+
+        $this->travelBack();
+    }
+
+    /**
+     * A model that will not stop asserting a booking it never made must not
+     * wear the loop down until its last attempt is relayed. It hands off.
+     */
+    public function test_it_hands_off_rather_than_relaying_a_claim_it_could_not_correct(): void
+    {
+        $this->fakeGroq([
+            $this->text('¡Listo! Tu cita quedó agendada para el martes.'),
+            $this->text('Tu cita quedó agendada, bella.'),
+            $this->text('La cita está agendada para el martes.'),
+        ]);
+
+        $this->expectException(AssistantUnavailable::class);
+
+        $this->coordinator()->reply($this->message('agendame'), $this->provider());
     }
 
     public function test_a_rate_limit_is_retryable_and_honours_the_requested_wait(): void

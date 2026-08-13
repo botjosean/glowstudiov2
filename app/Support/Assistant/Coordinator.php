@@ -2,6 +2,8 @@
 
 namespace App\Support\Assistant;
 
+use App\Enums\AppointmentStatus;
+use App\Models\Appointment;
 use App\Models\Provider;
 use App\Support\Kapso\InboundMessage;
 use App\Support\Kapso\KapsoClient;
@@ -65,6 +67,21 @@ class Coordinator
      * same assistant that just said it couldn't.
      */
     private const DEFAULT_HANDOFF_PAUSE_MINUTES = 120;
+
+    /**
+     * How many times one reply may be sent back to the model for claiming
+     * something the database does not support.
+     *
+     * Bounded separately from the iteration limit, and much lower, because the
+     * two failures are different. Measured on 2026-08-12 across six scripted
+     * conversations: a model that will not stop asserting a booking it never
+     * made does not recover on the third nudge either — it rephrases the same
+     * sentence until the loop runs out, and then the client waits for a whole
+     * round trip per attempt before being handed to a person anyway. Spending
+     * the remaining rounds on tool calls that might actually book is worth
+     * more than spending them on nudges that historically never land.
+     */
+    private const MAX_CORRECTIONS = 2;
 
     public function __construct(
         private readonly ChatModel $model,
@@ -130,11 +147,13 @@ class Coordinator
         $definitions = $this->tools->definitions();
         $maxIterations = (int) (config('services.assistant.max_iterations') ?: 6);
 
-        // Whether crear_cita succeeded at any point in *this* reply — the
-        // only thing that licenses the model to tell the client a booking
-        // exists. Reset per call, not per iteration: a booking made two
-        // iterations ago still justifies a confirmation now.
-        $bookingConfirmed = false;
+        // What actually happened on the server during *this* reply. Reset per
+        // call, not per iteration: a booking made two iterations ago still
+        // justifies talking about it now.
+        $bookedId = null;
+        $cancelled = false;
+        $corrections = 0;
+        $toolsRun = [];
 
         for ($iteration = 1; $iteration <= $maxIterations; $iteration++) {
             $assistant = $this->model->chat($messages, $definitions);
@@ -154,7 +173,22 @@ class Coordinator
                     throw AssistantUnavailable::transient('The model answered with neither text nor a tool call.');
                 }
 
-                if (! $bookingConfirmed && $this->claimsAConfirmedBooking($answer)) {
+                $correction = $this->contradictedByTheDatabase($answer, $context, $bookedId !== null, $cancelled);
+
+                if ($correction !== null) {
+                    if ($corrections >= self::MAX_CORRECTIONS) {
+                        // Out of nudges and still asserting something untrue.
+                        // Handing the conversation to a person is a worse
+                        // answer than a good one and a far better one than a
+                        // client walking in for an appointment nobody has.
+                        Log::warning('WhatsApp assistant would not stop asserting a booking the database does not have; handing off.', [
+                            'provider' => $context->provider->slug,
+                            'model' => config('services.assistant.model'),
+                        ]);
+
+                        throw AssistantUnavailable::permanent('The model kept claiming a booking that was never made.');
+                    }
+
                     // Caught for real on 2026-08-12: gemini-2.5-flash-lite told
                     // a client "¡Listo! Cita agendada..." twice in one
                     // conversation without ever calling crear_cita — the model
@@ -162,21 +196,38 @@ class Coordinator
                     // this is that rule violated from the other side: the
                     // client is told something happened that never reached the
                     // database. Rather than relay it, push the model to either
-                    // actually book or admit it has not, same as any other
-                    // tool-less turn — bounded by the same iteration limit.
-                    Log::warning('WhatsApp assistant claimed a booking without calling crear_cita this turn; forcing it to actually book.', [
+                    // act for real or say what is actually true.
+                    $corrections++;
+
+                    Log::warning('WhatsApp assistant asserted something the database does not support; sending it back.', [
                         'provider' => $context->provider->slug,
+                        'correction' => $corrections,
                     ]);
 
-                    $messages[] = [
-                        'role' => 'system',
-                        'content' => 'No llamaste a crear_cita en este turno, asi que no puedes decir que la cita quedo agendada, confirmada o registrada. Si la clienta ya confirmo servicio, dia, hora y nombre, llama a crear_cita ahora mismo. Si falta algun dato, pideselo primero.',
-                    ];
+                    $messages[] = ['role' => 'system', 'content' => $correction];
 
                     continue;
                 }
 
-                return $answer;
+                $reply = $bookedId !== null
+                    ? $this->withTheBookingItActuallyMade($answer, $bookedId, $context)
+                    : $answer;
+
+                // One line per answered message, so the questions this project
+                // has had to answer by grepping ("is the new model even being
+                // used?", "did the guardrail fire on a real client?") are a
+                // single grep away instead of an archaeology session. Nothing
+                // here identifies the client: tool names and counters only.
+                Log::info('WhatsApp assistant answered.', [
+                    'provider' => $context->provider->slug,
+                    'model' => config('services.assistant.model'),
+                    'iterations' => $iteration,
+                    'tools' => $toolsRun,
+                    'corrections' => $corrections,
+                    'booked' => $bookedId !== null,
+                ]);
+
+                return $reply;
             }
 
             // `reasoning` is deliberately not echoed back: it is a provider
@@ -191,9 +242,22 @@ class Coordinator
             foreach ($toolCalls as $call) {
                 $executed = $this->execute($call, $context);
                 $messages[] = $executed['message'];
+                $toolsRun[] = $executed['tool'];
 
-                if ($executed['tool'] === 'crear_cita' && ! $executed['failed']) {
-                    $bookingConfirmed = true;
+                if ($executed['failed']) {
+                    continue;
+                }
+
+                // `ya_estaba_reservada` counts too: the tool answers with the
+                // appointment the client already had, so a confirmation about
+                // it is true, and suppressing it would leave her thinking
+                // nothing happened.
+                if ($executed['tool'] === 'crear_cita' && isset($executed['result']['cita_id'])) {
+                    $bookedId = (int) $executed['result']['cita_id'];
+                }
+
+                if ($executed['tool'] === 'cancelar_cita') {
+                    $cancelled = true;
                 }
             }
         }
@@ -202,42 +266,202 @@ class Coordinator
     }
 
     /**
-     * Whether a final, tool-less answer reads as telling the client a booking
-     * is done — "cita agendada", "queda confirmada" and the like — as opposed
-     * to *proposing* one and waiting for a yes ("¿Es correcto?"). A question
-     * is never treated as a claim of completion, because the model is
-     * expected to propose exactly that way before crear_cita is ever called,
-     * and flagging that would force a booking through without the client's
-     * explicit yes.
+     * The correction to send back when a final, tool-less answer asserts
+     * something the appointments table does not support — or null when the
+     * answer is safe to relay.
      *
-     * A heuristic over the model's own wording, not a substitute for the real
-     * check (whether crear_cita actually ran) — it only decides which answers
-     * are worth holding to that check.
+     * **The verdict is the database, not the wording.** The first version of
+     * this guard asked only "did crear_cita run this turn?", and that was
+     * wrong in the most ordinary case there is: a client asking "¿sigue en pie
+     * mi cita?" gets a true answer built from listar_mis_citas or from the
+     * CLIENTA KNOWN block, no crear_cita anywhere, and the guard blocked it.
+     * Four such phrasings were reproduced against the released regex before
+     * this rewrite. Asking the table instead makes a true statement pass and a
+     * fabricated one fail, which is the distinction that was wanted all along.
+     *
+     * Because the verdict is now a fact, the wording test can afford to be
+     * blunt and wide — English included, which the Spanish-only original
+     * missed entirely even though the assistant is told to answer in English
+     * when written to in English.
      */
-    private function claimsAConfirmedBooking(string $answer): bool
+    private function contradictedByTheDatabase(string $answer, ToolContext $context, bool $booked, bool $cancelled): ?string
     {
-        if (str_contains($answer, '?')) {
-            return false;
+        if ($booked && $cancelled) {
+            return null;
         }
 
-        return (bool) preg_match(
-            '/\bcita\b[^.!]{0,60}\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao])\b'
-            .'|\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao])\b[^.!]{0,60}\bcita\b'
-            // "pendiente de confirmación" is AssistantTools' own vocabulary
-            // (see createBooking's `estado`) and the model echoes it verbatim
-            // whether or not it actually called the tool, so it is treated as
-            // a claim on its own — a live benchmark run showed it paired with
-            // "queda", "quedó", "está" and "tiene" in different turns, too
-            // many verbs to chase individually.
+        $statements = $this->statementsIn($answer);
+
+        if ($statements === []) {
+            return null;
+        }
+
+        $hasLiveAppointments = null;
+
+        if (! $booked && $this->readsAsABooking($statements)) {
+            $hasLiveAppointments = $this->clientHasLiveAppointments($context);
+
+            if (! $hasLiveAppointments) {
+                return 'No llamaste a crear_cita y esta clienta no tiene ninguna cita registrada, '
+                    .'asi que no puedes decirle que quedo agendada, confirmada ni registrada. '
+                    .'Si ya confirmo servicio, dia, hora y nombre, llama a crear_cita ahora mismo. '
+                    .'Si falta algun dato, pideselo primero.';
+            }
+        }
+
+        if (! $cancelled && $this->readsAsACancellation($statements)) {
+            $hasLiveAppointments ??= $this->clientHasLiveAppointments($context);
+
+            if ($hasLiveAppointments) {
+                return 'No llamaste a cancelar_cita y esta clienta sigue teniendo su cita activa, '
+                    .'asi que no puedes decirle que quedo cancelada. Si de verdad quiere cancelarla, '
+                    .'busca cual es con listar_mis_citas y llama a cancelar_cita.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The parts of an answer that assert something, questions dropped.
+     *
+     * Split per sentence rather than judged whole, because the model routinely
+     * ends a message with an invitation — "¡Listo! Tu cita quedó agendada.
+     * ¿Necesitas algo más?" — and a single question mark anywhere used to
+     * exempt the entire message, which is precisely the shape of the reply
+     * that started this. A *proposal* awaiting a yes ("¿Te la agendo?") is
+     * still exempt, because it is a question in itself.
+     *
+     * @return list<string>
+     */
+    private function statementsIn(string $answer): array
+    {
+        $sentences = preg_split('/(?<=[.!?])\s+|\n+/u', $answer, -1, PREG_SPLIT_NO_EMPTY) ?: [$answer];
+
+        return array_values(array_filter(
+            $sentences,
+            static fn (string $sentence): bool => ! str_contains($sentence, '?'),
+        ));
+    }
+
+    /**
+     * Whether any statement reads as telling the client a booking exists.
+     *
+     * "pendiente de confirmación" is AssistantTools' own vocabulary (see
+     * createBooking's `estado`) and the model echoes it verbatim, so it counts
+     * on its own: a live run showed it paired with "queda", "quedó", "está"
+     * and "tiene" in different turns, too many verbs to chase one by one.
+     *
+     * @param  list<string>  $statements
+     */
+    private function readsAsABooking(array $statements): bool
+    {
+        return $this->anyMatches(
+            '/\b(cita|turno|appointment|booking)\b[^.!]{0,80}\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao]|apartad[ao]|separad[ao]|booked|scheduled|confirmed|reserved)\b'
+            .'|\b(agendad[ao]|confirmad[ao]|reservad[ao]|registrad[ao]|apartad[ao]|separad[ao]|booked|scheduled|confirmed|reserved)\b[^.!]{0,80}\b(cita|turno|appointment|booking)\b'
             .'|\bpendiente\s+de\s+confirmaci[oó]n\b'
-            .'|\bqued(?:a|[oó])\s+(?:ya\s+)?(?:registrada|confirmada|agendada)\b/iu',
+            .'|\byou\s*(?:\x27re|are)\s+all\s+set\b/iu',
+            $statements,
+        );
+    }
+
+    /**
+     * @param  list<string>  $statements
+     */
+    private function readsAsACancellation(array $statements): bool
+    {
+        return $this->anyMatches(
+            '/\b(cita|turno|appointment|booking)\b[^.!]{0,80}\b(cancelad[ao]|anulad[ao]|eliminad[ao]|cancell?ed)\b'
+            .'|\b(cancelad[ao]|anulad[ao]|eliminad[ao]|cancell?ed)\b[^.!]{0,80}\b(cita|turno|appointment|booking)\b/iu',
+            $statements,
+        );
+    }
+
+    /**
+     * @param  list<string>  $statements
+     */
+    private function anyMatches(string $pattern, array $statements): bool
+    {
+        foreach ($statements as $statement) {
+            if (preg_match($pattern, $statement) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether this client already has an appointment that has not happened yet
+     * — the ground truth behind any sentence about "your appointment".
+     *
+     * Scoped exactly like the tools are (provider + the phone the webhook
+     * established, see ToolContext), so it can no more see somebody else's
+     * bookings than listar_mis_citas can.
+     */
+    private function clientHasLiveAppointments(ToolContext $context): bool
+    {
+        return Appointment::query()
+            ->where('provider_id', $context->provider->id)
+            ->where('client_phone', $context->storedPhone)
+            ->whereIn('status', AppointmentStatus::blocking())
+            ->where('starts_at', '>=', now()->utc())
+            ->exists();
+    }
+
+    /**
+     * Makes sure a reply that follows a real booking actually tells the client
+     * when it is.
+     *
+     * The mirror image of the fabricated confirmation, and seen in the same
+     * benchmark: crear_cita succeeded, the row was in Postgres, and the model
+     * answered with a question instead — the appointment existed and the
+     * client had no way to know. When the answer already names the hour it is
+     * left untouched, so the assistant's own voice carries the good case and
+     * this only fills a silence.
+     *
+     * The facts come from the row, never from the model's prose, so a booking
+     * the model narrates on the wrong day contradicts itself in front of the
+     * client instead of being discovered a week later at the salon door.
+     */
+    private function withTheBookingItActuallyMade(string $answer, int $appointmentId, ToolContext $context): string
+    {
+        $appointment = Appointment::query()
+            ->where('id', $appointmentId)
+            ->where('provider_id', $context->provider->id)
+            ->first();
+
+        if ($appointment === null) {
+            return $answer;
+        }
+
+        $local = $appointment->starts_at->setTimezone($context->provider->timezone);
+
+        $mentionsTheHour = preg_match(
+            '/\b'.$local->format('g').'(?::'.$local->format('i').')?\s*(?:a\.?\s?m\.?|p\.?\s?m\.?|h)\b/iu',
             $answer,
+        ) === 1;
+
+        if ($mentionsTheHour) {
+            return $answer;
+        }
+
+        Log::info('WhatsApp assistant booked without telling the client when; adding the details.', [
+            'provider' => $context->provider->slug,
+        ]);
+
+        return $answer."\n\n".sprintf(
+            '%s el %s a las %s. Queda pendiente de que %s te la confirme.',
+            $appointment->service_name,
+            $local->locale('es')->isoFormat('dddd D [de] MMMM'),
+            $local->format('g:i A'),
+            $context->provider->public_name,
         );
     }
 
     /**
      * @param  array<mixed>  $call
-     * @return array{tool: string, failed: bool, message: array<string, mixed>}
+     * @return array{tool: string, failed: bool, result: array<string, mixed>, message: array<string, mixed>}
      */
     private function execute(array $call, ToolContext $context): array
     {
@@ -263,6 +487,7 @@ class Coordinator
         return [
             'tool' => $name,
             'failed' => $failed,
+            'result' => $result,
             'message' => [
                 'role' => 'tool',
                 'tool_call_id' => (string) ($call['id'] ?? ''),

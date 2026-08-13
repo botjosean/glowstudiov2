@@ -95,6 +95,7 @@ class RespondToWhatsAppMessage implements ShouldQueue
             Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
                 'phone_number_id' => $this->message->phoneNumberId,
                 'policy' => $policy->describe(),
+                'reason' => $policy->refusalReason($this->message->fromPhone, $this->message->phoneNumberId, $contactName),
             ]);
 
             return;

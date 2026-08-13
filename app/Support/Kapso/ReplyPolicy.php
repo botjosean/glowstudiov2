@@ -51,6 +51,26 @@ final class ReplyPolicy
     }
 
     /**
+     * Why a refused message was refused, in a form safe to log.
+     *
+     * The count alone could not answer the question that actually gets asked
+     * of it. On 2026-08-13 more than twenty messages in one day were dropped
+     * on the number shared with personal use, and the log could not say
+     * whether that was the guard doing its job on the professional's own
+     * contacts or eating clients she had saved after their first visit —
+     * which is a decision for the owner, and needs the reason to be reachable
+     * without reading anybody's conversations.
+     */
+    public function refusalReason(?string $phoneDigits, string $phoneNumberId, ?string $contactName): string
+    {
+        if ($this->isSavedContactOnAGuardedNumber($phoneDigits, $phoneNumberId, $contactName)) {
+            return 'saved as a contact on the number shared with personal use';
+        }
+
+        return 'not in the allowlist';
+    }
+
+    /**
      * A description safe to log: says how the decision was made without
      * writing anyone's phone number into the log file.
      */
