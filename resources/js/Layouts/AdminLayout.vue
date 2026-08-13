@@ -1,7 +1,7 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { House, CalendarDays, Sparkles, Clock, User, Settings, ArrowLeft } from '@lucide/vue';
+import { House, CalendarDays, Sparkles, Clock, User, Settings, ArrowLeft, X } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -15,7 +15,21 @@ const currentPath = computed(() => page.url.split('?')[0]);
 
 // Shared prop computed server-side; null once every onboarding step is done.
 const onboarding = computed(() => page.props.onboarding ?? null);
-const showBanner = computed(() => onboarding.value && currentPath.value !== '/admin/inicio');
+
+// Collapsible, not dismissible: closing it lasts for the browser session and
+// it returns on the next visit, because the steps it points to are still
+// pending — sessionStorage is exactly that lifetime.
+const BANNER_KEY = 'onboarding-banner-collapsed';
+const bannerCollapsed = ref(sessionStorage.getItem(BANNER_KEY) === '1');
+
+function collapseBanner() {
+    bannerCollapsed.value = true;
+    sessionStorage.setItem(BANNER_KEY, '1');
+}
+
+const showBanner = computed(() =>
+    onboarding.value && !bannerCollapsed.value && currentPath.value !== '/admin/inicio',
+);
 
 const navItems = [
     { href: '/admin/inicio', icon: House, key: 'nav.home' },
@@ -58,18 +72,27 @@ function isActive(href) {
             </header>
         </slot>
 
-        <Link
+        <div
             v-if="showBanner"
-            href="/admin/inicio"
-            class="flex items-center justify-between gap-3 border-b border-[var(--green-border)] bg-[var(--green-soft)] px-4 py-2.5 hover:brightness-[0.98]"
+            class="flex items-center gap-2 border-b border-[var(--green-border)] bg-[var(--green-soft)] py-2.5 pl-4 pr-2"
         >
-            <span class="text-[13px] font-medium text-[var(--green-deep)]">
-                {{ $t('inicio.bannerText', onboarding.pending) }}
-            </span>
-            <span class="shrink-0 rounded-full bg-[var(--btn-bg)] px-3.5 py-1.5 text-[12px] font-semibold text-white">
-                {{ $t('inicio.bannerCta') }}
-            </span>
-        </Link>
+            <Link href="/admin/inicio" class="flex min-w-0 flex-1 items-center justify-between gap-3 hover:brightness-[0.98]">
+                <span class="text-[13px] font-medium text-[var(--green-deep)]">
+                    {{ $t('inicio.bannerText', onboarding.pending) }}
+                </span>
+                <span class="shrink-0 rounded-full bg-[var(--btn-bg)] px-3.5 py-1.5 text-[12px] font-semibold text-white">
+                    {{ $t('inicio.bannerCta') }}
+                </span>
+            </Link>
+            <button
+                type="button"
+                :aria-label="$t('common.close')"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-[var(--green-border)]"
+                @click="collapseBanner"
+            >
+                <X :size="15" class="text-[var(--green-deep)]" />
+            </button>
+        </div>
 
         <main class="flex-1 pb-4">
             <slot />

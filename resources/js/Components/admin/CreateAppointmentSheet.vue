@@ -25,6 +25,9 @@ const props = defineProps({
     // The day being booked — the sheet inherits it from the agenda's
     // selected day rather than asking again.
     date: { type: Date, required: true },
+    // 'HH:MM' the agenda canvas was tapped on. Only honored if that hour is
+    // actually free: the availability endpoint stays the sole authority.
+    preselectHour: { type: String, default: '' },
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -74,6 +77,9 @@ async function loadSlots() {
         });
         if (!res.ok) throw new Error('slots');
         slots.value = (await res.json()).horas;
+        if (props.preselectHour && slots.value.some((slot) => slot.value === props.preselectHour)) {
+            form.hora = props.preselectHour;
+        }
     } catch {
         slotsError.value = t('admin.slotsError');
     } finally {

@@ -39,7 +39,7 @@ class GoogleAuthenticationTest extends TestCase
         $response = $this->get('/auth/google/callback');
 
         $this->assertAuthenticatedAs($user);
-        $response->assertRedirect('/admin/inicio');
+        $response->assertRedirect('/admin/citas');
     }
 
     public function test_an_existing_unverified_account_is_verified_by_signing_in_with_google(): void

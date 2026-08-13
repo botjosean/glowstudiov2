@@ -73,7 +73,10 @@ return [
     |
     */
 
-    'home' => '/admin/inicio',
+    // La agenda es el aterrizaje: la profesional abre la app decenas de veces
+    // al día entre clientas y lo que necesita ver es su día, no el checklist.
+    // Los pasos pendientes siguen visibles en el banner global del layout.
+    'home' => '/admin/citas',
 
     /*
     |--------------------------------------------------------------------------

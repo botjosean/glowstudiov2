@@ -64,6 +64,7 @@ class DashboardController extends Controller
     public function citas(Request $request): Response
     {
         $provider = $request->user()->provider;
+        $provider->load(['businessHours', 'timeOff']);
 
         // Snapshot columns mean this is the whole query — no eager loading needed.
         $appointments = $provider->appointments()
@@ -73,6 +74,20 @@ class DashboardController extends Controller
 
         return Inertia::render('Admin/Citas', [
             'providerName' => $provider->public_name,
+            // The agenda timeline shades everything outside the working window,
+            // so it needs the same rows the Horario page edits — raw data, not
+            // derived flags, because the window depends on which date the
+            // viewer has selected and only the client knows that.
+            'schedule' => [
+                'lunchStart' => $provider->lunch_start_minute,
+                'lunchEnd' => $provider->lunch_end_minute,
+                'days' => $this->weekScheduleFor($provider),
+                'timeOff' => $provider->timeOff->map(fn ($off) => [
+                    'startsOn' => $off->starts_on->toDateString(),
+                    'endsOn' => $off->ends_on->toDateString(),
+                    'reason' => $off->reason,
+                ])->values()->all(),
+            ],
             // For the create-appointment sheet: what she can book by hand.
             'services' => $provider->services()->active()->orderBy('position')->orderBy('id')
                 ->get()->map(fn (Service $service) => [
@@ -137,19 +152,7 @@ class DashboardController extends Controller
                 'lunchStart' => $provider->lunch_start_minute,
                 'lunchEnd' => $provider->lunch_end_minute,
                 'bufferMinutes' => $provider->buffer_minutes,
-                // Always seven, built from the range rather than from the rows,
-                // so a provider whose rows are somehow incomplete still gets a
-                // full week to edit instead of a form missing a day.
-                'days' => array_map(function (int $weekday) use ($provider) {
-                    $hours = $provider->businessHours->firstWhere('weekday', $weekday);
-
-                    return [
-                        'weekday' => $weekday,
-                        'isOpen' => $hours?->is_open ?? true,
-                        'workStart' => $hours?->work_start_minute ?? $provider->work_start_minute,
-                        'workEnd' => $hours?->work_end_minute ?? $provider->work_end_minute,
-                    ];
-                }, range(0, 6)),
+                'days' => $this->weekScheduleFor($provider),
             ],
             'timeOff' => $provider->timeOff->map(fn ($off) => [
                 'id' => $off->id,
@@ -158,6 +161,28 @@ class DashboardController extends Controller
                 'reason' => $off->reason,
             ])->values()->all(),
         ]);
+    }
+
+    /**
+     * The seven weekday rows both Citas (timeline shading) and Horario (the
+     * editing form) render. Always seven, built from the range rather than
+     * from the rows, so a provider whose rows are somehow incomplete still
+     * gets a full week instead of a day silently missing.
+     *
+     * @return list<array{weekday: int, isOpen: bool, workStart: int, workEnd: int}>
+     */
+    private function weekScheduleFor(Provider $provider): array
+    {
+        return array_map(function (int $weekday) use ($provider) {
+            $hours = $provider->businessHours->firstWhere('weekday', $weekday);
+
+            return [
+                'weekday' => $weekday,
+                'isOpen' => $hours?->is_open ?? true,
+                'workStart' => $hours?->work_start_minute ?? $provider->work_start_minute,
+                'workEnd' => $hours?->work_end_minute ?? $provider->work_end_minute,
+            ];
+        }, range(0, 6));
     }
 
     public function perfil(Request $request): Response

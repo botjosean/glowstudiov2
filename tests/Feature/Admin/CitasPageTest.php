@@ -76,4 +76,35 @@ class CitasPageTest extends TestCase
             ->where('appointments.0.id', $recent->id)
         );
     }
+
+    public function test_schedule_rows_for_the_agenda_timeline_are_exposed(): void
+    {
+        $provider = Provider::factory()->published()->create([
+            'work_start_minute' => 600,
+            'work_end_minute' => 1200,
+            'lunch_start_minute' => 780,
+            'lunch_end_minute' => 840,
+        ]);
+        $provider->businessHours()->where('weekday', 0)->update(['is_open' => false]);
+        $provider->timeOff()->create([
+            'starts_on' => '2026-09-01',
+            'ends_on' => '2026-09-03',
+            'reason' => 'Vacaciones',
+        ]);
+
+        $this->actingAs($provider->user)->get('/admin/citas')->assertInertia(fn (Assert $page) => $page
+            ->where('schedule.lunchStart', 780)
+            ->where('schedule.lunchEnd', 840)
+            ->has('schedule.days', 7)
+            ->where('schedule.days.0.weekday', 0)
+            ->where('schedule.days.0.isOpen', false)
+            ->where('schedule.days.1.isOpen', true)
+            ->where('schedule.days.1.workStart', 600)
+            ->where('schedule.days.1.workEnd', 1200)
+            ->has('schedule.timeOff', 1)
+            ->where('schedule.timeOff.0.startsOn', '2026-09-01')
+            ->where('schedule.timeOff.0.endsOn', '2026-09-03')
+            ->where('schedule.timeOff.0.reason', 'Vacaciones')
+        );
+    }
 }

@@ -67,7 +67,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', ['identifier' => 'patib', 'password' => 'password']);
 
-        $response->assertRedirect('/admin/inicio');
+        $response->assertRedirect('/admin/citas');
     }
 
     public function test_login_is_rate_limited_after_repeated_failures(): void

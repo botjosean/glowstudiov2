@@ -1,12 +1,14 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
-import { CalendarDays, Plus } from '@lucide/vue';
+import { Link, router } from '@inertiajs/vue3';
+import { ChevronDown, Clock, Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
+import AgendaTimeline from '../../Components/admin/AgendaTimeline.vue';
 import AppointmentDetailSheet from '../../Components/admin/AppointmentDetailSheet.vue';
 import CreateAppointmentSheet from '../../Components/admin/CreateAppointmentSheet.vue';
+import MonthPickerSheet from '../../Components/admin/MonthPickerSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import WhatsAppPromptSheet from '../../Components/admin/WhatsAppPromptSheet.vue';
 import { useFormat } from '../../composables/useFormat';
@@ -19,6 +21,9 @@ const props = defineProps({
     //    durationMinutes, price, status, startsAt (UTC ISO string) }]
     services: { type: Array, default: () => [] },
     // [{ id, name, durationMinutes, price }] — for the create sheet.
+    schedule: { type: Object, required: true },
+    // { lunchStart, lunchEnd, days: [{ weekday, isOpen, workStart, workEnd }],
+    //   timeOff: [{ startsOn, endsOn, reason }] } — what the timeline shades.
 });
 
 const { t } = useI18n();
@@ -73,8 +78,6 @@ const enrichedAppointments = computed(() =>
     }),
 );
 
-const dayGroupLabel = computed(() => formatDayLabel(selectedDate.value));
-
 const counts = computed(() => ({
     agenda: enrichedAppointments.value.filter((a) => a.isToday && a.status !== 'cancelled').length,
     pending: enrichedAppointments.value.filter((a) => a.status === 'pending').length,
@@ -93,7 +96,79 @@ const filtered = computed(() => {
     return enrichedAppointments.value.filter((a) => a.status === activeTab.value);
 });
 
+// ---- The day canvas -------------------------------------------------------
+
+// Local calendar date, never toISOString(): UTC conversion would shift
+// evenings to the next day. Same rule as the create sheet.
+function toYmd(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// The selected day's working window, resolved exactly like the server does it
+// (time off first, then the weekday row): the raw rows come down as props and
+// only the client knows which date is on screen.
+const dayWindow = computed(() => {
+    const ymd = toYmd(selectedDate.value);
+    const off = props.schedule.timeOff.find((block) => block.startsOn <= ymd && ymd <= block.endsOn);
+    if (off) return { closed: true, reason: off.reason ?? '' };
+
+    const row = props.schedule.days.find((day) => day.weekday === selectedDate.value.getDay());
+    if (!row || !row.isOpen) return { closed: true, reason: '' };
+
+    return { closed: false, start: row.workStart, end: row.workEnd };
+});
+
+// start === end is the panel's "no lunch" form.
+const lunchBreak = computed(() =>
+    props.schedule.lunchStart < props.schedule.lunchEnd
+        ? { start: props.schedule.lunchStart, end: props.schedule.lunchEnd }
+        : null,
+);
+
+const timelineAppointments = computed(() =>
+    filtered.value.map((appt) => {
+        const date = new Date(appt.startsAt);
+        const startMin = date.getHours() * 60 + date.getMinutes();
+
+        return { ...appt, startMin, endMin: startMin + appt.durationMinutes };
+    }),
+);
+
+const selectedIsToday = computed(() => selectedKey.value === new Date().toDateString());
+
+const headerTitle = computed(() =>
+    selectedIsToday.value ? t('admin.agendaToday') : formatDayLabel(selectedDate.value),
+);
+
+const headerRange = computed(() => {
+    if (dayWindow.value.closed) return t('admin.agendaDayOff');
+    const label = (minute) => formatTime(Math.floor(minute / 60), minute % 60);
+
+    return `${label(dayWindow.value.start)} – ${label(dayWindow.value.end)}`;
+});
+
+const monthOpen = ref(false);
+
+function pickDate(date) {
+    selectedDate.value = date;
+    activeTab.value = 'agenda';
+}
+
 const createOpen = ref(false);
+const createPreselect = ref('');
+
+function openCreate() {
+    createPreselect.value = '';
+    createOpen.value = true;
+}
+
+// A tap on a free quarter hour proposes that time in the create sheet. The
+// sheet still validates against the real availability endpoint, so a slot the
+// buffer already ate simply comes back unselected.
+function handleCreateAt(minute) {
+    createPreselect.value = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+    createOpen.value = true;
+}
 
 // A phone was captured → offer to notify her by WhatsApp right away, same
 // flow as confirming a pending appointment. Without a phone the prompt
@@ -238,10 +313,31 @@ function confirmCancel() {
 
 <template>
     <AdminLayout :provider-name="providerName">
-        <div class="px-4 pt-4">
-            <h1 class="px-1 pb-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
-                {{ $t('admin.appointmentsTitle') }}
-            </h1>
+        <!-- Sticky: the timeline is three screens tall and the day strip is
+             how you know where you are — Booksy pins it too. -->
+        <div class="sticky top-0 z-20 border-b border-[var(--surface-mute)] bg-[var(--bg-canvas)] px-4 pt-4">
+            <h1 class="sr-only">{{ $t('admin.appointmentsTitle') }}</h1>
+            <div class="flex items-center justify-between px-1 pb-3">
+                <button
+                    type="button"
+                    class="flex flex-col items-start text-left"
+                    :aria-label="$t('admin.agendaPickDay')"
+                    @click="monthOpen = true"
+                >
+                    <span class="flex items-center gap-1.5 text-[22px] font-bold capitalize leading-tight tracking-tight text-[var(--text-strong)]">
+                        {{ headerTitle }}
+                        <ChevronDown :size="18" class="mt-0.5 shrink-0 text-[var(--text-mute)]" />
+                    </span>
+                    <span class="text-[12px] font-normal tabular-nums text-[var(--text-mute)]">{{ headerRange }}</span>
+                </button>
+                <Link
+                    href="/admin/horario"
+                    :aria-label="$t('nav.schedule')"
+                    class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
+                >
+                    <Clock :size="20" class="text-[var(--text-strong)]" />
+                </Link>
+            </div>
             <div class="grid grid-cols-4 gap-1 rounded-xl bg-[var(--surface-mute)] p-1">
                 <button
                     v-for="tab in tabs"
@@ -286,39 +382,16 @@ function confirmCancel() {
         </div>
 
         <div class="flex flex-col gap-3 p-4">
-            <div v-if="activeTab === 'agenda' && filtered.length" class="text-[13px] font-medium capitalize text-[var(--text-mute)]">
-                {{ dayGroupLabel }}
-            </div>
-
             <template v-if="activeTab === 'agenda'">
-                <div v-if="filtered.length === 0" class="flex flex-col items-center px-8 pb-6 pt-10 text-center">
-                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--surface-mute)]">
-                        <CalendarDays :size="24" class="text-[var(--text-faint)]" />
-                    </div>
-                    <p class="mt-4 text-base font-bold text-[var(--text-strong)]">{{ $t('admin.dayEmpty') }}</p>
-                    <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.dayEmptyHint') }}</p>
-                </div>
-                <button
-                    v-for="appt in filtered"
-                    :key="appt.id"
-                    type="button"
-                    class="flex items-center justify-between rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[var(--border-strong)]"
-                    @click="openDetail(appt)"
-                >
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--chip-bg)] text-[var(--chip-fg)]">
-                            <span class="text-[14px] font-semibold leading-none">{{ appt.timeLabel.split(' ')[0] }}</span>
-                            <span class="text-[8px] font-bold opacity-70">{{ appt.timeLabel.split(' ')[1] || '' }}</span>
-                        </div>
-                        <div>
-                            <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ appt.clientName }}</div>
-                            <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">
-                                {{ appt.service }} · {{ appt.duration }} · ${{ appt.price }}
-                            </div>
-                        </div>
-                    </div>
-                    <Badge :variant="badgeVariant[appt.status]">{{ $t(statusKey[appt.status]) }}</Badge>
-                </button>
+                <AgendaTimeline
+                    :appointments="timelineAppointments"
+                    :window="dayWindow.closed ? null : { start: dayWindow.start, end: dayWindow.end }"
+                    :lunch="lunchBreak"
+                    :closed-reason="dayWindow.reason"
+                    :is-today="selectedIsToday"
+                    @select="openDetail"
+                    @create="handleCreateAt"
+                />
             </template>
 
             <template v-else>
@@ -354,7 +427,7 @@ function confirmCancel() {
             type="button"
             :aria-label="$t('admin.addAppointment')"
             class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
-            @click="createOpen = true"
+            @click="openCreate"
         >
             <Plus :size="22" class="text-white" />
         </button>
@@ -363,7 +436,14 @@ function confirmCancel() {
             v-model="createOpen"
             :services="services"
             :date="selectedDate"
+            :preselect-hour="createPreselect"
             @created="handleCreated"
+        />
+
+        <MonthPickerSheet
+            v-model="monthOpen"
+            :selected="selectedDate"
+            @pick="pickDate"
         />
 
         <AppointmentDetailSheet
