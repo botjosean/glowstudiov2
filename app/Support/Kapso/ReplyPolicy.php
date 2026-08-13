@@ -63,11 +63,7 @@ final class ReplyPolicy
      */
     public function refusalReason(?string $phoneDigits, string $phoneNumberId, ?string $contactName): string
     {
-        if ($this->isSavedContactOnAGuardedNumber($phoneDigits, $phoneNumberId, $contactName)) {
-            return 'saved as a contact on the number shared with personal use';
-        }
-
-        return 'not in the allowlist';
+        return $this->personalContactVerdict($phoneDigits, $phoneNumberId, $contactName) ?? 'not in the allowlist';
     }
 
     /**
@@ -83,14 +79,34 @@ final class ReplyPolicy
 
     private function isSavedContactOnAGuardedNumber(?string $phoneDigits, string $phoneNumberId, ?string $contactName): bool
     {
+        return $this->personalContactVerdict($phoneDigits, $phoneNumberId, $contactName) !== null;
+    }
+
+    /**
+     * Why the personal-contact guard silenced this message, or null when it
+     * did not apply.
+     *
+     * The three answers are deliberately separate, because they are not the
+     * same event and only one of them is the guard working. The whole guard
+     * rests on an assumption about a shape Kapso does not document: that when
+     * nothing is saved it echoes the sender's own number back as the "name".
+     * If that shape ever changes — a `+`, a country code dropped, a space —
+     * every stranger reads as a saved contact and the assistant goes silent
+     * for the entire number without a single error anywhere. That is
+     * indistinguishable from the guard working correctly unless the log says
+     * which branch fired, and on 2026-08-13 twenty-odd dropped messages in one
+     * day left exactly that question unanswerable.
+     */
+    private function personalContactVerdict(?string $phoneDigits, string $phoneNumberId, ?string $contactName): ?string
+    {
         $guarded = config('services.kapso.personal_phone_number_id');
 
         if (! is_string($guarded) || trim($guarded) === '' || trim($guarded) !== $phoneNumberId) {
-            return false;
+            return null;
         }
 
         if ($contactName === null || trim($contactName) === '') {
-            return false;
+            return null;
         }
 
         // Kapso's fallback when nothing is saved is the bare phone number
@@ -98,7 +114,22 @@ final class ReplyPolicy
         // at all — only something else means a real contact exists.
         $nameDigits = preg_replace('/\D/', '', $contactName) ?? '';
 
-        return $nameDigits === '' || $nameDigits !== $phoneDigits;
+        if ($nameDigits === '') {
+            return 'saved under a name on the number shared with personal use';
+        }
+
+        if ($phoneDigits === null) {
+            return 'guarded number and no sender phone to compare the name against';
+        }
+
+        if ($nameDigits !== $phoneDigits) {
+            // A name that carries digits — or the fallback arriving in a shape
+            // this comparison does not expect. Worth telling apart in the log,
+            // because the second one silences everybody.
+            return 'name with digits that do not match the sender on the guarded number';
+        }
+
+        return null;
     }
 
     private function mode(): string

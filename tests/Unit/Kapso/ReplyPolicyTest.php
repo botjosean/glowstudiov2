@@ -180,6 +180,52 @@ class ReplyPolicyTest extends TestCase
         $this->assertStringNotContainsString('12056455856', $description);
     }
 
+    /**
+     * The reason has one job the count could not do: telling "the guard is
+     * working" apart from "the guard has gone blind".
+     *
+     * Both silence the number. Only the second is an outage — if Kapso ever
+     * changes the shape of its fallback name, every stranger starts reading as
+     * a saved contact and the assistant stops answering that number entirely,
+     * with no error anywhere. Whoever greps the log after a quiet day needs
+     * those two to look different.
+     */
+    public function test_the_logged_reason_separates_a_real_contact_from_a_name_that_does_not_match(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'everyone',
+            'services.kapso.personal_phone_number_id' => self::NUMBER,
+        ]);
+
+        $this->assertSame(
+            'saved under a name on the number shared with personal use',
+            $this->policy()->refusalReason('14045551234', self::NUMBER, 'Alguien Guardado'),
+        );
+
+        $this->assertSame(
+            'name with digits that do not match the sender on the guarded number',
+            $this->policy()->refusalReason('14045551234', self::NUMBER, '+1 404 555 9999'),
+        );
+
+        $this->assertSame(
+            'guarded number and no sender phone to compare the name against',
+            $this->policy()->refusalReason(null, self::NUMBER, '14045551234'),
+        );
+    }
+
+    public function test_the_logged_reason_never_leaks_a_phone_number(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            'services.kapso.test_recipients' => '12056455856',
+        ]);
+
+        $reason = $this->policy()->refusalReason('14045551234', self::NUMBER, null);
+
+        $this->assertSame('not in the allowlist', $reason);
+        $this->assertStringNotContainsString('14045551234', $reason);
+    }
+
     private function policy(): ReplyPolicy
     {
         return new ReplyPolicy;
