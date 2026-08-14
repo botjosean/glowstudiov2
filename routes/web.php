@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AppointmentStatusController;
 use App\Http\Controllers\Admin\BioSuggestionController;
+use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ManualAppointmentController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\SuperadminController;
 use App\Http\Middleware\EnsureUserHasPassword;
 use App\Http\Middleware\EnsureUserHasProvider;
 use App\Http\Middleware\EnsureUserIsSuperadmin;
+use App\Models\Client;
 use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +86,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'appointment')->name('citas.cancel');
     Route::get('/citas/horas', [ManualAppointmentController::class, 'slots'])->name('citas.slots');
     Route::post('/citas', [ManualAppointmentController::class, 'store'])->name('citas.store');
+
+    Route::get('/clientes', [ClientController::class, 'index'])->name('clientes');
+    Route::post('/clientes', [ClientController::class, 'store'])
+        ->can('create', Client::class)->name('clientes.store');
+    Route::get('/clientes/{client}', [ClientController::class, 'show'])
+        ->can('view', 'client')->name('clientes.show');
+    Route::put('/clientes/{client}', [ClientController::class, 'update'])
+        ->can('update', 'client')->name('clientes.update');
+    Route::delete('/clientes/{client}', [ClientController::class, 'destroy'])
+        ->can('delete', 'client')->name('clientes.destroy');
 
     Route::get('/servicios', [DashboardController::class, 'servicios'])->name('servicios');
     Route::post('/servicios', [ServiceController::class, 'store'])

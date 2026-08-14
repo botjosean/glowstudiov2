@@ -28,6 +28,10 @@ const props = defineProps({
     // 'HH:MM' the agenda canvas was tapped on. Only honored if that hour is
     // actually free: the availability endpoint stays the sole authority.
     preselectHour: { type: String, default: '' },
+    // Filled when the agenda was reached from a client card ("Cita nueva"):
+    // the professional already said who this is for.
+    prefillName: { type: String, default: '' },
+    prefillPhone: { type: String, default: '' },
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -93,6 +97,8 @@ watch(open, (isOpen) => {
     form.clearErrors();
     form.serviceId = props.services[0]?.id ?? null;
     form.fecha = toYmd(props.date);
+    form.clientName = props.prefillName;
+    form.clientPhone = props.prefillPhone;
     loadSlots();
 });
 

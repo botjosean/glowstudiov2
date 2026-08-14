@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { House, CalendarDays, Sparkles, Clock, User, Settings, ArrowLeft, X } from '@lucide/vue';
+import { CalendarDays, Users, Sparkles, Clock, User, Settings, ArrowLeft, X } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -31,9 +31,12 @@ const showBanner = computed(() =>
     onboarding.value && !bannerCollapsed.value && currentPath.value !== '/admin/inicio',
 );
 
+// Citas first and Clientes second, the Booksy order the owner asked for.
+// Inicio left the bar when the agenda became the landing: the checklist is
+// one tap away through the onboarding banner while steps remain.
 const navItems = [
-    { href: '/admin/inicio', icon: House, key: 'nav.home' },
     { href: '/admin/citas', icon: CalendarDays, key: 'nav.appointments' },
+    { href: '/admin/clientes', icon: Users, key: 'nav.clients' },
     { href: '/admin/servicios', icon: Sparkles, key: 'nav.services' },
     { href: '/admin/horario', icon: Clock, key: 'nav.schedule' },
     { href: '/admin/perfil', icon: User, key: 'nav.profile' },
@@ -52,9 +55,9 @@ function isActive(href) {
             <header class="flex items-center justify-between border-b border-[var(--surface-mute)] bg-[var(--surface)] px-4 py-3">
                 <div class="flex min-w-0 items-center gap-3">
                     <Link
-                        v-if="currentPath !== '/admin/inicio'"
-                        href="/admin/inicio"
-                        :aria-label="$t('nav.home')"
+                        v-if="currentPath !== '/admin/citas'"
+                        href="/admin/citas"
+                        :aria-label="$t('nav.appointments')"
                         class="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
                     >
                         <ArrowLeft :size="20" class="text-[var(--text-strong)]" />

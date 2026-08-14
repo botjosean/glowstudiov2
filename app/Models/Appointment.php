@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\QueryException;
 
 #[Fillable([
     'provider_id', 'service_id', 'client_name', 'client_phone',
@@ -79,5 +80,34 @@ class Appointment extends Model
         return Attribute::make(
             get: fn (): string => Format::duration($this->duration_minutes),
         );
+    }
+
+    /**
+     * Every booked phone grows a card in the provider's client book, whatever
+     * the channel — bot, public page or the panel's manual flow all end up
+     * here. Done on the model rather than in CreateAppointment so no future
+     * caller can forget it. firstOrCreate keeps the existing card untouched:
+     * the professional's own edits (name fixes, notes) always win over a
+     * booking snapshot.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (self $appointment): void {
+            $phone = (string) $appointment->client_phone;
+
+            if (preg_match('/^\d{10}$/', $phone) !== 1) {
+                return;
+            }
+
+            try {
+                Client::firstOrCreate(
+                    ['provider_id' => $appointment->provider_id, 'phone' => $phone],
+                    ['name' => $appointment->client_name],
+                );
+            } catch (QueryException) {
+                // A concurrent booking already created the card. The card is a
+                // convenience; it must never break the booking that spawned it.
+            }
+        });
     }
 }

@@ -80,6 +80,14 @@ class Provider extends Model
     }
 
     /**
+     * @return HasMany<Client, $this>
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
+    }
+
+    /**
      * @return HasMany<ProviderBusinessHour, $this>
      */
     public function businessHours(): HasMany

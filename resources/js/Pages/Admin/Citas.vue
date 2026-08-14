@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ChevronDown, Clock, Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
@@ -156,6 +156,17 @@ function pickDate(date) {
 
 const createOpen = ref(false);
 const createPreselect = ref('');
+
+// "Cita nueva" from a client card lands here with her name and phone in the
+// query string: the sheet opens already filled, and stays bound to her for
+// as long as those params live in the URL.
+const urlParams = new URLSearchParams(window.location.search);
+const prefillName = urlParams.get('nombre') ?? '';
+const prefillPhone = urlParams.get('tel') ?? '';
+
+onMounted(() => {
+    if (prefillName) createOpen.value = true;
+});
 
 function openCreate() {
     createPreselect.value = '';
@@ -437,6 +448,8 @@ function confirmCancel() {
             :services="services"
             :date="selectedDate"
             :preselect-hour="createPreselect"
+            :prefill-name="prefillName"
+            :prefill-phone="prefillPhone"
             @created="handleCreated"
         />
 
