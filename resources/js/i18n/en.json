@@ -120,7 +120,7 @@
         "scheduleUpdated": "Schedule updated",
         "scheduleConflictWarning": "{count} upcoming appointment(s) fall outside your new schedule",
         "profileUpdated": "Profile updated",
-        "profilePublished": "Your profile is now visible",
+        "profilePublished": "Published",
         "profileUnpublished": "Your profile is hidden",
         "appointmentConfirmed": "Appointment confirmed",
         "appointmentCancelled": "Appointment cancelled",
@@ -333,7 +333,12 @@
         "newClientPromptBody": "She was saved to your client book. Add her details to complete her card.",
         "newClientPromptCta": "Complete her card",
         "newClientPromptSkip": "Not now, thanks",
-        "agendaQuickTimeOff": "Add time off"
+        "agendaQuickTimeOff": "Add time off",
+        "portfolioTitle": "Portfolio",
+        "uploadFromPhone": "Upload from your phone",
+        "statMonthDone": "Completed this month",
+        "statMonthSales": "Sales this month",
+        "settingsSearch": "Search settings…"
     },
     "nav": {
         "appointments": "Appointments",

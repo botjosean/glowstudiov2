@@ -120,7 +120,7 @@
         "scheduleUpdated": "Horario actualizado",
         "scheduleConflictWarning": "{count} cita(s) futura(s) quedan fuera de tu nuevo horario",
         "profileUpdated": "Perfil actualizado",
-        "profilePublished": "Tu perfil ya es visible",
+        "profilePublished": "Publicado",
         "profileUnpublished": "Tu perfil está oculto",
         "appointmentConfirmed": "Cita confirmada",
         "appointmentCancelled": "Cita cancelada",
@@ -333,7 +333,12 @@
         "newClientPromptBody": "Se guardó en tu libro de clientas. Añadí sus datos para completar su ficha.",
         "newClientPromptCta": "Completar su ficha",
         "newClientPromptSkip": "Gracias, ahora no",
-        "agendaQuickTimeOff": "Agregar ausencia"
+        "agendaQuickTimeOff": "Agregar ausencia",
+        "portfolioTitle": "Portafolio",
+        "uploadFromPhone": "Subir desde el teléfono",
+        "statMonthDone": "Completadas este mes",
+        "statMonthSales": "Ventas del mes",
+        "settingsSearch": "Buscar en configuración…"
     },
     "nav": {
         "appointments": "Citas",

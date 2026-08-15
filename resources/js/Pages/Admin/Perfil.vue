@@ -1,150 +1,44 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
-import { useForm, router, usePage, Link } from '@inertiajs/vue3';
-import { Camera, Ban, Plus, Sparkles, Settings } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import { Link, router, useForm } from '@inertiajs/vue3';
+import { Ban, Camera, ChevronRight, Eye, MessageCircle, Pencil, Plus, Settings, Share2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
-import Input from '../../Components/ui/Input.vue';
-import Textarea from '../../Components/ui/Textarea.vue';
-import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
-import Collapse from '../../Components/ui/Collapse.vue';
-import PublicLinkCard from '../../Components/admin/PublicLinkCard.vue';
-import BioSuggesterSheet from '../../Components/admin/BioSuggesterSheet.vue';
-import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
+import QrShareSheet from '../../Components/admin/QrShareSheet.vue';
 
+/**
+ * The Perfil tab as Booksy has it: a showcase, not a form. What the world
+ * sees (cover, name, portfolio), how the business is doing (progress card,
+ * three honest numbers, the bot's state), and the doors — pencil to edit in
+ * Configuración, eye to preview, share with the QR. The words and switches
+ * themselves live in Configuración → Información del negocio.
+ */
 const props = defineProps({
-    profile: { type: Object, required: true },
-    // { username, publicName, phone, email, bio, isMobile, serviceArea, addressLine,
-    //   bannerPhoto, avatarPhoto, gallery: [{ id, url }], maxGallery, published, activeServicesCount }
+    providerName: { type: String, default: 'Pati' },
+    bannerPhoto: { type: String, default: null },
+    avatarPhoto: { type: String, default: null },
+    publicName: { type: String, required: true },
+    addressLabel: { type: String, default: null },
+    published: { type: Boolean, default: false },
     publicUrl: { type: String, required: true },
+    whatsappConnected: { type: Boolean, default: false },
+    progress: { type: Object, required: true },
+    // { done, total }
+    stats: { type: Object, required: true },
+    // { upcoming, completedMonth, salesMonth }
+    gallery: { type: Array, default: () => [] },
+    maxGallery: { type: Number, default: 6 },
 });
 
 const { t } = useI18n();
-const { returnToInicio } = useOnboardingReturn();
 
-const form = useForm({
-    username: props.profile.username,
-    publicName: props.profile.publicName,
-    phone: props.profile.phone,
-    bio: props.profile.bio,
-    isMobile: props.profile.isMobile,
-    homeService: props.profile.homeService,
-    serviceArea: props.profile.serviceArea,
-    addressLine: props.profile.addressLine,
-});
+const shareOpen = ref(false);
 
-function submit() {
-    form.put('/admin/perfil', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
-}
+const progressPct = computed(() => Math.round((props.progress.done / props.progress.total) * 100));
 
-// One collapsible per topic, so the page reads as short questions instead of
-// one endless form. The first incomplete section starts open; coming from the
-// checklist's "publish" step (?abrir=publicacion) opens that one instead.
-const sectionDone = computed(() => ({
-    info: Boolean(props.profile.publicName) && Boolean(props.profile.bio),
-    ubicacion: Boolean(props.profile.isMobile
-        ? props.profile.serviceArea
-        : (props.profile.homeService
-            ? props.profile.addressLine && props.profile.serviceArea
-            : props.profile.addressLine)),
-    fotos: props.profile.gallery.length >= props.profile.maxGallery,
-    publicacion: props.profile.published,
-}));
+// ---- Cover / avatar / portfolio uploads (same endpoints as always) --------
 
-const page = usePage();
-
-function initialOpenSection() {
-    const order = ['info', 'ubicacion', 'fotos', 'publicacion'];
-    // ?abrir=<seccion> gana sobre "la primera incompleta": el checklist manda
-    // a la persona a una sección concreta y abrirle otra sería desorientarla.
-    const asked = order.find((key) => page.url.includes(`abrir=${key}`));
-
-    return asked ?? order.find((key) => !sectionDone.value[key]) ?? null;
-}
-
-const openSections = reactive({
-    info: false,
-    ubicacion: false,
-    fotos: false,
-    publicacion: false,
-});
-const first = initialOpenSection();
-if (first) openSections[first] = true;
-
-// A validation error inside a collapsed section would be invisible — open
-// every section that has one.
-const errorSection = {
-    username: 'info',
-    publicName: 'info',
-    phone: 'info',
-    bio: 'info',
-    serviceArea: 'ubicacion',
-    addressLine: 'ubicacion',
-};
-
-watch(
-    () => form.errors,
-    (errors) => {
-        for (const field of Object.keys(errors)) {
-            const section = errorSection[field];
-            if (section) openSections[section] = true;
-        }
-    },
-    { deep: true },
-);
-
-const publishOptions = computed(() => [
-    { value: 'public', label: t('admin.publishStatePublic') },
-    { value: 'hidden', label: t('admin.publishStateHidden') },
-]);
-
-const locationOptions = computed(() => [
-    { value: 'studio', label: t('admin.locationStudio') },
-    { value: 'mobile', label: t('admin.locationMobile') },
-    { value: 'both', label: t('admin.locationBoth') },
-]);
-
-// Three honest modes over two booleans: studio (F/F), mobile-only (T/-),
-// both (F/T). Which services actually go out is a per-service switch in
-// Servicios — this only says the professional is willing to travel at all.
-const locationValue = computed({
-    get: () => (form.isMobile ? 'mobile' : form.homeService ? 'both' : 'studio'),
-    set: (value) => {
-        form.isMobile = value === 'mobile';
-        form.homeService = value === 'both';
-    },
-});
-
-const canPublish = computed(() => props.profile.published || props.profile.activeServicesCount > 0);
-const publishValue = computed(() => (props.profile.published ? 'public' : 'hidden'));
-const publishProcessing = ref(false);
-
-function togglePublish(value) {
-    publishProcessing.value = true;
-    router.patch(
-        '/admin/perfil/publicacion',
-        { published: value === 'public' },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                if (value === 'public') returnToInicio();
-            },
-            onFinish: () => { publishProcessing.value = false; },
-        },
-    );
-}
-
-// Client-side size check is convenience only — instant feedback instead of
-// waiting out a large upload just to get the same rejection from the
-// server, which validates this regardless.
-//
-// This MUST stay in step with UploadProviderPhotoRequest's File::image()->max()
-// — when the server cap moved to 20 MB and this one didn't, the browser
-// rejected 8-20 MB phone photos the server would have happily accepted, and
-// the error quoted a limit that was no longer real. The megabyte figure is
-// interpolated into the message from here so the two can't drift again.
 const MAX_UPLOAD_MB = 20;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
@@ -156,19 +50,12 @@ const avatarForm = useForm({ photo: null });
 const bannerForm = useForm({ photo: null });
 const galleryForm = useForm({ photo: null });
 
-// The photo error renders as plain text with no dismiss button, and Inertia
-// keeps form errors around until the next submit — so a single rejection used
-// to sit on screen indefinitely, long after the provider had moved on. Expire
-// it on a timer the way FlashMessage already does for flash messages.
 const PHOTO_ERROR_TIMEOUT_MS = 6000;
 const photoErrorTimers = new WeakMap();
 
 function expirePhotoError(form) {
     clearTimeout(photoErrorTimers.get(form));
-    photoErrorTimers.set(
-        form,
-        setTimeout(() => form.clearErrors('photo'), PHOTO_ERROR_TIMEOUT_MS),
-    );
+    photoErrorTimers.set(form, setTimeout(() => form.clearErrors('photo'), PHOTO_ERROR_TIMEOUT_MS));
 }
 
 function uploadPhoto(form, url) {
@@ -192,8 +79,6 @@ function uploadPhoto(form, url) {
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
-            // Server-side rejections (bad dimensions, unsupported type) land in
-            // the same slot and need the same expiry.
             onError: () => expirePhotoError(form),
             onFinish: () => {
                 input.value = '';
@@ -205,8 +90,6 @@ function uploadPhoto(form, url) {
 const onAvatarSelected = uploadPhoto(avatarForm, '/admin/perfil/avatar');
 const onBannerSelected = uploadPhoto(bannerForm, '/admin/perfil/portada');
 const onGallerySelected = uploadPhoto(galleryForm, '/admin/perfil/galeria');
-
-const bioSheetOpen = ref(false);
 
 const deleteConfirmOpen = ref(false);
 const deleteProcessing = ref(false);
@@ -233,16 +116,43 @@ function confirmDeletePhoto() {
 </script>
 
 <template>
-    <AdminLayout :provider-name="profile.publicName" :avatar-src="profile.avatarPhoto">
-        <div class="relative h-[120px] w-full overflow-hidden bg-[var(--surface-mute)]">
-            <img v-if="profile.bannerPhoto" :src="profile.bannerPhoto" alt="" class="h-full w-full object-cover" />
-            <input
-                ref="bannerInput"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                class="hidden"
-                @change="onBannerSelected"
-            />
+    <AdminLayout :provider-name="providerName" :avatar-src="avatarPhoto">
+        <!-- Cover with Booksy's overlay doors: pencil → edit, eye → preview,
+             share pill. The camera button keeps the cover changeable here. -->
+        <div class="relative h-44 w-full overflow-hidden bg-[#131a2a]">
+            <img v-if="bannerPhoto" :src="bannerPhoto" alt="" class="h-full w-full object-cover" />
+            <input ref="bannerInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onBannerSelected" />
+
+            <div class="absolute left-3 top-3">
+                <Link
+                    href="/admin/negocio"
+                    :aria-label="$t('admin.settingsBusinessInfo')"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-black/45 backdrop-blur-sm hover:bg-black/60"
+                >
+                    <Pencil :size="17" class="text-white" />
+                </Link>
+            </div>
+            <div class="absolute right-3 top-3 flex items-center gap-2">
+                <a
+                    v-if="published"
+                    :href="publicUrl"
+                    target="_blank"
+                    rel="noopener"
+                    :aria-label="$t('admin.publicLinkView')"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-black/45 backdrop-blur-sm hover:bg-black/60"
+                >
+                    <Eye :size="17" class="text-white" />
+                </a>
+                <button
+                    v-if="published"
+                    type="button"
+                    class="flex items-center gap-1.5 rounded-xl bg-black/45 px-3.5 py-2.5 text-[13px] font-semibold text-white backdrop-blur-sm hover:bg-black/60"
+                    @click="shareOpen = true"
+                >
+                    {{ $t('admin.shareProfile') }}
+                    <Share2 :size="14" />
+                </button>
+            </div>
             <button
                 type="button"
                 :disabled="bannerForm.processing"
@@ -254,159 +164,118 @@ function confirmDeletePhoto() {
             </button>
         </div>
 
-        <div class="pointer-events-none relative -mt-10 flex justify-center">
-            <div class="pointer-events-auto relative h-20 w-20">
-                <div class="box-border flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--surface)] bg-[var(--surface-mute)] shadow-[0_4px_14px_rgba(17,24,39,0.12)]">
-                    <img
-                        v-if="profile.avatarPhoto"
-                        :src="profile.avatarPhoto"
-                        :alt="profile.publicName"
-                        class="h-full w-full object-cover"
-                    />
-                    <span v-else class="text-xl font-semibold text-[var(--text-faint)]">{{
-                        profile.publicName?.charAt(0)?.toUpperCase() ?? '·'
-                    }}</span>
+        <!-- Avatar overlapping the cover, Booksy-style -->
+        <div class="pointer-events-none relative -mt-12 flex justify-center">
+            <div class="pointer-events-auto relative h-24 w-24">
+                <div class="box-border flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[var(--surface)] bg-[var(--surface-mute)] shadow-[0_4px_14px_rgba(17,24,39,0.15)]">
+                    <img v-if="avatarPhoto" :src="avatarPhoto" :alt="publicName" class="h-full w-full object-cover" />
+                    <span v-else class="text-2xl font-semibold text-[var(--text-faint)]">{{ publicName?.charAt(0)?.toUpperCase() ?? '·' }}</span>
                 </div>
-                <input
-                    ref="avatarInput"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    class="hidden"
-                    @change="onAvatarSelected"
-                />
+                <input ref="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onAvatarSelected" />
                 <button
                     type="button"
                     :disabled="avatarForm.processing"
-                    class="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--btn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--btn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                     @click="avatarInput?.click()"
                 >
-                    <span v-if="avatarForm.processing" class="text-[8px] font-bold text-white"
-                        >{{ avatarForm.progress?.percentage ?? 0 }}%</span
-                    >
-                    <Camera v-else :size="13" class="text-white" />
+                    <span v-if="avatarForm.processing" class="text-[8px] font-bold text-white">{{ avatarForm.progress?.percentage ?? 0 }}%</span>
+                    <Camera v-else :size="14" class="text-white" />
                 </button>
             </div>
         </div>
 
-        <p
-            v-if="avatarForm.errors.photo || bannerForm.errors.photo"
-            class="px-6 pt-2 text-center text-[13px] font-normal text-[var(--danger)]"
-        >
+        <p v-if="avatarForm.errors.photo || bannerForm.errors.photo" class="px-6 pt-2 text-center text-[13px] font-normal text-[var(--danger)]">
             {{ avatarForm.errors.photo || bannerForm.errors.photo }}
         </p>
 
+        <div class="flex flex-col items-center px-5 pt-3">
+            <span
+                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold"
+                :class="published
+                    ? 'bg-[var(--green-soft)] text-[var(--green-text-strong)]'
+                    : 'bg-[var(--surface-mute)] text-[var(--text-mute)]'"
+            >
+                <span class="h-1.5 w-1.5 rounded-full" :class="published ? 'bg-[var(--green-text)]' : 'bg-[var(--text-faint)]'" />
+                {{ published ? $t('admin.profilePublished') : $t('admin.publicLinkHidden') }}
+            </span>
+            <h1 class="mt-2 text-[24px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">{{ publicName }}</h1>
+            <p v-if="addressLabel" class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">{{ addressLabel }}</p>
+        </div>
+
         <div class="flex flex-col gap-3 p-5 pb-8">
-            <div class="pb-2 pt-1 text-center">
-                <h1 class="text-[22px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
-                    {{ $t('admin.profileTitle') }}
-                </h1>
-                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
+            <!-- Progress card, Booksy's "Novato — X de Y" -->
+            <Link
+                href="/admin/inicio"
+                class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 hover:border-[var(--border-strong)]"
+            >
+                <div class="flex items-center justify-between">
+                    <span class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.settingsActivation') }}</span>
+                    <span class="flex items-center gap-1 text-[13px] font-medium text-[var(--text-mute)]">
+                        {{ $t('inicio.progress', { done: progress.done, total: progress.total }) }}
+                        <ChevronRight :size="15" class="text-[var(--text-faint)]" />
+                    </span>
+                </div>
+                <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-mute)]">
+                    <div class="h-full rounded-full bg-[var(--gold)]" :style="{ width: `${progressPct}%` }" />
+                </div>
+            </Link>
+
+            <!-- Three honest numbers -->
+            <div class="grid grid-cols-3 divide-x divide-[var(--surface-mute)] rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] py-3.5">
+                <div class="flex flex-col items-center gap-0.5">
+                    <span class="text-[18px] font-bold tabular-nums text-[var(--text-strong)]">{{ stats.upcoming }}</span>
+                    <span class="px-1 text-center text-[11px] font-medium text-[var(--text-mute)]">{{ $t('admin.clientStatUpcoming') }}</span>
+                </div>
+                <div class="flex flex-col items-center gap-0.5">
+                    <span class="text-[18px] font-bold tabular-nums text-[var(--text-strong)]">{{ stats.completedMonth }}</span>
+                    <span class="px-1 text-center text-[11px] font-medium text-[var(--text-mute)]">{{ $t('admin.statMonthDone') }}</span>
+                </div>
+                <div class="flex flex-col items-center gap-0.5">
+                    <span class="text-[18px] font-bold tabular-nums text-[var(--text-strong)]">${{ stats.salesMonth.toFixed(0) }}</span>
+                    <span class="px-1 text-center text-[11px] font-medium text-[var(--text-mute)]">{{ $t('admin.statMonthSales') }}</span>
+                </div>
             </div>
 
-            <PublicLinkCard :url="publicUrl" :published="profile.published" :provider-name="profile.publicName" />
+            <!-- The WhatsApp assistant's state, at a glance -->
+            <div class="flex items-center gap-3.5 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
+                <span
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    :class="whatsappConnected ? 'bg-[var(--green-soft)]' : 'bg-[var(--surface-mute)]'"
+                >
+                    <MessageCircle :size="18" :class="whatsappConnected ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'" />
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-[14px] font-semibold text-[var(--text-strong)]">{{ $t('inicio.botTitle') }}</span>
+                    <span class="block text-[12px] font-normal leading-relaxed text-[var(--text-mute)]">
+                        {{ whatsappConnected ? $t('inicio.botActive') : $t('inicio.botOffline') }}
+                    </span>
+                </span>
+            </div>
 
-            <Collapse
-                v-model="openSections.info"
-                :title="$t('admin.sectionInfo')"
-                :hint="profile.publicName || $t('admin.sectionInfoHint')"
-                :done="sectionDone.info"
-            >
-                <div class="flex flex-col gap-4">
-                    <div>
-                        <Input v-model="form.username" :label="$t('admin.username')" />
-                        <p v-if="form.errors.username" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.username }}</p>
-                    </div>
-                    <div>
-                        <Input v-model="form.publicName" :label="$t('admin.publicName')" />
-                        <p v-if="form.errors.publicName" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.publicName }}</p>
-                    </div>
-                    <div>
-                        <Input v-model="form.phone" :label="$t('admin.phone')" type="tel" />
-                        <p v-if="form.errors.phone" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.phone }}</p>
-                    </div>
-                    <div>
-                        <Input :model-value="profile.email" :label="$t('admin.email')" type="email" disabled />
-                        <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.emailReadOnly') }}</p>
-                    </div>
-                    <div>
-                        <Textarea v-model="form.bio" :label="$t('admin.bio')" :rows="4" />
-                        <button
-                            type="button"
-                            class="mt-2 flex items-center gap-1.5 rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[13px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
-                            @click="bioSheetOpen = true"
-                        >
-                            <Sparkles :size="14" />
-                            {{ form.bio ? $t('admin.bioAiRedo') : $t('admin.bioAiCta') }}
-                        </button>
-                        <p v-if="form.errors.bio" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.bio }}</p>
-                    </div>
+            <!-- Portafolio -->
+            <div>
+                <div class="flex items-baseline justify-between px-1 pb-2 pt-2">
+                    <span class="text-[15px] font-bold text-[var(--text-strong)]">{{ $t('admin.portfolioTitle') }}</span>
+                    <span class="text-[12px] font-medium text-[var(--text-faint)]">{{ gallery.length }} / {{ maxGallery }}</span>
                 </div>
-            </Collapse>
-
-            <Collapse
-                v-model="openSections.ubicacion"
-                :title="$t('admin.sectionLocation')"
-                :hint="(profile.isMobile ? profile.serviceArea : profile.addressLine) || $t('admin.sectionLocationHint')"
-                :done="sectionDone.ubicacion"
-            >
-                <ToggleGroup v-model="locationValue" :options="locationOptions" />
-                <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.locationHint') }}</p>
-
-                <div class="mt-3 flex flex-col gap-3">
-                    <Input
-                        v-if="!form.isMobile"
-                        v-model="form.addressLine"
-                        :label="$t('admin.addressLine')"
-                        :placeholder="$t('admin.addressLinePlaceholder')"
-                    />
-                    <Input
-                        v-if="form.isMobile || form.homeService"
-                        v-model="form.serviceArea"
-                        :label="$t('admin.serviceArea')"
-                        :placeholder="$t('admin.serviceAreaPlaceholder')"
-                    />
-                    <p v-if="form.homeService && !form.isMobile" class="text-[12px] font-normal text-[var(--text-faint)]">
-                        {{ $t('admin.locationBothHint') }}
-                    </p>
-                    <p v-if="form.errors.serviceArea" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
-                        {{ form.errors.serviceArea }}
-                    </p>
-                    <p v-if="form.errors.addressLine" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
-                        {{ form.errors.addressLine }}
-                    </p>
-                </div>
-            </Collapse>
-
-            <Collapse
-                v-model="openSections.fotos"
-                :title="$t('admin.sectionPhotos')"
-                :hint="profile.gallery.length ? `${profile.gallery.length} / ${profile.maxGallery}` : $t('admin.sectionPhotosHint')"
-                :done="sectionDone.fotos"
-            >
                 <div class="grid grid-cols-3 gap-2.5">
                     <div
-                        v-for="photo in profile.gallery"
+                        v-for="photo in gallery"
                         :key="photo.id"
                         class="relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-mute)]"
                     >
                         <img :src="photo.url" alt="" class="h-full w-full object-cover" />
                         <button
                             type="button"
+                            :aria-label="$t('admin.deletePhoto')"
                             class="absolute right-1.5 top-1.5 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-black/60"
                             @click="askDeletePhoto(photo)"
                         >
                             <Ban :size="11" class="text-white" />
                         </button>
                     </div>
-                    <input
-                        ref="galleryInput"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        class="hidden"
-                        @change="onGallerySelected"
-                    />
                     <button
-                        v-if="profile.gallery.length < profile.maxGallery"
+                        v-if="gallery.length < maxGallery"
                         type="button"
                         :disabled="galleryForm.processing"
                         class="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[var(--border-strong)] text-[var(--text-faint)] hover:border-[var(--text-faint)] disabled:cursor-not-allowed disabled:opacity-60"
@@ -421,40 +290,21 @@ function confirmDeletePhoto() {
                         </template>
                     </button>
                 </div>
+                <input ref="galleryInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onGallerySelected" />
+                <button
+                    v-if="gallery.length < maxGallery"
+                    type="button"
+                    :disabled="galleryForm.processing"
+                    class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] py-3 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
+                    @click="galleryInput?.click()"
+                >
+                    <Camera :size="15" />
+                    {{ $t('admin.uploadFromPhone') }}
+                </button>
                 <p v-if="galleryForm.errors.photo" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                     {{ galleryForm.errors.photo }}
                 </p>
-            </Collapse>
-
-            <Collapse
-                v-model="openSections.publicacion"
-                :title="$t('admin.publishProfile')"
-                :hint="profile.published ? $t('admin.publishStatePublic') : $t('admin.publishStateHidden')"
-                :done="sectionDone.publicacion"
-            >
-                <ToggleGroup
-                    :model-value="publishValue"
-                    :options="publishOptions"
-                    :disabled="publishProcessing || !canPublish"
-                    @update:model-value="togglePublish"
-                />
-                <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.publishProfileHint') }}</p>
-                <p v-if="!canPublish" class="mt-1.5 text-[12px] font-normal text-[var(--amber-text)]">
-                    {{ $t('admin.publishBlockedNoServices') }}
-                </p>
-                <p v-else-if="profile.published && profile.activeServicesCount === 0" class="mt-1.5 text-[12px] font-normal text-[var(--amber-text)]">
-                    {{ $t('admin.publishedWithoutServices') }}
-                </p>
-            </Collapse>
-
-            <button
-                type="button"
-                :disabled="form.processing"
-                class="mt-2 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                @click="submit"
-            >
-                {{ form.processing ? $t('common.saving') : $t('admin.saveChanges') }}
-            </button>
+            </div>
         </div>
 
         <ConfirmDialog
@@ -466,11 +316,10 @@ function confirmDeletePhoto() {
             variant="danger"
             @confirm="confirmDeletePhoto"
         />
-        <BioSuggesterSheet v-model="bioSheetOpen" @use="(text) => { form.bio = text; }" />
 
-        <!-- Booksy's floating Configuración pill: the profile is the doorway
-             to every business setting, and the pill keeps that door on screen
-             no matter how deep she scrolls. -->
+        <QrShareSheet v-model="shareOpen" :url="publicUrl" :provider-name="publicName" />
+
+        <!-- Booksy's floating Configuración pill -->
         <Link
             href="/admin/ajustes"
             class="fixed bottom-24 right-4 z-20 flex items-center gap-2 rounded-full bg-[#101010] py-3.5 pl-4 pr-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:bg-black sm:right-[calc(50vw-224px)]"

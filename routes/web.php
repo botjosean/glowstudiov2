@@ -137,6 +137,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->whereNumber('timeOff')->name('horario.ausencias.destroy');
 
     Route::get('/perfil', [DashboardController::class, 'perfil'])->name('perfil');
+    // La vitrina y su formulario viven separados, como en Booksy: /perfil
+    // muestra, /negocio edita — los endpoints de escritura no cambian.
+    Route::get('/negocio', [DashboardController::class, 'negocio'])->name('negocio');
     Route::put('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
     // Throttled because every call costs a model request: a suggestion is a
     // convenience, not something worth letting one account hammer.

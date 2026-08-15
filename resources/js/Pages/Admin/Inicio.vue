@@ -30,7 +30,7 @@ const steps = computed(() => [
         done: props.checklist.profileComplete,
         titleKey: 'inicio.stepProfile',
         hintKey: 'inicio.stepProfileHint',
-        href: '/admin/perfil?desde=inicio',
+        href: '/admin/negocio?desde=inicio',
     },
     {
         // Its own step, not folded into "complete your profile": a half-filled
@@ -70,7 +70,7 @@ const steps = computed(() => [
         done: props.checklist.published,
         titleKey: 'inicio.stepPublish',
         hintKey: 'inicio.stepPublishHint',
-        href: '/admin/perfil?desde=inicio&abrir=publicacion',
+        href: '/admin/negocio?desde=inicio&abrir=publicacion',
     },
     {
         key: 'booking',

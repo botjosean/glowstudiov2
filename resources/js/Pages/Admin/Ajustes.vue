@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import {
@@ -12,6 +12,7 @@ import {
     LogOut,
     MessageCircle,
     ChevronRight,
+    Search,
     Store,
     Sparkles,
     CalendarClock,
@@ -50,7 +51,7 @@ const whatsappPromptOptions = computed(() => [
 // Servicios and Horario left the bottom bar when it went to four tabs — this
 // hub is now their front door (the agenda's gear still shortcuts to Horario).
 const businessLinks = [
-    { href: '/admin/perfil', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
+    { href: '/admin/negocio', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
     { href: '/admin/servicios', icon: Sparkles, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
     { href: '/admin/horario', icon: CalendarClock, titleKey: 'nav.schedule', hintKey: 'admin.settingsScheduleHint' },
     { href: '/admin/inicio', icon: House, titleKey: 'admin.settingsActivation', hintKey: 'admin.settingsActivationHint' },
@@ -60,6 +61,21 @@ const legalLinks = [
     { href: '/terminos', icon: FileText, titleKey: 'legal.termsTitle' },
     { href: '/privacidad', icon: ShieldCheck, titleKey: 'legal.privacyTitle' },
 ];
+
+// Booksy's settings search: filters the hub's rows by their visible title.
+// While a query is active the preference cards step aside — the searcher is
+// looking for a door, not a toggle.
+const search = ref('');
+
+function matches(titleKey) {
+    const needle = search.value.trim().toLowerCase();
+    if (needle === '') return true;
+    return t(titleKey).toLowerCase().includes(needle);
+}
+
+const filteredBusinessLinks = computed(() => businessLinks.filter((item) => matches(item.titleKey)));
+const filteredLegalLinks = computed(() => legalLinks.filter((item) => matches(item.titleKey)));
+const searching = computed(() => search.value.trim() !== '');
 </script>
 
 <template>
@@ -77,11 +93,21 @@ const legalLinks = [
         </template>
 
         <div class="flex flex-col gap-6 p-5 pb-8">
-            <section>
+            <label class="flex items-center gap-2.5 rounded-xl bg-[var(--surface-mute)] px-3.5 py-2.5">
+                <Search :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                <input
+                    v-model="search"
+                    type="search"
+                    :placeholder="$t('admin.settingsSearch')"
+                    class="w-full bg-transparent text-[15px] text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:outline-none"
+                />
+            </label>
+
+            <section v-if="filteredBusinessLinks.length">
                 <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsBusiness') }}</h2>
                 <div class="overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]">
                     <Link
-                        v-for="(item, index) in businessLinks"
+                        v-for="(item, index) in filteredBusinessLinks"
                         :key="item.href"
                         :href="item.href"
                         class="flex w-full items-center gap-3.5 px-4 py-4 hover:bg-[var(--surface-alt)]"
@@ -99,7 +125,7 @@ const legalLinks = [
                 </div>
             </section>
 
-            <section>
+            <section v-show="!searching">
                 <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsPreferences') }}</h2>
                 <div class="flex flex-col gap-3">
                     <div class="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-4">
@@ -176,11 +202,11 @@ const legalLinks = [
                 </div>
             </section>
 
-            <section>
+            <section v-if="filteredLegalLinks.length">
                 <h2 class="mb-2 px-1 text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.settingsLegal') }}</h2>
                 <div class="overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]">
                     <Link
-                        v-for="(item, index) in legalLinks"
+                        v-for="(item, index) in filteredLegalLinks"
                         :key="item.href"
                         :href="item.href"
                         class="flex w-full items-center gap-3.5 px-4 py-4 hover:bg-[var(--surface-alt)]"

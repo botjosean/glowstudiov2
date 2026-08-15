@@ -194,12 +194,81 @@ class DashboardController extends Controller
         }, range(0, 6));
     }
 
+    /**
+     * The Perfil tab, Booksy-style: a showcase of the business as the world
+     * sees it — cover, progress, numbers, portfolio, bot — with editing moved
+     * to Configuración → Información del negocio (negocio() below).
+     */
     public function perfil(Request $request): Response
     {
         $provider = $request->user()->provider;
         $provider->load('photos');
+        $now = $provider->currentTime();
+        $monthStart = $now->startOfMonth();
+
+        $checklist = $this->checklistFor($provider);
 
         return Inertia::render('Admin/Perfil', [
+            'providerName' => $provider->public_name,
+            'bannerPhoto' => MediaUrl::resolve($provider->banner_photo_url),
+            'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
+            'publicName' => $provider->public_name,
+            'addressLabel' => $provider->is_mobile ? $provider->service_area : $provider->address_line,
+            'published' => $provider->published_at !== null,
+            'publicUrl' => route('providers.show', $provider),
+            'whatsappConnected' => $provider->whatsapp_phone_number_id !== null,
+            'progress' => [
+                'done' => count(array_filter($checklist)),
+                'total' => count($checklist),
+            ],
+            'stats' => [
+                'upcoming' => $provider->appointments()->blocking()
+                    ->where('starts_at', '>=', $now)->count(),
+                'completedMonth' => $provider->appointments()
+                    ->where('status', AppointmentStatus::Closed)
+                    ->where('starts_at', '>=', $monthStart)->count(),
+                'salesMonth' => (float) $provider->sales()
+                    ->where('created_at', '>=', $monthStart)
+                    ->selectRaw('COALESCE(SUM(amount + tip), 0) as total')->value('total'),
+            ],
+            'gallery' => $provider->photos->map(fn ($photo) => [
+                'id' => $photo->id,
+                'url' => MediaUrl::resolve($photo->url),
+            ])->values()->all(),
+            'maxGallery' => Provider::MAX_GALLERY_PHOTOS,
+        ]);
+    }
+
+    /**
+     * Everything the checklist counts, in one place: inicio() renders the
+     * long form, perfil() only needs done/total for the progress card.
+     *
+     * @return array<string, bool>
+     */
+    private function checklistFor(Provider $provider): array
+    {
+        return [
+            'account' => true,
+            'profile' => filled($provider->bio)
+                && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line)),
+            'photos' => $provider->photos()->count() >= Provider::MAX_GALLERY_PHOTOS,
+            'services' => $provider->services()->active()->exists(),
+            'whatsapp' => $provider->whatsapp_phone_number_id !== null,
+            'published' => $provider->published_at !== null,
+            'booked' => $provider->appointments()->exists(),
+        ];
+    }
+
+    /**
+     * Configuración → Información del negocio: the editing form that used to
+     * masquerade as the Perfil tab. Same update endpoints as always.
+     */
+    public function negocio(Request $request): Response
+    {
+        $provider = $request->user()->provider;
+        $provider->load('photos');
+
+        return Inertia::render('Admin/Negocio', [
             'profile' => [
                 'username' => $request->user()->username,
                 'publicName' => $provider->public_name,

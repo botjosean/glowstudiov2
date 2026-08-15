@@ -10,8 +10,11 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
             fonts: [
-                bunny('Plus Jakarta Sans', {
-                    weights: [400, 500, 600, 700, 800],
+                // Figtree: geométrica suave y cálida — la alternativa libre
+                // más cercana al Proxima Nova de Booksy, más fina y amable
+                // que Jakarta en los mismos pesos.
+                bunny('Figtree', {
+                    weights: [300, 400, 500, 600, 700],
                 }),
             ],
         }),
