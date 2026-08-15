@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Support\Format;
+use App\Support\MediaUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -75,6 +76,11 @@ class ClientController extends Controller
                 'notes' => $client->notes,
                 'tags' => $client->tags,
             ],
+            'photos' => $client->photos->map(fn ($photo) => [
+                'id' => $photo->id,
+                'url' => MediaUrl::resolve($photo->url),
+            ])->values()->all(),
+            'maxPhotos' => Client::MAX_PHOTOS,
             'upcoming' => $upcoming->map(fn (Appointment $appointment) => $this->appointmentPayload($appointment))->values()->all(),
             'past' => $past->map(fn (Appointment $appointment) => $this->appointmentPayload($appointment))->values()->all(),
             'stats' => [

@@ -100,7 +100,10 @@ function isActive(href) {
             <slot />
         </main>
 
-        <nav class="grid grid-cols-4 border-t border-[var(--surface-mute)] bg-[var(--surface)] px-2 pb-3.5 pt-2">
+        <!-- Booksy's black bar, always on screen: sticky so a long page
+             scrolls under it, black in BOTH themes on purpose (it is the
+             brand's anchor, not a surface), active item in gold. -->
+        <nav class="sticky bottom-0 z-30 grid grid-cols-4 bg-[#101010] px-2 pb-3.5 pt-2.5">
             <Link
                 v-for="item in navItems"
                 :key="item.href"
@@ -111,11 +114,11 @@ function isActive(href) {
                     :is="item.icon"
                     :size="21"
                     :stroke-width="isActive(item.href) ? 2.2 : 1.8"
-                    :class="isActive(item.href) ? 'text-[var(--text-strong)]' : 'text-[var(--text-faint)]'"
+                    :class="isActive(item.href) ? 'text-[#e3c26d]' : 'text-[#9ca3af]'"
                 />
                 <span
                     class="text-[10px]"
-                    :class="isActive(item.href) ? 'font-semibold text-[var(--text-strong)]' : 'font-medium text-[var(--text-faint)]'"
+                    :class="isActive(item.href) ? 'font-semibold text-[#e3c26d]' : 'font-medium text-[#9ca3af]'"
                     >{{ $t(item.key) }}</span
                 >
             </Link>

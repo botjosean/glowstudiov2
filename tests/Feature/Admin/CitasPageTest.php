@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
+use App\Models\Client;
 use App\Models\Provider;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,6 +75,20 @@ class CitasPageTest extends TestCase
         $this->actingAs($provider->user)->get('/admin/citas')->assertInertia(fn (Assert $page) => $page
             ->has('appointments', 1)
             ->where('appointments.0.id', $recent->id)
+        );
+    }
+
+    public function test_the_client_book_feeds_the_create_sheet_picker(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $provider->clients()->create(['name' => 'Ana Sosa', 'phone' => '3055550199']);
+        Client::factory()->create(['name' => 'Ajena']);
+
+        $this->actingAs($provider->user)->get('/admin/citas')->assertInertia(fn (Assert $page) => $page
+            ->has('clients', 1)
+            ->where('clients.0.name', 'Ana Sosa')
+            ->where('clients.0.phone', '(305) 555-0199')
+            ->where('clients.0.phoneDigits', '3055550199')
         );
     }
 

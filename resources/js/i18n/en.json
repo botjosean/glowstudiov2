@@ -321,7 +321,19 @@
         "shareSend": "Share",
         "shareMessage": "Book your appointment with {provider} here 👉 {url}",
         "settingsActivation": "Activation & assistant",
-        "settingsActivationHint": "Checklist, bot status and your booking link"
+        "settingsActivationHint": "Checklist, bot status and your booking link",
+        "clientPhotosTitle": "Work photos",
+        "clientPhotoUpload": "Upload photo",
+        "clientPhotoAdded": "Photo saved.",
+        "clientPhotoDeleted": "Photo deleted.",
+        "clientPhotoLimit": "This client reached the photo limit.",
+        "clientPhotoDeleteTitle": "Delete this photo?",
+        "selectClient": "Select client",
+        "newClientPromptTitle": "New client?",
+        "newClientPromptBody": "She was saved to your client book. Add her details to complete her card.",
+        "newClientPromptCta": "Complete her card",
+        "newClientPromptSkip": "Not now, thanks",
+        "agendaQuickTimeOff": "Add time off"
     },
     "nav": {
         "appointments": "Appointments",
@@ -364,7 +376,8 @@
         "book": "Book",
         "footerCta": "Quick appointments with",
         "openMap": "Open map",
-        "homeAvailable": "home visit available"
+        "homeAvailable": "home visit available",
+        "reserve": "Book"
     },
     "common": {
         "cancel": "Cancel",

@@ -96,6 +96,15 @@ class DashboardController extends Controller
                     'durationMinutes' => $service->duration_minutes,
                     'price' => $service->price,
                 ])->values()->all(),
+            // The sheet's "Seleccionar clienta" picker — the whole book, it
+            // is small. phoneDigits feeds the form; phone is what she reads.
+            'clients' => $provider->clients()->orderBy('name')->get()
+                ->map(fn ($client) => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'phone' => $client->phone === null ? null : Format::usPhone($client->phone),
+                    'phoneDigits' => $client->phone,
+                ])->values()->all(),
             'appointments' => $appointments->map(fn (Appointment $appointment) => [
                 'id' => $appointment->id,
                 'clientName' => $appointment->client_name,

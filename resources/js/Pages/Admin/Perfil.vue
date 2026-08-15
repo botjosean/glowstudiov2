@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { useForm, router, usePage } from '@inertiajs/vue3';
-import { Camera, Ban, Plus, Sparkles } from '@lucide/vue';
+import { useForm, router, usePage, Link } from '@inertiajs/vue3';
+import { Camera, Ban, Plus, Sparkles, Settings } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Input from '../../Components/ui/Input.vue';
@@ -467,5 +467,16 @@ function confirmDeletePhoto() {
             @confirm="confirmDeletePhoto"
         />
         <BioSuggesterSheet v-model="bioSheetOpen" @use="(text) => { form.bio = text; }" />
+
+        <!-- Booksy's floating Configuración pill: the profile is the doorway
+             to every business setting, and the pill keeps that door on screen
+             no matter how deep she scrolls. -->
+        <Link
+            href="/admin/ajustes"
+            class="fixed bottom-24 right-4 z-20 flex items-center gap-2 rounded-full bg-[#101010] py-3.5 pl-4 pr-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:bg-black sm:right-[calc(50vw-224px)]"
+        >
+            <Settings :size="18" class="text-[#e3c26d]" />
+            {{ $t('admin.settings') }}
+        </Link>
     </AdminLayout>
 </template>

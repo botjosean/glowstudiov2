@@ -102,7 +102,7 @@
         "addressLinePlaceholder": "p. ej. Calle 10 #5-20",
         "sampleImages": "Imágenes de muestra",
         "add": "Añadir",
-        "settings": "Ajustes",
+        "settings": "Configuración",
         "language": "Idioma",
         "languageHint": "Idioma de la aplicación",
         "timeFormat": "Formato de hora",
@@ -321,7 +321,19 @@
         "shareSend": "Compartir",
         "shareMessage": "Reservá tu cita con {provider} acá 👉 {url}",
         "settingsActivation": "Activación y asistente",
-        "settingsActivationHint": "Checklist, estado del bot y tu enlace de reservas"
+        "settingsActivationHint": "Checklist, estado del bot y tu enlace de reservas",
+        "clientPhotosTitle": "Fotos de su trabajo",
+        "clientPhotoUpload": "Subir foto",
+        "clientPhotoAdded": "Foto guardada.",
+        "clientPhotoDeleted": "Foto borrada.",
+        "clientPhotoLimit": "Llegaste al máximo de fotos de esta clienta.",
+        "clientPhotoDeleteTitle": "¿Borrar la foto?",
+        "selectClient": "Seleccionar clienta",
+        "newClientPromptTitle": "¿Clienta nueva?",
+        "newClientPromptBody": "Se guardó en tu libro de clientas. Añadí sus datos para completar su ficha.",
+        "newClientPromptCta": "Completar su ficha",
+        "newClientPromptSkip": "Gracias, ahora no",
+        "agendaQuickTimeOff": "Agregar ausencia"
     },
     "nav": {
         "appointments": "Citas",
@@ -364,7 +376,8 @@
         "book": "Reservar",
         "footerCta": "Citas rápidas con",
         "openMap": "Abrir mapa",
-        "homeAvailable": "a domicilio disponible"
+        "homeAvailable": "a domicilio disponible",
+        "reserve": "Reservar"
     },
     "common": {
         "cancel": "Cancelar",

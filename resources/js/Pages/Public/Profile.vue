@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { MapPin, ChevronRight } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
@@ -10,10 +11,31 @@ const props = defineProps({
     // provider: { slug, name, bio, availableNow, bannerPhoto, avatarPhoto, location: { title, subtitle },
     //             gallery: [url], services: [{ id, icon, name, duration, price }] }
 });
+// Booksy-style splash: the brand greets, then gets out of the way. Pure CSS
+// fade — no external assets, nothing to load.
+const splash = ref(true);
+
+onMounted(() => {
+    setTimeout(() => {
+        splash.value = false;
+    }, 900);
+});
 </script>
 
 <template>
     <PublicLayout>
+        <Transition
+            leave-active-class="transition-opacity duration-500"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="splash"
+                class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[var(--surface)]"
+            >
+                <GlowMark :size="64" class="splash-mark" />
+                <span class="text-[20px] font-bold tracking-tight text-[var(--text-strong)]">{{ provider.name }}</span>
+            </div>
+        </Transition>
         <div class="relative">
             <div class="relative h-48 w-full overflow-hidden bg-[#131a2a]">
                 <img v-if="provider.bannerPhoto" :src="provider.bannerPhoto" :alt="`${provider.name} banner`" class="h-full w-full object-cover opacity-75" />
@@ -31,6 +53,10 @@ const props = defineProps({
 
             <div class="px-6 pt-3 text-center">
                 <div class="text-2xl font-bold tracking-tight text-[var(--text-strong)]">{{ provider.name }}</div>
+                <p class="mt-1 flex items-center justify-center gap-1 text-[13px] font-normal text-[var(--text-mute)]">
+                    <MapPin :size="13" class="shrink-0" />
+                    {{ provider.location.subtitle }}
+                </p>
                 <div
                     v-if="provider.availableNow"
                     class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--green-border)] bg-[var(--green-soft)] px-3 py-1 text-[13px] font-medium text-[var(--green-text)]"
@@ -172,9 +198,11 @@ const props = defineProps({
                             {{ service.duration }}<template v-if="service.homeAvailable"> · {{ $t('profile.homeAvailable') }}</template>
                         </div>
                     </div>
-                    <div class="flex shrink-0 items-center gap-2">
+                    <div class="flex shrink-0 items-center gap-2.5">
                         <span class="text-[17px] font-bold tabular-nums text-[var(--text-strong)]">${{ service.price }}</span>
-                        <ChevronRight :size="16" class="text-[var(--text-faint)]" />
+                        <span class="rounded-lg bg-[var(--gold-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--gold-text)] ring-1 ring-inset ring-[var(--gold-border)]">
+                            {{ $t('profile.reserve') }}
+                        </span>
                     </div>
                 </Link>
             </div>
@@ -188,3 +216,15 @@ const props = defineProps({
         </div>
     </PublicLayout>
 </template>
+
+<style scoped>
+.splash-mark {
+    animation: splash-pop 0.9s ease-out;
+}
+
+@keyframes splash-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    45% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+}
+</style>

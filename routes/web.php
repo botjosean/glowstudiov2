@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AppointmentStatusController;
 use App\Http\Controllers\Admin\BioSuggestionController;
 use App\Http\Controllers\Admin\ClientController;
+use App\Http\Controllers\Admin\ClientPhotoController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ManualAppointmentController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -98,6 +99,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'client')->name('clientes.update');
     Route::delete('/clientes/{client}', [ClientController::class, 'destroy'])
         ->can('delete', 'client')->name('clientes.destroy');
+    // POST for the upload (Inertia cannot send files over PUT/PATCH) and
+    // scoped bindings so a photo id from another card is a 404, not a hit.
+    Route::middleware('throttle:uploads')->group(function () {
+        Route::post('/clientes/{client}/fotos', [ClientPhotoController::class, 'store'])
+            ->can('update', 'client')->name('clientes.fotos.store');
+    });
+    Route::delete('/clientes/{client}/fotos/{photo}', [ClientPhotoController::class, 'destroy'])
+        ->can('update', 'client')->scopeBindings()->name('clientes.fotos.destroy');
 
     Route::get('/ventas', [SalesController::class, 'index'])->name('ventas');
     Route::post('/ventas', [SalesController::class, 'store'])

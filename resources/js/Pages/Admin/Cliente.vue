@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, CalendarPlus, MessageCircle, MessageSquare, Pencil, Phone, Trash2, X } from '@lucide/vue';
+import { ArrowLeft, CalendarPlus, Camera, MessageCircle, MessageSquare, Pencil, Phone, Trash2, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
@@ -23,6 +23,9 @@ const props = defineProps({
     // [{ id, service, price, durationMinutes, status, startsAt }]
     stats: { type: Object, required: true },
     // { upcoming, completed, cancelled }
+    photos: { type: Array, default: () => [] },
+    // [{ id, url }] — the "after" shots pinned to this card.
+    maxPhotos: { type: Number, default: 12 },
 });
 
 const { t } = useI18n();
@@ -97,6 +100,47 @@ function addTag() {
 function removeTag(tag) {
     if (tagsProcessing.value) return;
     saveTags(props.client.tags.filter((item) => item !== tag));
+}
+
+// ---- Work photos -----------------------------------------------------------
+
+const photoInput = ref(null);
+const photoUploading = ref(false);
+
+function uploadPhoto(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    photoUploading.value = true;
+    router.post(`/admin/clientes/${props.client.id}/fotos`, { photo: file }, {
+        forceFormData: true,
+        preserveScroll: true,
+        onFinish: () => {
+            photoUploading.value = false;
+        },
+    });
+}
+
+const photoDeleteOpen = ref(false);
+const photoDeleting = ref(null);
+const photoDeleteProcessing = ref(false);
+
+function askDeletePhoto(photo) {
+    photoDeleting.value = photo;
+    photoDeleteOpen.value = true;
+}
+
+function confirmDeletePhoto() {
+    if (!photoDeleting.value) return;
+    photoDeleteProcessing.value = true;
+    router.delete(`/admin/clientes/${props.client.id}/fotos/${photoDeleting.value.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            photoDeleteProcessing.value = false;
+            photoDeleteOpen.value = false;
+            photoDeleting.value = null;
+        },
+    });
 }
 
 const deleteOpen = ref(false);
@@ -254,6 +298,37 @@ function confirmDelete() {
                 <p class="mt-1.5 whitespace-pre-line text-[14px] font-normal leading-relaxed text-[var(--text-strong)]">{{ client.notes }}</p>
             </div>
 
+            <!-- Work photos -->
+            <div>
+                <div class="flex items-center justify-between pb-2">
+                    <span class="text-[13px] font-semibold text-[var(--text-mute)]">{{ $t('admin.clientPhotosTitle') }}</span>
+                    <button
+                        v-if="photos.length < maxPhotos"
+                        type="button"
+                        :disabled="photoUploading"
+                        class="flex items-center gap-1.5 rounded-full bg-[var(--surface-mute)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-strong)] hover:bg-[var(--border-strong)] disabled:opacity-60"
+                        @click="photoInput.click()"
+                    >
+                        <Camera :size="13" />
+                        {{ photoUploading ? $t('common.saving') : $t('admin.clientPhotoUpload') }}
+                    </button>
+                </div>
+                <input ref="photoInput" type="file" accept="image/*" class="hidden" @change="uploadPhoto" />
+                <div v-if="photos.length" class="grid grid-cols-3 gap-2">
+                    <div v-for="photo in photos" :key="photo.id" class="group relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-mute)]">
+                        <img :src="photo.url" :alt="client.name" class="h-full w-full object-cover" />
+                        <button
+                            type="button"
+                            :aria-label="$t('admin.clientPhotoDeleteTitle')"
+                            class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/75"
+                            @click="askDeletePhoto(photo)"
+                        >
+                            <X :size="12" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Upcoming -->
             <div>
                 <div class="pb-2 text-[13px] font-semibold text-[var(--text-mute)]">{{ $t('admin.clientUpcomingTitle') }}</div>
@@ -307,6 +382,15 @@ function confirmDelete() {
             :processing="deleteProcessing"
             variant="danger"
             @confirm="confirmDelete"
+        />
+
+        <ConfirmDialog
+            v-model="photoDeleteOpen"
+            :title="$t('admin.clientPhotoDeleteTitle')"
+            :confirm-label="$t('admin.clientPhotoDeleteTitle')"
+            :processing="photoDeleteProcessing"
+            variant="danger"
+            @confirm="confirmDeletePhoto"
         />
     </AdminLayout>
 </template>

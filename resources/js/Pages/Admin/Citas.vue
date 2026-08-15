@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ChevronDown, Clock, Plus } from '@lucide/vue';
+import { Bell, ChevronDown, Clock, Plus, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
@@ -24,6 +24,8 @@ const props = defineProps({
     schedule: { type: Object, required: true },
     // { lunchStart, lunchEnd, days: [{ weekday, isOpen, workStart, workEnd }],
     //   timeOff: [{ startsOn, endsOn, reason }] } — what the timeline shades.
+    clients: { type: Array, default: () => [] },
+    // [{ id, name, phone, phoneDigits }] — the create sheet's client picker.
 });
 
 const { t } = useI18n();
@@ -157,6 +159,77 @@ function pickDate(date) {
 const createOpen = ref(false);
 const createPreselect = ref('');
 
+// Booksy's "+" opens a quick menu, not the form: the three things she does
+// in a hurry between clients.
+const speedDialOpen = ref(false);
+const pauseConfirmOpen = ref(false);
+const pauseProcessing = ref(false);
+
+function quickNew() {
+    speedDialOpen.value = false;
+    openCreate();
+}
+
+function quickPause() {
+    speedDialOpen.value = false;
+    pauseConfirmOpen.value = true;
+}
+
+function confirmPause() {
+    pauseProcessing.value = true;
+    router.post('/admin/horario/parar', { days: 1 }, {
+        onFinish: () => {
+            pauseProcessing.value = false;
+            pauseConfirmOpen.value = false;
+        },
+    });
+}
+
+function quickTimeOff() {
+    speedDialOpen.value = false;
+    router.visit('/admin/horario');
+}
+
+// Who was in the book before this booking round: what makes "¿Clienta
+// nueva?" answerable after Inertia swaps the props under us.
+const clientsBefore = ref(new Set());
+const newClientOpen = ref(false);
+const newClientId = ref(null);
+const pendingWaPrompt = ref(null);
+
+function openNewClientPrompt(prompt) {
+    newClientOpen.value = false;
+    pendingWaPrompt.value = null;
+    if (prompt.phoneDigits && !clientsBefore.value.has(prompt.phoneDigits)) {
+        const fresh = props.clients.find((client) => client.phoneDigits === prompt.phoneDigits);
+        if (fresh) {
+            newClientId.value = fresh.id;
+            pendingWaPrompt.value = prompt.wa;
+            newClientOpen.value = true;
+            return true;
+        }
+    }
+    return false;
+}
+
+function newClientGo() {
+    // Navigating away: drop the queued WhatsApp offer before the close
+    // watcher below can fire it.
+    pendingWaPrompt.value = null;
+    newClientOpen.value = false;
+    router.visit(`/admin/clientes/${newClientId.value}`);
+}
+
+// ConfirmDialog only emits confirm; dismissing it (button or backdrop) just
+// closes. Watching the close covers every path to "no thanks" — and then the
+// WhatsApp offer still gets its turn.
+watch(newClientOpen, (isOpen) => {
+    if (isOpen || !pendingWaPrompt.value) return;
+    const prompt = pendingWaPrompt.value;
+    pendingWaPrompt.value = null;
+    openWaPrompt(prompt);
+});
+
 // "Cita nueva" from a client card lands here with her name and phone in the
 // query string: the sheet opens already filled, and stays bound to her for
 // as long as those params live in the URL.
@@ -170,6 +243,7 @@ onMounted(() => {
 
 function openCreate() {
     createPreselect.value = '';
+    clientsBefore.value = new Set(props.clients.map((client) => client.phoneDigits).filter(Boolean));
     createOpen.value = true;
 }
 
@@ -178,6 +252,7 @@ function openCreate() {
 // buffer already ate simply comes back unselected.
 function handleCreateAt(minute) {
     createPreselect.value = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+    clientsBefore.value = new Set(props.clients.map((client) => client.phoneDigits).filter(Boolean));
     createOpen.value = true;
 }
 
@@ -185,7 +260,7 @@ function handleCreateAt(minute) {
 // flow as confirming a pending appointment. Without a phone the prompt
 // guard drops it silently.
 function handleCreated(created) {
-    openWaPrompt({
+    const wa = {
         clientName: created.clientName,
         clientPhone: created.clientPhone,
         phoneDigits: created.phoneDigits,
@@ -193,7 +268,13 @@ function handleCreated(created) {
         provider: props.providerName,
         startsAt: created.startsAt,
         variant: 'confirmed',
-    });
+    };
+
+    // Booksy's order: first "¿Clienta nueva?" (her card just auto-appeared
+    // in the book), then the WhatsApp offer if she stays on this screen.
+    if (!openNewClientPrompt({ phoneDigits: created.phoneDigits, wa })) {
+        openWaPrompt(wa);
+    }
 }
 
 const badgeVariant = { confirmed: 'confirmed', pending: 'pending', cancelled: 'cancelled', closed: 'closed' };
@@ -328,10 +409,25 @@ function confirmCancel() {
              how you know where you are — Booksy pins it too. -->
         <div class="sticky top-0 z-20 border-b border-[var(--surface-mute)] bg-[var(--bg-canvas)] px-4 pt-4">
             <h1 class="sr-only">{{ $t('admin.appointmentsTitle') }}</h1>
-            <div class="flex items-center justify-between px-1 pb-3">
+            <div class="flex items-center gap-3 px-1 pb-3">
                 <button
                     type="button"
-                    class="flex flex-col items-start text-left"
+                    :aria-label="$t('admin.tabPending')"
+                    class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
+                    @click="activeTab = 'pending'"
+                >
+                    <Bell :size="21" class="text-[var(--text-strong)]" />
+                    <span
+                        v-if="counts.pending > 0"
+                        class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d97706] px-1 text-[9px] font-bold text-white"
+                    >
+                        {{ counts.pending }}
+                    </span>
+                </button>
+                <span class="h-8 w-px shrink-0 bg-[var(--surface-mute)]" />
+                <button
+                    type="button"
+                    class="flex min-w-0 flex-1 flex-col items-start text-left"
                     :aria-label="$t('admin.agendaPickDay')"
                     @click="monthOpen = true"
                 >
@@ -383,7 +479,10 @@ function confirmCancel() {
                     @click="selectedDate = day.date"
                 >
                     <span class="text-[10px] font-medium uppercase">{{ day.dow }}</span>
-                    <span class="text-[15px] font-bold" :class="selectedKey !== day.key && 'text-[var(--text-strong)]'">{{ day.num }}</span>
+                    <span
+                        class="text-[15px] font-bold"
+                        :class="selectedKey !== day.key && (day.isToday ? 'text-[var(--danger)]' : 'text-[var(--text-strong)]')"
+                    >{{ day.num }}</span>
                     <span
                         class="h-1 w-1 rounded-full"
                         :class="day.isToday ? (selectedKey === day.key ? 'bg-[var(--chip-fg)]' : 'bg-[var(--text-strong)]') : 'bg-transparent'"
@@ -431,21 +530,65 @@ function confirmCancel() {
             </template>
         </div>
 
+        <!-- Back to today, Booksy's floating pill, only when she wandered off. -->
+        <button
+            v-if="activeTab === 'agenda' && !selectedIsToday"
+            type="button"
+            class="fixed bottom-24 left-1/2 z-20 -translate-x-1/2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-[12px] font-bold uppercase tracking-wide text-[var(--text-strong)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-[var(--surface-mute)]"
+            @click="pickDate(new Date())"
+        >
+            {{ $t('admin.agendaToday') }}
+        </button>
+
+        <!-- Booksy's "+": a quick menu, not a form. Backdrop closes it. -->
+        <div
+            v-if="speedDialOpen"
+            class="fixed inset-0 z-20 bg-black/40"
+            @click="speedDialOpen = false"
+        />
+        <div
+            v-if="speedDialOpen"
+            class="fixed bottom-40 right-4 z-30 flex flex-col items-end gap-3 sm:right-[calc(50vw-224px)]"
+        >
+            <button
+                type="button"
+                class="rounded-full bg-[#101010] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+                @click="quickNew"
+            >
+                {{ $t('admin.clientNewAppointment') }}
+            </button>
+            <button
+                type="button"
+                class="rounded-full bg-[var(--surface)] px-6 py-3.5 text-[15px] font-semibold text-[var(--text-strong)] shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
+                @click="quickPause"
+            >
+                {{ $t('admin.agendaPauseToday') }}
+            </button>
+            <button
+                type="button"
+                class="rounded-full bg-[var(--surface)] px-6 py-3.5 text-[15px] font-semibold text-[var(--text-strong)] shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
+                @click="quickTimeOff"
+            >
+                {{ $t('admin.agendaQuickTimeOff') }}
+            </button>
+        </div>
         <!-- Fixed on every viewport; on wide screens the right offset pins it
              to the centered 480px column's edge (same pattern as Servicios). -->
         <button
             v-if="activeTab === 'agenda' && services.length > 0"
             type="button"
             :aria-label="$t('admin.addAppointment')"
-            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
-            @click="openCreate"
+            class="fixed bottom-24 right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] transition-transform hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
+            :class="speedDialOpen && 'rotate-90'"
+            @click="speedDialOpen = !speedDialOpen"
         >
-            <Plus :size="22" class="text-white" />
+            <component :is="speedDialOpen ? X : Plus" :size="22" class="text-white" />
         </button>
 
         <CreateAppointmentSheet
             v-model="createOpen"
             :services="services"
+            :clients="clients"
             :date="selectedDate"
             :preselect-hour="createPreselect"
             :prefill-name="prefillName"
@@ -484,6 +627,27 @@ function confirmCancel() {
             :client-phone="waPrompt?.clientPhone"
             :phone-digits="waPrompt?.phoneDigits"
             :message="waMessage"
+        />
+
+        <ConfirmDialog
+            v-model="pauseConfirmOpen"
+            :title="$t('admin.agendaPauseToday')"
+            :body="$t('admin.agendaPauseHint')"
+            :confirm-label="$t('admin.agendaPauseToday')"
+            :processing="pauseProcessing"
+            variant="danger"
+            @confirm="confirmPause"
+        />
+
+        <!-- Booksy's post-save nudge: her card just appeared in the book. -->
+        <ConfirmDialog
+            v-model="newClientOpen"
+            :title="$t('admin.newClientPromptTitle')"
+            :body="$t('admin.newClientPromptBody')"
+            :confirm-label="$t('admin.newClientPromptCta')"
+            :cancel-label="$t('admin.newClientPromptSkip')"
+            variant="primary"
+            @confirm="newClientGo"
         />
     </AdminLayout>
 </template>

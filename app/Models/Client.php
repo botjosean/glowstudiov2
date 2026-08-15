@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['provider_id', 'name', 'phone', 'email', 'notes', 'tags'])]
 class Client extends Model
@@ -27,12 +28,22 @@ class Client extends Model
         ];
     }
 
+    public const MAX_PHOTOS = 12;
+
     /**
      * @return BelongsTo<Provider, $this>
      */
     public function provider(): BelongsTo
     {
         return $this->belongsTo(Provider::class);
+    }
+
+    /**
+     * @return HasMany<ClientPhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ClientPhoto::class)->orderByDesc('id');
     }
 
     /**

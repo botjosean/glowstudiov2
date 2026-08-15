@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { X } from '@lucide/vue';
+import { ArrowLeft, ChevronRight, Plus, Search, UserRound, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
@@ -22,6 +22,9 @@ import { useFormat } from '../../composables/useFormat';
  */
 const props = defineProps({
     services: { type: Array, required: true },
+    clients: { type: Array, default: () => [] },
+    // [{ id, name, phone, phoneDigits }] — the book behind "Seleccionar
+    // clienta"; manual entry stays as the walk-in fallback.
     // The day being booked — the sheet inherits it from the agenda's
     // selected day rather than asking again.
     date: { type: Date, required: true },
@@ -63,6 +66,45 @@ const slots = ref([]);
 const slotsLoading = ref(false);
 const slotsError = ref('');
 
+// Booksy's picker: the sheet swaps to the book, a tap fills the form. Manual
+// mode keeps the old free-text fields for the walk-in who is not a card yet.
+const pickerOpen = ref(false);
+const manualMode = ref(false);
+const selectedClient = ref(null);
+const clientSearch = ref('');
+
+const filteredClients = computed(() => {
+    const needle = clientSearch.value.trim().toLowerCase();
+    if (needle === '') return props.clients;
+    return props.clients.filter((client) =>
+        client.name.toLowerCase().includes(needle)
+        || (client.phoneDigits ?? '').includes(needle.replace(/\D/g, '') || ' '),
+    );
+});
+
+function pickClient(client) {
+    selectedClient.value = client;
+    form.clientName = client.name;
+    form.clientPhone = client.phoneDigits ?? '';
+    pickerOpen.value = false;
+    manualMode.value = false;
+    clientSearch.value = '';
+}
+
+function clearClient() {
+    selectedClient.value = null;
+    form.clientName = '';
+    form.clientPhone = '';
+}
+
+function startManual() {
+    selectedClient.value = null;
+    form.clientName = '';
+    form.clientPhone = '';
+    manualMode.value = true;
+    pickerOpen.value = false;
+}
+
 async function loadSlots() {
     if (!form.serviceId) {
         slots.value = [];
@@ -99,6 +141,14 @@ watch(open, (isOpen) => {
     form.fecha = toYmd(props.date);
     form.clientName = props.prefillName;
     form.clientPhone = props.prefillPhone;
+    pickerOpen.value = false;
+    clientSearch.value = '';
+    // Arriving from a client card counts as having picked her; otherwise the
+    // sheet opens on the dashed "Seleccionar clienta" invitation.
+    selectedClient.value = props.prefillName
+        ? { name: props.prefillName, phone: props.prefillPhone, phoneDigits: props.prefillPhone }
+        : null;
+    manualMode.value = false;
     loadSlots();
 });
 
@@ -163,6 +213,62 @@ function submit() {
             </button>
         </div>
 
+        <!-- The book view: Booksy's client search swapped into the sheet. -->
+        <div v-if="pickerOpen">
+            <div class="mb-4 flex items-center gap-3">
+                <button
+                    type="button"
+                    :aria-label="$t('common.cancel')"
+                    class="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
+                    @click="pickerOpen = false"
+                >
+                    <ArrowLeft :size="19" class="text-[var(--text-strong)]" />
+                </button>
+                <span class="text-[16px] font-bold text-[var(--text-strong)]">{{ $t('admin.selectClient') }}</span>
+            </div>
+            <label class="mb-2 flex items-center gap-2.5 rounded-xl bg-[var(--surface-mute)] px-3.5 py-2.5">
+                <Search :size="16" class="shrink-0 text-[var(--text-faint)]" />
+                <input
+                    v-model="clientSearch"
+                    type="search"
+                    :placeholder="$t('admin.clientsSearch')"
+                    class="w-full bg-transparent text-[15px] text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:outline-none"
+                />
+            </label>
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 border-b border-[var(--surface-mute)] px-1 py-3 text-left hover:bg-[var(--surface-alt)]"
+                @click="startManual"
+            >
+                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-mute)]">
+                    <Plus :size="16" class="text-[var(--text-strong)]" />
+                </span>
+                <span class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.addClient') }}</span>
+            </button>
+            <div class="max-h-[300px] overflow-y-auto">
+                <button
+                    v-for="client in filteredClients"
+                    :key="client.id"
+                    type="button"
+                    class="flex w-full items-center gap-3 border-b border-[var(--surface-mute)] px-1 py-3 text-left last:border-b-0 hover:bg-[var(--surface-alt)]"
+                    @click="pickClient(client)"
+                >
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-mute)] text-[13px] font-bold text-[var(--text-mute)]">
+                        {{ client.name[0]?.toUpperCase() }}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate text-[15px] font-semibold text-[var(--text-strong)]">{{ client.name }}</span>
+                        <span class="block text-[13px] font-normal text-[var(--text-mute)]">{{ client.phone ?? '—' }}</span>
+                    </span>
+                    <ChevronRight :size="15" class="shrink-0 text-[var(--text-faint)]" />
+                </button>
+                <p v-if="filteredClients.length === 0" class="py-6 text-center text-[13px] font-normal text-[var(--text-mute)]">
+                    {{ $t('admin.clientsEmpty') }}
+                </p>
+            </div>
+        </div>
+
+        <div v-else>
         <OutlinedSelect
             id="appointment-service"
             v-model="form.serviceId"
@@ -193,26 +299,74 @@ function submit() {
             </p>
         </div>
 
-        <OutlinedInput
-            id="appointment-client"
-            v-model="form.clientName"
-            class="mb-5"
-            :label="$t('admin.appointmentClientName')"
-            :error="form.errors.clientName"
-            clearable
-        />
-
-        <div class="mb-2">
-            <OutlinedInput
-                id="appointment-phone"
-                v-model="form.clientPhone"
-                type="tel"
-                inputmode="tel"
-                :label="$t('admin.appointmentPhone')"
-                :error="form.errors.clientPhone"
-            />
-            <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.phoneOptionalHint') }}</p>
+        <div v-if="!manualMode" class="mb-2">
+            <button
+                v-if="!selectedClient"
+                type="button"
+                class="flex w-full items-center gap-3.5 rounded-2xl border border-dashed border-[var(--border-strong)] px-4 py-4 text-left hover:bg-[var(--surface-alt)]"
+                @click="pickerOpen = true"
+            >
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--surface-mute)] bg-[var(--surface-mute)]">
+                    <UserRound :size="20" class="text-[var(--text-faint)]" />
+                </span>
+                <span class="flex-1 text-[15px] font-medium text-[var(--text-mute)]">{{ $t('admin.selectClient') }}</span>
+                <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+            </button>
+            <div
+                v-else
+                class="flex items-center gap-3.5 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] px-4 py-3.5"
+            >
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--gold-soft)] text-[15px] font-bold text-[var(--gold-text)]">
+                    {{ selectedClient.name[0]?.toUpperCase() }}
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate text-[15px] font-semibold text-[var(--text-strong)]">{{ selectedClient.name }}</span>
+                    <span class="block text-[13px] font-normal text-[var(--text-mute)]">{{ selectedClient.phone ?? '' }}</span>
+                </span>
+                <button
+                    type="button"
+                    :aria-label="$t('common.clear')"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-mute)] hover:bg-[var(--border-strong)]"
+                    @click="clearClient"
+                >
+                    <X :size="14" class="text-[var(--text-mute)]" />
+                </button>
+            </div>
+            <p v-if="form.errors.clientName" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
+                {{ form.errors.clientName }}
+            </p>
         </div>
+
+        <template v-else>
+            <OutlinedInput
+                id="appointment-client"
+                v-model="form.clientName"
+                class="mb-5"
+                :label="$t('admin.appointmentClientName')"
+                :error="form.errors.clientName"
+                clearable
+            />
+
+            <div class="mb-2">
+                <OutlinedInput
+                    id="appointment-phone"
+                    v-model="form.clientPhone"
+                    type="tel"
+                    inputmode="tel"
+                    :label="$t('admin.appointmentPhone')"
+                    :error="form.errors.clientPhone"
+                />
+                <p class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.phoneOptionalHint') }}</p>
+            </div>
+
+            <button
+                type="button"
+                class="text-[13px] font-semibold text-[var(--text-mute)] underline-offset-2 hover:underline"
+                @click="pickerOpen = true"
+            >
+                {{ $t('admin.selectClient') }}
+            </button>
+        </template>
 
         <div class="mt-6">
             <button
@@ -226,6 +380,7 @@ function submit() {
             <p v-if="incomplete" class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
                 {{ $t('admin.addAppointmentMissing') }}
             </p>
+        </div>
         </div>
     </BottomSheet>
 </template>
