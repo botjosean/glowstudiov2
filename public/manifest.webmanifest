@@ -2,7 +2,7 @@
     "name": "Glow Studio",
     "short_name": "Glow Studio",
     "description": "Tu agenda, tus servicios y tus citas.",
-    "start_url": "/admin/inicio",
+    "start_url": "/admin/citas",
     "scope": "/",
     "display": "standalone",
     "background_color": "#ffffff",
