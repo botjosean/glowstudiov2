@@ -17,6 +17,7 @@ import {
     CalendarClock,
     FileText,
     ShieldCheck,
+    House,
 } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
@@ -46,10 +47,13 @@ const whatsappPromptOptions = computed(() => [
     { value: 'never', label: t('admin.waPromptStateNever') },
 ]);
 
+// Servicios and Horario left the bottom bar when it went to four tabs — this
+// hub is now their front door (the agenda's gear still shortcuts to Horario).
 const businessLinks = [
     { href: '/admin/perfil', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
     { href: '/admin/servicios', icon: Sparkles, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
     { href: '/admin/horario', icon: CalendarClock, titleKey: 'nav.schedule', hintKey: 'admin.settingsScheduleHint' },
+    { href: '/admin/inicio', icon: House, titleKey: 'admin.settingsActivation', hintKey: 'admin.settingsActivationHint' },
 ];
 
 const legalLinks = [
@@ -63,7 +67,7 @@ const legalLinks = [
         <template #header>
             <header class="flex items-center gap-3 border-b border-[var(--surface-mute)] bg-[var(--surface)] px-4 py-3">
                 <Link
-                    href="/admin/inicio"
+                    href="/admin/citas"
                     class="-ml-1 flex h-9 w-9 items-center justify-center rounded-full hover:bg-[var(--surface-mute)]"
                 >
                     <ArrowLeft :size="20" class="text-[var(--text-strong)]" />

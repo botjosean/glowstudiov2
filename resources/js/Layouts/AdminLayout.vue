@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { CalendarDays, Users, Sparkles, Clock, User, Settings, ArrowLeft, X } from '@lucide/vue';
+import { CalendarDays, Users, Receipt, User, Settings, ArrowLeft, X } from '@lucide/vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -31,14 +31,13 @@ const showBanner = computed(() =>
     onboarding.value && !bannerCollapsed.value && currentPath.value !== '/admin/inicio',
 );
 
-// Citas first and Clientes second, the Booksy order the owner asked for.
-// Inicio left the bar when the agenda became the landing: the checklist is
-// one tap away through the onboarding banner while steps remain.
+// The final Booksy-order bar the owner asked for: Citas · Clientas · Ventas ·
+// Perfil. Servicios and Horario live on in Ajustes (and the agenda's own
+// gear); Inicio through the onboarding banner while steps remain.
 const navItems = [
     { href: '/admin/citas', icon: CalendarDays, key: 'nav.appointments' },
     { href: '/admin/clientes', icon: Users, key: 'nav.clients' },
-    { href: '/admin/servicios', icon: Sparkles, key: 'nav.services' },
-    { href: '/admin/horario', icon: Clock, key: 'nav.schedule' },
+    { href: '/admin/ventas', icon: Receipt, key: 'nav.sales' },
     { href: '/admin/perfil', icon: User, key: 'nav.profile' },
 ];
 
@@ -101,7 +100,7 @@ function isActive(href) {
             <slot />
         </main>
 
-        <nav class="grid grid-cols-5 border-t border-[var(--surface-mute)] bg-[var(--surface)] px-2 pb-3.5 pt-2">
+        <nav class="grid grid-cols-4 border-t border-[var(--surface-mute)] bg-[var(--surface)] px-2 pb-3.5 pt-2">
             <Link
                 v-for="item in navItems"
                 :key="item.href"

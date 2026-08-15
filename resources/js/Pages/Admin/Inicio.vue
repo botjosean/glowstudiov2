@@ -110,7 +110,7 @@ const botState = computed(() => {
                 clients should be the first thing in reach. Until then the
                 setup steps stay on top and the link waits at the bottom.
             -->
-            <PublicLinkCard v-if="allDone" :url="publicUrl" :published="checklist.published" />
+            <PublicLinkCard v-if="allDone" :url="publicUrl" :published="checklist.published" :provider-name="providerName" />
 
             <div>
                 <div class="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-mute)]">
@@ -225,7 +225,7 @@ const botState = computed(() => {
                 <ChevronRight :size="16" class="text-[var(--text-faint)]" />
             </Link>
 
-            <PublicLinkCard v-if="!allDone" :url="publicUrl" :published="checklist.published" />
+            <PublicLinkCard v-if="!allDone" :url="publicUrl" :published="checklist.published" :provider-name="providerName" />
         </div>
     </AdminLayout>
 </template>

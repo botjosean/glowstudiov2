@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ManualAppointmentController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ProfilePhotoController;
+use App\Http\Controllers\Admin\SalesController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\AppointmentController;
@@ -18,6 +19,7 @@ use App\Http\Middleware\EnsureUserHasPassword;
 use App\Http\Middleware\EnsureUserHasProvider;
 use App\Http\Middleware\EnsureUserIsSuperadmin;
 use App\Models\Client;
+use App\Models\Sale;
 use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
@@ -96,6 +98,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'client')->name('clientes.update');
     Route::delete('/clientes/{client}', [ClientController::class, 'destroy'])
         ->can('delete', 'client')->name('clientes.destroy');
+
+    Route::get('/ventas', [SalesController::class, 'index'])->name('ventas');
+    Route::post('/ventas', [SalesController::class, 'store'])
+        ->can('create', Sale::class)->name('ventas.store');
+    // PUT before the {sale} route so 'metodos' can never be captured as an id.
+    Route::put('/ventas/metodos', [SalesController::class, 'updateMethods'])->name('ventas.metodos');
+    Route::delete('/ventas/{sale}', [SalesController::class, 'destroy'])
+        ->can('delete', 'sale')->name('ventas.destroy');
 
     Route::get('/servicios', [DashboardController::class, 'servicios'])->name('servicios');
     Route::post('/servicios', [ServiceController::class, 'store'])

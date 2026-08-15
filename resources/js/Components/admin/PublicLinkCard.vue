@@ -1,12 +1,16 @@
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue';
-import { Copy, Check, ExternalLink } from '@lucide/vue';
+import { Copy, Check, ExternalLink, QrCode } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import QrShareSheet from './QrShareSheet.vue';
 
 const props = defineProps({
     url: { type: String, required: true },
     published: { type: Boolean, default: false },
+    providerName: { type: String, default: '' },
 });
+
+const qrOpen = ref(false);
 
 const { t } = useI18n();
 
@@ -109,6 +113,16 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
             </a>
         </div>
 
+        <button
+            v-if="published"
+            type="button"
+            class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
+            @click="qrOpen = true"
+        >
+            <QrCode :size="15" />
+            {{ $t('admin.shareQrTitle') }}
+        </button>
+
         <a
             v-if="published"
             :href="url"
@@ -119,5 +133,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
             {{ $t('admin.publicLinkView') }}
             <ExternalLink :size="13" />
         </a>
+
+        <QrShareSheet v-model="qrOpen" :url="url" :provider-name="providerName" />
     </div>
 </template>

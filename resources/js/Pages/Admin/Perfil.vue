@@ -303,7 +303,7 @@ function confirmDeletePhoto() {
                 <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.profileSubtitle') }}</p>
             </div>
 
-            <PublicLinkCard :url="publicUrl" :published="profile.published" />
+            <PublicLinkCard :url="publicUrl" :published="profile.published" :provider-name="profile.publicName" />
 
             <Collapse
                 v-model="openSections.info"

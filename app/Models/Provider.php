@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'is_mobile', 'home_service', 'is_available_now', 'published_at', 'service_area', 'address_line',
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
+    'payment_methods',
 ])]
 class Provider extends Model
 {
@@ -44,6 +45,7 @@ class Provider extends Model
             'lunch_start_minute' => 'int',
             'lunch_end_minute' => 'int',
             'buffer_minutes' => 'int',
+            'payment_methods' => 'array',
         ];
     }
 
@@ -85,6 +87,14 @@ class Provider extends Model
     public function clients(): HasMany
     {
         return $this->hasMany(Client::class);
+    }
+
+    /**
+     * @return HasMany<Sale, $this>
+     */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
     }
 
     /**
