@@ -130,6 +130,44 @@ class ClientController extends Controller
     }
 
     /**
+     * Bulk import from the phone's contact picker (Contact Picker API).
+     * The browser hands over only what the professional selected; here each
+     * pick becomes a card if it carries a usable US phone the book does not
+     * already know. No usable phone, no card — a card the assistant and the
+     * agenda can never match by phone would only clutter the book.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $provider = $request->user()->provider;
+
+        $validated = $request->validate([
+            'contacts' => ['required', 'array', 'max:500'],
+            'contacts.*.name' => ['required', 'string', 'max:120'],
+            'contacts.*.phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $known = $provider->clients()->pluck('phone')->filter()->flip();
+        $imported = 0;
+
+        foreach ($validated['contacts'] as $contact) {
+            $digits = Format::digitsOnly($contact['phone'] ?? '');
+
+            if (strlen($digits) !== 10 || isset($known[$digits])) {
+                continue;
+            }
+
+            $provider->clients()->create([
+                'name' => trim($contact['name']),
+                'phone' => $digits,
+            ]);
+            $known[$digits] = true;
+            $imported++;
+        }
+
+        return to_route('admin.clientes')->with('success', 'admin.clientsImported');
+    }
+
+    /**
      * Shared by store and update: the same live-masked US phone the rest of
      * the panel uses, normalized to ten digits or null — never empty string,
      * so the unique (provider_id, phone) pair only ever sees real numbers.

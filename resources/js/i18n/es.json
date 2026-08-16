@@ -338,7 +338,9 @@
         "uploadFromPhone": "Subir desde el teléfono",
         "statMonthDone": "Completadas este mes",
         "statMonthSales": "Ventas del mes",
-        "settingsSearch": "Buscar en configuración…"
+        "settingsSearch": "Buscar en configuración…",
+        "importContacts": "Importar de tus contactos",
+        "clientsImported": "Contactos importados a tu libro."
     },
     "nav": {
         "appointments": "Citas",

@@ -1,7 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { CalendarDays, Users, Receipt, User, Settings, ArrowLeft, X } from '@lucide/vue';
+import { Settings, ArrowLeft, X } from '@lucide/vue';
+import NavCalendar from '../Components/icons/NavCalendar.vue';
+import NavClients from '../Components/icons/NavClients.vue';
+import NavSales from '../Components/icons/NavSales.vue';
+import NavStore from '../Components/icons/NavStore.vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
 
@@ -34,11 +38,14 @@ const showBanner = computed(() =>
 // The final Booksy-order bar the owner asked for: Citas · Clientas · Ventas ·
 // Perfil. Servicios and Horario live on in Ajustes (and the agenda's own
 // gear); Inicio through the onboarding banner while steps remain.
+// Hand-drawn set after Booksy's: calendar, clients, receipt and — like
+// Booksy — a storefront for Perfil, because the tab shows the business,
+// not the person.
 const navItems = [
-    { href: '/admin/citas', icon: CalendarDays, key: 'nav.appointments' },
-    { href: '/admin/clientes', icon: Users, key: 'nav.clients' },
-    { href: '/admin/ventas', icon: Receipt, key: 'nav.sales' },
-    { href: '/admin/perfil', icon: User, key: 'nav.profile' },
+    { href: '/admin/citas', icon: NavCalendar, key: 'nav.appointments' },
+    { href: '/admin/clientes', icon: NavClients, key: 'nav.clients' },
+    { href: '/admin/ventas', icon: NavSales, key: 'nav.sales' },
+    { href: '/admin/perfil', icon: NavStore, key: 'nav.profile' },
 ];
 
 function isActive(href) {
@@ -112,8 +119,7 @@ function isActive(href) {
             >
                 <component
                     :is="item.icon"
-                    :size="21"
-                    :stroke-width="isActive(item.href) ? 2.2 : 1.8"
+                    :size="22"
                     :class="isActive(item.href) ? 'text-[#e3c26d]' : 'text-[#9ca3af]'"
                 />
                 <span

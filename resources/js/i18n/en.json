@@ -338,7 +338,9 @@
         "uploadFromPhone": "Upload from your phone",
         "statMonthDone": "Completed this month",
         "statMonthSales": "Sales this month",
-        "settingsSearch": "Search settings…"
+        "settingsSearch": "Search settings…",
+        "importContacts": "Import from your contacts",
+        "clientsImported": "Contacts imported to your book."
     },
     "nav": {
         "appointments": "Appointments",

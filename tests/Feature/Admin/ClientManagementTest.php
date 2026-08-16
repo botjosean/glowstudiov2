@@ -117,6 +117,41 @@ class ClientManagementTest extends TestCase
         $this->actingAs($provider->user)->delete("/admin/clientes/{$foreign->id}")->assertForbidden();
     }
 
+    public function test_contact_import_creates_cards_and_skips_duplicates_and_unusable_phones(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        Client::factory()->for($provider)->create(['name' => 'Ya Estaba', 'phone' => '3055550199']);
+
+        $this->actingAs($provider->user)->post('/admin/clientes/importar', [
+            'contacts' => [
+                ['name' => 'Ana Nueva', 'phone' => '+1 (305) 555-0111'],
+                ['name' => 'Repetida', 'phone' => '305-555-0199'],
+                ['name' => 'Sin Teléfono', 'phone' => ''],
+                ['name' => 'Corto', 'phone' => '12345'],
+                ['name' => 'Bea Nueva', 'phone' => '3055550122'],
+            ],
+        ])->assertRedirect('/admin/clientes');
+
+        $this->assertSame(3, $provider->clients()->count());
+        $this->assertSame('Ana Nueva', $provider->clients()->where('phone', '3055550111')->sole()->name);
+        // La existente conserva su nombre: la importación nunca pisa fichas.
+        $this->assertSame('Ya Estaba', $provider->clients()->where('phone', '3055550199')->sole()->name);
+    }
+
+    public function test_contact_import_dedupes_within_the_same_batch(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/clientes/importar', [
+            'contacts' => [
+                ['name' => 'Ana', 'phone' => '3055550111'],
+                ['name' => 'Ana Otra Vez', 'phone' => '(305) 555-0111'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $provider->clients()->count());
+    }
+
     public function test_a_booking_with_a_new_phone_grows_a_card_on_any_channel(): void
     {
         $provider = Provider::factory()->published()->create();

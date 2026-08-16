@@ -93,6 +93,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     Route::get('/clientes', [ClientController::class, 'index'])->name('clientes');
     Route::post('/clientes', [ClientController::class, 'store'])
         ->can('create', Client::class)->name('clientes.store');
+    Route::post('/clientes/importar', [ClientController::class, 'import'])
+        ->can('create', Client::class)->name('clientes.importar');
     Route::get('/clientes/{client}', [ClientController::class, 'show'])
         ->can('view', 'client')->name('clientes.show');
     Route::put('/clientes/{client}', [ClientController::class, 'update'])
