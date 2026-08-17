@@ -121,3 +121,27 @@ body {
     background: var(--bg-canvas);
     color: var(--text-body);
 }
+
+/*
+ * "Reducir movimiento" del sistema, respetado en toda la app.
+ *
+ * Hasta ahora sólo lo miraban la pantalla de carga y la rueda de horas; el
+ * resto de transiciones seguían corriendo. Quien activa esa opción no lo hace
+ * por gusto —suele ser mareo o migraña— y una app llena de deslizamientos le
+ * resulta físicamente incómoda.
+ *
+ * Duraciones mínimas en vez de `animation: none`: las transiciones de Vue
+ * esperan a que el navegador avise que terminaron, y anularlas del todo deja
+ * elementos a medio montar. Con 0,01 ms el aviso llega igual y el movimiento
+ * desaparece.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

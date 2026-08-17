@@ -7,6 +7,7 @@ import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
 import OutlinedSelect from '../ui/OutlinedSelect.vue';
 import Chip from '../ui/Chip.vue';
+import Skeleton from '../ui/Skeleton.vue';
 import { useFormat } from '../../composables/useFormat';
 
 /**
@@ -280,7 +281,12 @@ function submit() {
 
         <div class="mb-5">
             <span class="mb-2 block text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.pickHour') }}</span>
-            <p v-if="slotsLoading" class="text-[13px] font-normal text-[var(--text-faint)]">{{ $t('admin.slotsLoading') }}</p>
+            <!-- La forma de la rejilla mientras llega, en vez de un "cargando"
+                 suelto: la espera se lee como "esto viene" y no como "no hay
+                 nada". Nueve huecos, que es lo que suele caber sin desplazar. -->
+            <div v-if="slotsLoading" class="grid grid-cols-3 gap-2" :aria-label="$t('admin.slotsLoading')" role="status">
+                <Skeleton v-for="n in 9" :key="n" :height="38" />
+            </div>
             <p v-else-if="slotsError" class="text-[13px] font-normal text-[var(--danger)]">{{ slotsError }}</p>
             <p v-else-if="slots.length === 0" class="text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.slotsEmpty') }}</p>
             <div v-else class="grid max-h-[190px] grid-cols-3 gap-2 overflow-y-auto pr-1">

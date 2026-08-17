@@ -7,6 +7,7 @@ import OutlinedInput from '../ui/OutlinedInput.vue';
 import OutlinedSelect from '../ui/OutlinedSelect.vue';
 import Chip from '../ui/Chip.vue';
 import { useI18n } from 'vue-i18n';
+import { useHaptics } from '../../composables/useHaptics';
 
 /**
  * Record a charge: who (optional, from the client book), how much, the tip
@@ -25,6 +26,7 @@ const props = defineProps({
 const open = defineModel({ type: Boolean, default: false });
 
 const { t } = useI18n();
+const haptics = useHaptics();
 
 const form = useForm({
     clientId: null,
@@ -89,8 +91,10 @@ function submit() {
     })).post('/admin/ventas', {
         preserveScroll: true,
         onSuccess: () => {
+            haptics.success();
             open.value = false;
         },
+        onError: () => haptics.error(),
     });
 }
 </script>

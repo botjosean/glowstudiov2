@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { Plus, Receipt, SlidersHorizontal, Trash2, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import { useHaptics } from '../../composables/useHaptics';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
@@ -26,6 +27,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const haptics = useHaptics();
 const { formatTime, formatDayLabel } = useFormat();
 
 const methodKey = {
@@ -120,8 +122,10 @@ function askDelete(sale) {
 function confirmDelete() {
     if (!pendingDelete.value) return;
     deleteProcessing.value = true;
+    haptics.warn();
     router.delete(`/admin/ventas/${pendingDelete.value.id}`, {
         preserveScroll: true,
+        onError: () => haptics.error(),
         onFinish: () => {
             deleteProcessing.value = false;
             deleteOpen.value = false;

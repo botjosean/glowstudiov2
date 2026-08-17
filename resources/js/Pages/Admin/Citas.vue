@@ -12,6 +12,7 @@ import MonthPickerSheet from '../../Components/admin/MonthPickerSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import WhatsAppPromptSheet from '../../Components/admin/WhatsAppPromptSheet.vue';
 import { useFormat } from '../../composables/useFormat';
+import { useHaptics } from '../../composables/useHaptics';
 import { usePreferences } from '../../composables/usePreferences';
 
 const props = defineProps({
@@ -34,6 +35,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const { formatDuration, formatTime, formatDayLabel, formatDateTimeLabel } = useFormat();
+const haptics = useHaptics();
 const { whatsappPrompt, locale } = usePreferences();
 
 const tabs = [
@@ -70,11 +72,18 @@ const stripDays = computed(() => {
 
 // startsAt is UTC; `new Date(...)` renders it in the viewer's local time,
 // which is what dateLabel/timeLabel/dateKey should reflect.
+// Lo que la profesional acaba de tocar, mientras el servidor todavía no
+// contesta. En una tienda con mal wifi ese viaje de ida y vuelta son dos
+// segundos mirando un botón bloqueado; así el cambio se ve al instante y, si el
+// servidor rechaza, se revierte solo.
+const optimistic = ref({});
+
 const enrichedAppointments = computed(() =>
     props.appointments.map((appt) => {
         const date = new Date(appt.startsAt);
         return {
             ...appt,
+            status: optimistic.value[appt.id] ?? appt.status,
             duration: formatDuration(appt.durationMinutes),
             isToday: date.toDateString() === new Date().toDateString(),
             dateKey: date.toDateString(),
@@ -292,8 +301,10 @@ const leadProcessingId = ref(null);
 function markLead(lead, status) {
     if (leadProcessingId.value) return;
     leadProcessingId.value = lead.id;
+    status === 'descartado' ? haptics.warn() : haptics.success();
     router.patch(`/admin/solicitudes/${lead.id}`, { status }, {
         preserveScroll: true,
+        onError: () => haptics.error(),
         onFinish: () => {
             leadProcessingId.value = null;
         },
@@ -404,10 +415,20 @@ function confirmAppointment() {
     detailProcessing.value = true;
     // preserveState: true is now structural, not just a nicety — it's what
     // keeps `prompt` (captured above) meaningful once onSuccess fires.
+    // La tarjeta cambia YA; si el servidor rechaza se revierte abajo.
+    optimistic.value = { ...optimistic.value, [selectedId.value]: 'confirmed' };
+    haptics.success();
+
     router.patch(`/admin/citas/${selectedId.value}/confirmar`, {}, {
         preserveScroll: true,
         preserveState: true,
+        onError: () => {
+            optimistic.value = {};
+            haptics.error();
+        },
         onSuccess: (page) => {
+            // Las props ya traen el estado real: el parche local sobra.
+            optimistic.value = {};
             sheetOpen.value = false;
             // Kapso already sent it — opening the manual prompt too would
             // notify the client twice.
@@ -445,10 +466,18 @@ function confirmCancel() {
     if (!pendingCancel.value) return;
     const pending = pendingCancel.value;
     cancelProcessing.value = true;
+    optimistic.value = { ...optimistic.value, [pending.id]: 'cancelled' };
+    haptics.warn();
+
     router.patch(`/admin/citas/${pending.id}/cancelar`, {}, {
         preserveScroll: true,
         preserveState: true,
+        onError: () => {
+            optimistic.value = {};
+            haptics.error();
+        },
         onSuccess: (page) => {
+            optimistic.value = {};
             if (!page.props.flash?.notified) openWaPrompt(pending.prompt);
         },
         onFinish: () => {
