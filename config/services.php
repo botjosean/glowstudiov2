@@ -49,6 +49,10 @@ return [
         // told. The receptionist hands every conversation to a person, so a
         // person forgetting is the failure this mode introduces.
         'lead_alert_hours' => env('ASSISTANT_LEAD_ALERT_HOURS', 3),
+        // Receptionist mode only. How long a client waits in silence after the
+        // greeting before the second message arrives on its own, instead of
+        // only when she writes again.
+        'receptionist_follow_up_minutes' => env('ASSISTANT_RECEPTIONIST_FOLLOW_UP_MINUTES', 10),
     ],
 
     // Where the panel's help pill sends a professional who needs a person.

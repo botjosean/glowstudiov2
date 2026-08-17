@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'provider_id', 'phone', 'name', 'message', 'status',
-    'bot_messages_sent', 'last_inbound_wamid',
+    'bot_messages_sent', 'last_inbound_wamid', 'last_bot_message_at', 'conversation_id',
     'first_contact_at', 'last_contact_at', 'answered_at', 'alerted_at',
 ])]
 class Lead extends Model
@@ -55,6 +55,7 @@ class Lead extends Model
             'last_contact_at' => 'immutable_datetime',
             'answered_at' => 'immutable_datetime',
             'alerted_at' => 'immutable_datetime',
+            'last_bot_message_at' => 'immutable_datetime',
         ];
     }
 

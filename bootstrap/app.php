@@ -2,6 +2,7 @@
 
 use App\Console\Commands\AlertWaitingLeads;
 use App\Console\Commands\CloseFinishedAppointments;
+use App\Console\Commands\FollowUpWaitingLeads;
 use App\Console\Commands\PruneWhatsAppClaims;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocaleFromCookie;
@@ -37,6 +38,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Hourly, but each request is only ever alerted about once — see the
         // command. Nothing runs for a provider still in agent mode.
         $schedule->command(AlertWaitingLeads::class)->hourly()->withoutOverlapping();
+        // Every minute so "diez minutos" means ten, not "up to fifteen". It
+        // does nothing at all unless a conversation has been waiting that long.
+        $schedule->command(FollowUpWaitingLeads::class)->everyMinute()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

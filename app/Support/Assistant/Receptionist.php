@@ -139,6 +139,8 @@ class Receptionist
         $lead->forceFill([
             'bot_messages_sent' => $lead->bot_messages_sent + 1,
             'last_inbound_wamid' => $message->wamid,
+            // The clock the ten-minute follow-up measures from.
+            'last_bot_message_at' => now(),
         ])->save();
 
         Log::info('Receptionist answered.', [
@@ -204,6 +206,7 @@ class Receptionist
                 'status' => Lead::STATUS_NEW,
                 'bot_messages_sent' => 0,
                 'last_inbound_wamid' => null,
+                'conversation_id' => $message->conversationId,
                 'first_contact_at' => $now,
                 'last_contact_at' => $now,
             ],
@@ -219,7 +222,9 @@ class Receptionist
             return $lead;
         }
 
-        $changes = ['last_contact_at' => $now];
+        // Kept fresh: Kapso can start a new thread for the same phone, and a
+        // stale id would send the follow-up looking at the wrong conversation.
+        $changes = ['last_contact_at' => $now, 'conversation_id' => $message->conversationId];
 
         if ($this->hasGoneCold($lead)) {
             $changes['bot_messages_sent'] = 0;
@@ -311,7 +316,7 @@ class Receptionist
      * per provider: that page lists prices, and a professional who wants to
      * quote them herself must be able to say so.
      */
-    private function intake(Provider $provider): string
+    public function intake(Provider $provider): string
     {
         $template = $provider->bot_intake ?? self::defaultIntake();
 
@@ -397,26 +402,54 @@ class Receptionist
      * 2026-08-16: a client writing to her number already knows what she does,
      * and announcing it reads like a listing rather than like her.
      */
+    /**
+     * Says what it is, whose it is, and how to make it stop.
+     *
+     * **"El asistente de WhatsApp de Pati", not "soy Pati".** Naming the
+     * professional answers the doubt that started all of this — a client
+     * wondering whether she had reached the wrong number — and calling itself
+     * an assistant leaves nobody thinking a person typed it. Asked for by the
+     * owner on 2026-08-17, and the more honest of the two, which is why it is
+     * the default rather than an option.
+     *
+     * **The STOP line is not decoration.** Meta requires an opt-out to be
+     * honoured however it arrives and OptOutRegistry has always obeyed one —
+     * but a client who is never told cannot use it. Once, in the first
+     * message: repeating it would read as the salon trying to get rid of her.
+     */
     public static function defaultGreeting(): string
     {
-        return '¡Hola! Bienvenida a :negocio 💛 Soy el WhatsApp de :profesional.'
-            ."\n\nRecibí tu mensaje. Ahora mismo está atendiendo, pero ella te responde en cuanto se desocupe.";
+        return '¡Hola! Soy el asistente de WhatsApp de :profesional 💛'
+            ."\n\nRecibí tu mensaje. Ahora mismo está atendiendo, pero ella te responde en cuanto se desocupe."
+            ."\n\nSi no quieres mensajes automáticos, escribe STOP.";
     }
 
     public static function defaultReturningGreeting(): string
     {
-        return '¡Hola :nombre! Qué gusto leerte 💛'
-            ."\n\nRecibí tu mensaje. :profesional está atendiendo ahora mismo y te responde en cuanto se desocupe.";
+        return '¡Hola :nombre! Qué gusto leerte 💛 Soy el asistente de WhatsApp de :profesional.'
+            ."\n\nRecibí tu mensaje. Ella está atendiendo ahora mismo y te responde en cuanto se desocupe."
+            ."\n\nSi no quieres mensajes automáticos, escribe STOP.";
     }
 
+    /**
+     * The second and last message, in a different voice from the first.
+     *
+     * The first one is the salon answering the door: correct, a little formal.
+     * This one arrives ten minutes later into a silence, so it has to sound
+     * like a person leaning back in — lighter, warmer, and saying plainly that
+     * she has not been forgotten. Same information, different register: read
+     * one after the other they should not feel like two paragraphs of the same
+     * form letter.
+     */
     public static function defaultIntake(): string
     {
-        return 'Si quieres ir adelantando, mándame por aquí:'
+        return 'Sigue con una clienta 🙈 pero no te olvidamos: te escribe en cuanto termine.'
+            ."\n\nMientras tanto, si quieres ir adelantando, mándame por aquí:"
             ."\n\n• una foto de lo que te quieres hacer"
-            ."\n• una foto de referencia"
+            ."\n• otra de referencia"
             ."\n• tu nombre"
             ."\n• y qué día te gustaría"
-            ."\n\nAsí :profesional ya te llega con todo a la mano ✨";
+            ."\n\nAsí :profesional te contesta ya sabiendo qué necesitas ✨";
     }
 
     /**

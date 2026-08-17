@@ -56,9 +56,12 @@ class ReceptionistTest extends TestCase
         $reply = $this->reply($provider, 'hola, cuánto cuesta un flequillo?');
 
         $this->assertNotNull($reply);
-        $this->assertStringContainsString('Glow Studio', $reply);
+        $this->assertStringContainsString('asistente de WhatsApp', $reply);
         $this->assertStringContainsString('Patricia moreno', $reply);
         $this->assertStringContainsString('Recibí tu mensaje', $reply);
+        // Meta requires an opt-out to be honoured; a client who is never told
+        // cannot use it.
+        $this->assertStringContainsString('STOP', $reply);
         $this->assertNoModelWasConsulted();
     }
 
@@ -158,14 +161,15 @@ class ReceptionistTest extends TestCase
 
         $this->assertStringContainsString('María', $reply);
         $this->assertStringNotContainsString('López', $reply);
-        $this->assertStringNotContainsString('Bienvenida', $reply);
+        $this->assertStringContainsString('Qué gusto leerte', $reply);
     }
 
     public function test_a_stranger_is_not_greeted_by_name(): void
     {
         $reply = $this->reply($this->provider(), 'hola');
 
-        $this->assertStringContainsString('Bienvenida', $reply);
+        $this->assertStringContainsString('asistente de WhatsApp', $reply);
+        $this->assertStringNotContainsString('Qué gusto leerte', $reply);
     }
 
     public function test_it_stays_silent_and_closes_the_request_when_a_person_already_answered(): void
