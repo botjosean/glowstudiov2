@@ -14,6 +14,17 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="Glow Studio">
+        {{-- Chrome no ofrece "instalar app" sin un service worker, por eso el
+             aviso dejó de salir y el ícono guardado era solo un acceso directo
+             del navegador. Registrado después de load para no competir con el
+             primer render, y sin romper nada si el navegador no lo soporta. --}}
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function () {});
+                });
+            }
+        </script>
 
         @fonts
 
