@@ -447,7 +447,9 @@
         "saving": "Saving…",
         "continueWithGoogle": "Continue with Google",
         "showPassword": "Show password",
-        "hidePassword": "Hide password"
+        "hidePassword": "Hide password",
+        "install": "Install",
+        "installPrompt": "Install the app to get in faster, without hunting for the link."
     },
     "signIn": {
         "title": "Welcome back",

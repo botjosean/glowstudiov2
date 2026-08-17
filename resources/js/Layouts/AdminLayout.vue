@@ -8,6 +8,7 @@ import NavSales from '../Components/icons/NavSales.vue';
 import NavStore from '../Components/icons/NavStore.vue';
 import Avatar from '../Components/ui/Avatar.vue';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
+import InstallPrompt from '../Components/ui/InstallPrompt.vue';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
@@ -55,6 +56,7 @@ function isActive(href) {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)]">
+        <InstallPrompt />
         <FlashMessage />
 
         <slot name="header">

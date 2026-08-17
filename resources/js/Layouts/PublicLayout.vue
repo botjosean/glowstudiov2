@@ -5,6 +5,7 @@ import { Menu, X, Globe, Moon, UserPlus, LogIn } from '@lucide/vue';
 import { useTheme } from '../composables/useTheme';
 import { usePreferences } from '../composables/usePreferences';
 import FlashMessage from '../Components/ui/FlashMessage.vue';
+import InstallPrompt from '../Components/ui/InstallPrompt.vue';
 import GlowMark from '../Components/ui/GlowMark.vue';
 
 const menuOpen = ref(false);
@@ -21,6 +22,7 @@ function toggleLanguage() {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--surface)]">
+        <InstallPrompt />
         <FlashMessage />
 
         <header class="relative border-b border-[var(--surface-mute)] bg-[var(--surface)] p-4">

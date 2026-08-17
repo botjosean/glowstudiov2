@@ -447,7 +447,9 @@
         "saving": "Guardando…",
         "continueWithGoogle": "Continuar con Google",
         "showPassword": "Mostrar contraseña",
-        "hidePassword": "Ocultar contraseña"
+        "hidePassword": "Ocultar contraseña",
+        "install": "Instalar",
+        "installPrompt": "Instalá la app para entrar más rápido, sin buscar el enlace."
     },
     "signIn": {
         "title": "Bienvenido de nuevo",

@@ -6,9 +6,18 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        {{-- Instalable como app: "Añadir a pantalla de inicio" usa esto para
-             el ícono, el nombre y abrirse a pantalla completa. --}}
-        <link rel="manifest" href="/manifest.webmanifest">
+        {{-- Instalable como app. Dos manifiestos, no uno: la profesional
+             quiere abrir en su agenda y la clienta en la página de reservas, y
+             una app que abre a una clienta en el login del panel no le sirve
+             de nada. Se distinguen por su `id`, así que Android las trata como
+             dos apps distintas y cada quien instala la suya. --}}
+        @php
+            // Iniciar sesión y crear cuenta son puertas de la PROFESIONAL, no
+            // de la clienta: quien se registra ahí viene a montar su negocio,
+            // así que se le ofrece la app que abre en su agenda.
+            $esPanel = request()->is('admin/*', 'iniciar-sesion', 'crear-cuenta', 'admin-general*');
+        @endphp
+        <link rel="manifest" href="{{ $esPanel ? '/manifest-pro.webmanifest' : '/manifest.webmanifest' }}">
         <meta name="theme-color" content="#ffffff">
         <link rel="apple-touch-icon" href="/icons/icon-180.png">
         <meta name="apple-mobile-web-app-capable" content="yes">
