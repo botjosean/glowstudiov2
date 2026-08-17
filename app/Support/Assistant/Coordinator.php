@@ -290,13 +290,23 @@ class Coordinator
      * whether it lands is no longer left to the model, for the same reason
      * nothing else on this path is.
      *
-     * Only the unambiguous case is touched. `__` and `##` are left alone:
-     * they have never been seen in a real reply, and a rewrite rule that
-     * fires on text nobody sent is a bug waiting for its first client.
+     * Hyphen bullets get the same treatment, and for the same reason: the
+     * prompt forbids them in as many words, and on 2026-08-16 deepseek offered
+     * a client four appointment times as `- *10:00 AM*`. WhatsApp renders no
+     * list at all, so she reads a stray dash before every hour. `•` is what a
+     * person would have typed.
+     *
+     * `__` and `##` are still left alone: they have never been seen in a real
+     * reply, and a rewrite rule that fires on text nobody sent is a bug
+     * waiting for its first client.
      */
     private function asWhatsAppText(string $reply): string
     {
-        return preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '*$1*', $reply) ?? $reply;
+        $bolded = preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '*$1*', $reply) ?? $reply;
+
+        // Anchored to the start of a line so a dash inside a sentence — or a
+        // phone number, or a date range — is never touched.
+        return preg_replace('/^[ \t]*[-*][ \t]+(?=\S)/mu', '• ', $bolded) ?? $bolded;
     }
 
     /**

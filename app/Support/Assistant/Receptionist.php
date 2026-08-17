@@ -112,6 +112,20 @@ class Receptionist
             return null;
         }
 
+        // A Kapso send failure makes the queue retry this whole job, and by
+        // then the count has already moved. Answering the same inbound message
+        // twice must repeat what was attempted, never advance: otherwise a
+        // failed first attempt delivers the intake to a client who was never
+        // greeted, and two failures leave the conversation silent for good.
+        if ($this->isRetryOfTheLastAnswer($lead, $message)) {
+            Log::info('Receptionist re-sending the message a failed attempt never delivered.', [
+                'provider' => $provider->slug,
+                'message_number' => $lead->bot_messages_sent,
+            ]);
+
+            return $this->bodyFor($lead->bot_messages_sent - 1, $provider, $digits);
+        }
+
         if ($lead->botIsDone()) {
             Log::info('Receptionist has already sent its two messages; staying quiet.', [
                 'provider' => $provider->slug,
@@ -120,11 +134,12 @@ class Receptionist
             return null;
         }
 
-        $body = $lead->bot_messages_sent === 0
-            ? $this->greeting($provider, $digits)
-            : $this->intake($provider);
+        $body = $this->bodyFor($lead->bot_messages_sent, $provider, $digits);
 
-        $lead->forceFill(['bot_messages_sent' => $lead->bot_messages_sent + 1])->save();
+        $lead->forceFill([
+            'bot_messages_sent' => $lead->bot_messages_sent + 1,
+            'last_inbound_wamid' => $message->wamid,
+        ])->save();
 
         Log::info('Receptionist answered.', [
             'provider' => $provider->slug,
@@ -133,6 +148,25 @@ class Receptionist
         ]);
 
         return $body;
+    }
+
+    /**
+     * Whether this exact inbound message already produced an outgoing one that
+     * may not have reached the client.
+     */
+    private function isRetryOfTheLastAnswer(Lead $lead, InboundMessage $message): bool
+    {
+        return $lead->bot_messages_sent > 0 && $lead->last_inbound_wamid === $message->wamid;
+    }
+
+    /**
+     * @param  int  $alreadySent  how many messages this conversation has had
+     */
+    private function bodyFor(int $alreadySent, Provider $provider, string $digits): string
+    {
+        return $alreadySent === 0
+            ? $this->greeting($provider, $digits)
+            : $this->intake($provider);
     }
 
     /**
@@ -169,12 +203,19 @@ class Receptionist
                 'message' => $this->trimmed($message->text),
                 'status' => Lead::STATUS_NEW,
                 'bot_messages_sent' => 0,
+                'last_inbound_wamid' => null,
                 'first_contact_at' => $now,
                 'last_contact_at' => $now,
             ],
         );
 
         if ($lead->wasRecentlyCreated) {
+            return $lead;
+        }
+
+        // The queue retrying a failed send replays the same inbound message.
+        // Recording it again would print what she wrote twice on the card.
+        if ($lead->last_inbound_wamid === $message->wamid) {
             return $lead;
         }
 

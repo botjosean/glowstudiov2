@@ -375,6 +375,35 @@ class CoordinatorTest extends TestCase
     }
 
     /**
+     * Caught on `deepseek-v4-flash` on 2026-08-16, offering a client four
+     * appointment times as a Markdown list. WhatsApp renders no list at all,
+     * so she reads a stray dash before every hour — and the prompt forbids
+     * this in as many words, which the model ignored.
+     */
+    public function test_markdown_bullets_become_real_ones(): void
+    {
+        $this->fakeGroq([$this->text("Tengo estas horas:\n- *10:00 AM*\n- *2:00 PM*\n* 5:00 PM")]);
+
+        $reply = $this->coordinator()->reply($this->message('que horas hay'), $this->provider());
+
+        $this->assertSame("Tengo estas horas:\n• *10:00 AM*\n• *2:00 PM*\n• 5:00 PM", $reply);
+    }
+
+    /**
+     * A dash inside a sentence, and bold at the start of a line, are both
+     * ordinary and must survive — the bullet rule is anchored to a marker
+     * followed by a space for exactly this reason.
+     */
+    public function test_the_bullet_rule_never_touches_ordinary_text(): void
+    {
+        $this->fakeGroq([$this->text("*Balayage* — 3 horas\nHorario 10:00 - 23:45\nTe espero 5-6 semanas")]);
+
+        $reply = $this->coordinator()->reply($this->message('info'), $this->provider());
+
+        $this->assertSame("*Balayage* — 3 horas\nHorario 10:00 - 23:45\nTe espero 5-6 semanas", $reply);
+    }
+
+    /**
      * A lone pair of asterisks around nothing, and the ordinary single-asterisk
      * form, both have to survive untouched — a rewrite that mangles correct
      * text is worse than the Markdown it was meant to fix.

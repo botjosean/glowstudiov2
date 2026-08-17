@@ -13,6 +13,7 @@ use App\Support\Kapso\InboundMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -292,6 +293,174 @@ class ReceptionistTest extends TestCase
 
         $this->assertSame('Respuesta del modelo', $reply);
         $this->assertSame(0, Lead::query()->count());
+    }
+
+    // ---- Adversarial ------------------------------------------------------
+
+    /**
+     * The one that bit. A Kapso send failure makes the queue retry the whole
+     * job, and the count had already moved — so the client was never greeted
+     * and got the intake instead, or, after two failures, nothing ever again.
+     */
+    public function test_a_retried_delivery_repeats_the_message_instead_of_advancing(): void
+    {
+        $provider = $this->provider();
+        $message = $this->message('hola');
+
+        $first = app(Receptionist::class)->reply($message, $provider, false);
+        // Same inbound message, as the queue replays it after a failed send.
+        $again = app(Receptionist::class)->reply($message, $provider, false);
+
+        $this->assertSame($first, $again);
+        $this->assertStringContainsString('Recibí tu mensaje', $again);
+        $this->assertSame(1, Lead::query()->sole()->bot_messages_sent);
+
+        // And the next genuinely new message still gets the second one.
+        $this->assertStringContainsString('foto', $this->reply($provider, 'quiero cita'));
+    }
+
+    public function test_a_retry_does_not_print_what_she_wrote_twice_on_the_card(): void
+    {
+        $provider = $this->provider();
+        $message = $this->message('quiero un balayage');
+
+        app(Receptionist::class)->reply($message, $provider, false);
+        app(Receptionist::class)->reply($message, $provider, false);
+
+        $this->assertSame(1, substr_count(Lead::query()->sole()->message, 'quiero un balayage'));
+    }
+
+    /**
+     * The last message is retried too, and going quiet there would swallow the
+     * intake entirely.
+     */
+    public function test_a_retry_of_the_second_message_still_re_sends_it(): void
+    {
+        $provider = $this->provider();
+        $this->reply($provider, 'hola');
+        $second = $this->message('quiero cita');
+
+        $sent = app(Receptionist::class)->reply($second, $provider, false);
+        $retried = app(Receptionist::class)->reply($second, $provider, false);
+
+        $this->assertSame($sent, $retried);
+        $this->assertStringContainsString('foto', $retried);
+        $this->assertSame(2, Lead::query()->sole()->bot_messages_sent);
+    }
+
+    /**
+     * A client card is written by whoever books, so its name is not entirely
+     * trusted input. A name carrying a placeholder must land as text.
+     */
+    public function test_a_client_name_cannot_inject_a_placeholder(): void
+    {
+        $provider = $this->provider(['bot_business_name' => 'Glow Studio']);
+        Client::factory()->for($provider)->create(['name' => ':negocio :enlace', 'phone' => '2056455856']);
+
+        $reply = $this->reply($provider, 'hola');
+
+        $this->assertStringNotContainsString('Glow Studio', $reply);
+        $this->assertStringNotContainsString('http', $reply);
+    }
+
+    /**
+     * What the client types is never a template either.
+     */
+    public function test_what_the_client_writes_is_never_expanded(): void
+    {
+        $provider = $this->provider();
+
+        $this->reply($provider, 'hola :profesional :enlace');
+        $second = $this->reply($provider, ':negocio');
+
+        $this->assertSame(1, substr_count($second, 'http'));
+    }
+
+    public function test_two_professionals_never_share_a_conversation(): void
+    {
+        $pati = $this->provider(['slug' => 'pati']);
+        // A different number, because one is what routes every inbound message
+        // — the database refuses to let two providers share it, which is the
+        // protection this test relies on rather than exercises.
+        $vane = $this->provider([
+            'slug' => 'vane',
+            'public_name' => 'Vanessa',
+            'whatsapp_phone_number_id' => '1208335042365152',
+        ]);
+
+        // The same client writing to both is two separate conversations.
+        $this->reply($pati, 'hola');
+        $this->reply($pati, 'quiero cita');
+        $this->assertNull($this->reply($pati, 'hola?'));
+
+        $forVane = $this->reply($vane, 'hola');
+
+        $this->assertNotNull($forVane);
+        $this->assertStringContainsString('Vanessa', $forVane);
+        $this->assertSame(2, Lead::query()->count());
+    }
+
+    /**
+     * An appointment that has just started still counts: she is in the chair,
+     * and a welcome would be worse there than anywhere.
+     */
+    public function test_an_appointment_starting_right_now_still_silences_it(): void
+    {
+        $provider = $this->provider();
+
+        Appointment::factory()->for($provider)->confirmed()->create([
+            'client_phone' => '2056455856',
+            'starts_at' => CarbonImmutable::now()->addSeconds(30),
+            'ends_at' => CarbonImmutable::now()->addHour(),
+        ]);
+
+        $this->assertNull($this->reply($provider, 'ya llegué'));
+    }
+
+    /**
+     * A cancelled appointment is not a reason to stay quiet — she may well be
+     * writing to book another one.
+     */
+    public function test_a_cancelled_appointment_does_not_silence_it(): void
+    {
+        $provider = $this->provider();
+
+        Appointment::factory()->for($provider)->cancelled()->create([
+            'client_phone' => '2056455856',
+            'starts_at' => CarbonImmutable::now()->addDay(),
+            'ends_at' => CarbonImmutable::now()->addDay()->addHour(),
+        ]);
+
+        $this->assertNotNull($this->reply($provider, 'hola, quiero reagendar'));
+    }
+
+    /**
+     * @param  string  $text  the kind of thing people actually send
+     */
+    #[DataProvider('awkwardMessages')]
+    public function test_it_answers_whatever_she_types(string $text): void
+    {
+        $reply = $this->reply($this->provider(), $text);
+
+        $this->assertNotNull($reply);
+        $this->assertNoModelWasConsulted();
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function awkwardMessages(): array
+    {
+        return [
+            'solo emoji' => ['💅💅💅'],
+            'grito' => ['HOLAAAAA BUENAS TARDESSS'],
+            'sin acentos ni signos' => ['ola kiero saber cuanto sale el balayage y si tenes lugar manana'],
+            'un solo caracter' => ['?'],
+            'muy largo' => [str_repeat('hola necesito una cita porfa ', 200)],
+            'ingles' => ['hi do you have any openings tomorrow'],
+            'incoherente' => ['asdkjh 123 ??? ..... !!!'],
+            'con salto de linea' => ["hola\n\nquiero\n\ncita"],
+        ];
     }
 
     private function assertNoModelWasConsulted(): void

@@ -19,7 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'provider_id', 'phone', 'name', 'message', 'status',
-    'bot_messages_sent', 'first_contact_at', 'last_contact_at', 'answered_at', 'alerted_at',
+    'bot_messages_sent', 'last_inbound_wamid',
+    'first_contact_at', 'last_contact_at', 'answered_at', 'alerted_at',
 ])]
 class Lead extends Model
 {

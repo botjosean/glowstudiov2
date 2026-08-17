@@ -52,6 +52,12 @@ return new class extends Migration
             // 0, 1 or 2. Two is silence: see App\Support\Assistant\Receptionist.
             $table->unsignedSmallInteger('bot_messages_sent')->default(0);
 
+            // The last inbound message this conversation was seen to carry.
+            // Without it a Kapso send failure — which makes the queue retry the
+            // whole job — would count a message the client never received, and
+            // she would get the second one first, or nothing at all twice over.
+            $table->string('last_inbound_wamid', 128)->nullable();
+
             $table->timestamp('first_contact_at');
             $table->timestamp('last_contact_at');
             // When a person took it over. Drives the "waiting too long" alert.
