@@ -10,11 +10,10 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
             fonts: [
-                // Figtree: geométrica suave y cálida — la alternativa libre
-                // más cercana al Proxima Nova de Booksy, más fina y amable
-                // que Jakarta en los mismos pesos.
-                bunny('Figtree', {
-                    weights: [300, 400, 500, 600, 700],
+                // Manrope: números más finos y elegantes que Figtree —
+                // pedido del dueño el 2026-08-16 tras comparar 5 candidatas.
+                bunny('Manrope', {
+                    weights: [300, 400, 500, 600, 700, 800],
                 }),
             ],
         }),
