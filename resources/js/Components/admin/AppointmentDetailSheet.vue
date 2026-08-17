@@ -1,5 +1,6 @@
 <script setup>
-import { Phone, X, Check, Ban } from '@lucide/vue';
+import { Link } from '@inertiajs/vue3';
+import { Phone, X, Check, Ban, Receipt } from '@lucide/vue';
 import BottomSheet from '../ui/BottomSheet.vue';
 import Badge from '../ui/Badge.vue';
 
@@ -105,6 +106,14 @@ const statusKey = {
                         {{ $t('admin.confirm') }}
                     </button>
                 </div>
+                <Link
+                    v-if="['confirmed', 'closed'].includes(appointment.status)"
+                    :href="`/admin/ventas?clientPhone=${appointment.clientPhoneDigits}&amount=${appointment.price}`"
+                    class="flex items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-bg)] py-3.5 text-[14px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+                >
+                    <Receipt :size="15" />
+                    {{ $t('admin.registerSale') }}
+                </Link>
                 <button
                     v-if="!['cancelled', 'closed'].includes(appointment.status)"
                     type="button"

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\Provider;
 use App\Models\Sale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,7 +54,29 @@ class SalesController extends Controller
             'clients' => $provider->clients()->orderBy('name')->get(['id', 'name'])
                 ->map(fn (Client $client) => ['id' => $client->id, 'name' => $client->name])
                 ->values()->all(),
+            'prefill' => $this->prefillFrom($request, $provider),
         ]);
+    }
+
+    /**
+     * Arriving from "Registrar venta" on a confirmed appointment. Appointments
+     * don't carry a client_id (they're a snapshot, not a relation), so the
+     * client is resolved by phone here — the sheet opens with her and the
+     * price already in it instead of making the professional look her up twice.
+     */
+    private function prefillFrom(Request $request, Provider $provider): ?array
+    {
+        $phone = $request->query('clientPhone');
+        $amount = $request->query('amount');
+
+        if ($phone === null && $amount === null) {
+            return null;
+        }
+
+        return [
+            'clientId' => $phone !== null ? $provider->clients()->where('phone', $phone)->value('id') : null,
+            'amount' => $amount !== null && is_numeric($amount) ? (float) $amount : null,
+        ];
     }
 
     public function store(Request $request): RedirectResponse

@@ -30,6 +30,40 @@ class SaleManagementTest extends TestCase
         );
     }
 
+    public function test_no_prefill_query_means_no_prefill_prop(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->get('/admin/ventas')->assertInertia(fn (Assert $page) => $page
+            ->where('prefill', null)
+        );
+    }
+
+    public function test_registrar_venta_from_an_appointment_resolves_the_client_by_phone(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $client = Client::factory()->for($provider)->create(['phone' => '3055550142']);
+
+        $this->actingAs($provider->user)
+            ->get('/admin/ventas?clientPhone=3055550142&amount=45.50')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('prefill.clientId', $client->id)
+                ->where('prefill.amount', 45.5)
+            );
+    }
+
+    public function test_registrar_venta_with_an_unknown_phone_prefills_only_the_amount(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->get('/admin/ventas?clientPhone=3055559999&amount=45.50')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('prefill.clientId', null)
+                ->where('prefill.amount', 45.5)
+            );
+    }
+
     public function test_a_sale_snapshots_the_client_name(): void
     {
         $provider = Provider::factory()->published()->create();

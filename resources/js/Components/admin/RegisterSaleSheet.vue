@@ -18,6 +18,8 @@ const props = defineProps({
     // [{ id, name }]
     methods: { type: Array, required: true },
     // Accepted payment method slugs, e.g. ['cash', 'zelle'].
+    prefill: { type: Object, default: null },
+    // { clientId, amount } | null — from a confirmed appointment's "Registrar venta".
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -44,6 +46,10 @@ watch(open, (isOpen) => {
     form.paymentMethod = props.methods[0] ?? null;
     tipChoice.value = 0;
     customTip.value = '';
+    if (props.prefill) {
+        form.clientId = props.prefill.clientId ?? null;
+        form.amount = props.prefill.amount !== null ? String(props.prefill.amount) : '';
+    }
 });
 
 const amountNumber = computed(() => {
