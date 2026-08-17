@@ -19,6 +19,12 @@ class ProfileUpdateTest extends TestCase
             'publicName' => 'New Public Name',
             'phone' => '(305) 555-0142',
             'bio' => 'Updated bio.',
+            // Required by UpdateProfileRequest since the location fields
+            // landed; without it these three tests fail on validation before
+            // reaching what they actually assert. Left red for a while waiting
+            // for the original author, which only made the suite's real
+            // failures harder to see.
+            'isMobile' => false,
         ], $overrides);
     }
 
