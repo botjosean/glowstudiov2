@@ -42,7 +42,7 @@ class SystemPrompt
             $this->catalogue($provider),
             $this->schedule($provider),
             $this->location($provider),
-            $this->ownerNotes(),
+            $this->ownerNotes($provider),
             // Deliberately near the end: this changes once a day, so
             // everything above it stays a cacheable prefix all day.
             $this->today($provider),
@@ -111,9 +111,19 @@ class SystemPrompt
 
     private function rules(Provider $provider): string
     {
+        // The business identity comes from the provider row, not from a
+        // string in this file. It was hardcoded as "Glow Studio" until
+        // 2026-08-16, which is the single line that made this app not
+        // multi-tenant in the only way clients could hear.
+        $negocio = $provider->botBusinessName();
+        $oficio = trim((string) $provider->bot_trade);
+        $presentacion = $oficio === ''
+            ? "Atiendes en nombre de {$provider->public_name}."
+            : "Atiendes en nombre de {$provider->public_name}, {$oficio}.";
+
         return <<<PROMPT
-        Eres el asistente de WhatsApp de Glow Studio, un salón de belleza en Atlanta (Georgia).
-        Atiendes en nombre de {$provider->public_name}.
+        Eres el asistente de WhatsApp de {$negocio}.
+        {$presentacion}
 
         CÓMO HABLAS
         - Cálida, cercana y profesional, como una recepcionista latina que conoce a sus clientas.
@@ -374,8 +384,23 @@ class SystemPrompt
         return implode("\n", $lines);
     }
 
-    private function ownerNotes(): ?string
+    /**
+     * The provider's own notes when she has them, falling back to the shared
+     * file otherwise.
+     *
+     * The column wins on purpose: one negocio.md shared by every professional
+     * was the other half of "not really multi-tenant". Null in the column
+     * keeps reading the file, so nothing moved for anybody the day this
+     * shipped.
+     */
+    private function ownerNotes(Provider $provider): ?string
     {
+        $own = trim((string) $provider->bot_notes);
+
+        if ($own !== '') {
+            return "INFORMACIÓN DEL NEGOCIO\n".$own;
+        }
+
         $paths = [
             storage_path('app/'.self::OWNER_NOTES),
             resource_path('assistant/'.self::OWNER_NOTES),

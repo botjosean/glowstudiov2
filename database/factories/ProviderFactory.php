@@ -52,6 +52,19 @@ class ProviderFactory extends Factory
         ]);
     }
 
+    /**
+     * Answers WhatsApp as a receptionist: acknowledge, ask, hand over.
+     *
+     * Not the default on purpose — every existing test describes the agent,
+     * and this is meant to change nothing until it is asked for by name.
+     */
+    public function receptionist(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'bot_mode' => Provider::BOT_RECEPTIONIST,
+        ]);
+    }
+
     public function unpublished(): static
     {
         return $this->state(fn (array $attributes) => [

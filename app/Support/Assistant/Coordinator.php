@@ -88,6 +88,7 @@ class Coordinator
         private readonly AssistantTools $tools,
         private readonly SystemPrompt $prompt,
         private readonly KapsoClient $kapso,
+        private readonly Receptionist $receptionist,
     ) {}
 
     /**
@@ -98,11 +99,22 @@ class Coordinator
      */
     public function reply(InboundMessage $message, Provider $provider): ?string
     {
+        $turns = $this->turns($message);
+        $humanReplied = $this->humanTookOver($turns);
+
+        // A provider in receptionist mode never reaches the model, the tools
+        // or the fabricated-booking guard: it acknowledges, asks, and hands
+        // over. The branch sits here, after the history is loaded, so the
+        // receptionist gets the same "is a person already answering?" answer
+        // the agent does — sending an intake on top of the professional's own
+        // reply is the talking-over-each-other failure this check exists for.
+        if ($provider->botIsReceptionist()) {
+            return $this->receptionist->reply($message, $provider, $humanReplied);
+        }
+
         $context = ToolContext::for($provider, (string) $message->fromPhone, $message->contactName);
 
-        $turns = $this->turns($message);
-
-        if ($this->humanTookOver($turns)) {
+        if ($humanReplied) {
             Log::info('A person from the salon answered by hand recently; staying quiet.', [
                 'phone_number_id' => $message->phoneNumberId,
                 'provider' => $provider->slug,

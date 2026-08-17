@@ -28,6 +28,55 @@ class SystemPromptTest extends TestCase
         $this->assertStringContainsString('/pati', $prompt);
     }
 
+    /**
+     * The business name was a string literal in SystemPrompt until
+     * 2026-08-16 — the one line that made this app not multi-tenant in the
+     * only way a client could actually hear.
+     */
+    public function test_the_business_identity_comes_from_the_provider(): void
+    {
+        $provider = Provider::factory()->published()->create([
+            'bot_business_name' => 'Nails by Vane',
+            'bot_trade' => 'manicurista',
+            'public_name' => 'Vanessa',
+            // Her own notes too, or the shared negocio.md comes along and
+            // brings the old salon's name with it — which is the point of the
+            // assertion below.
+            'bot_notes' => 'Solo se atiende con cita previa.',
+        ]);
+
+        $prompt = app(SystemPrompt::class)->for($provider);
+
+        $this->assertStringContainsString('Nails by Vane', $prompt);
+        $this->assertStringContainsString('Vanessa, manicurista', $prompt);
+        $this->assertStringNotContainsString('Glow Studio', $prompt);
+    }
+
+    /**
+     * Nothing moved for anybody the day the column shipped: a provider who
+     * has not filled it in still reads the shared file and still calls the
+     * business what it has always been called.
+     */
+    public function test_a_provider_without_her_own_identity_keeps_the_shared_default(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->assertStringContainsString('Glow Studio', app(SystemPrompt::class)->for($provider));
+    }
+
+    public function test_her_own_notes_replace_the_shared_business_file(): void
+    {
+        $provider = Provider::factory()->published()->create([
+            'bot_notes' => 'Aquí solo se atiende con cita previa.',
+        ]);
+
+        $prompt = app(SystemPrompt::class)->for($provider);
+
+        $this->assertStringContainsString('Aquí solo se atiende con cita previa.', $prompt);
+        // The shared file's own wording must not come along with it.
+        $this->assertStringNotContainsString('Protocolo de color de Patricia', $prompt);
+    }
+
     public function test_the_prompt_never_leaks_another_providers_link(): void
     {
         $mine = Provider::factory()->published()->create(['slug' => 'pati']);

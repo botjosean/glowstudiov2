@@ -89,13 +89,25 @@ class RespondToWhatsAppMessage implements ShouldQueue
         // delivery's own value (normally null, i.e. "unknown") rather than
         // holding up the reply — an API hiccup must not silence the
         // assistant for a genuine new client.
-        $contactName = $this->resolvedContactName($kapso);
+        // Looked up before the policy runs, and only read from: which mode
+        // this number answers in decides whether the personal-contact guard
+        // applies at all. A receptionist's two short messages are welcome on a
+        // number shared with personal use; an agent's chatting is not.
+        $provider = Provider::query()
+            ->where('whatsapp_phone_number_id', $this->message->phoneNumberId)
+            ->first();
 
-        if (! $policy->allows($this->message->fromPhone, $this->message->phoneNumberId, $contactName)) {
+        // Unknown numbers keep the guard: no provider means no mode, and
+        // failing towards silence is this class's whole habit.
+        $guardPersonalContacts = $provider === null || ! $provider->botIsReceptionist();
+
+        $contactName = $this->resolvedContactName($kapso, $guardPersonalContacts);
+
+        if (! $policy->allows($this->message->fromPhone, $this->message->phoneNumberId, $contactName, $guardPersonalContacts)) {
             Log::info('Inbound WhatsApp message is outside the reply policy; ignoring.', [
                 'phone_number_id' => $this->message->phoneNumberId,
                 'policy' => $policy->describe(),
-                'reason' => $policy->refusalReason($this->message->fromPhone, $this->message->phoneNumberId, $contactName),
+                'reason' => $policy->refusalReason($this->message->fromPhone, $this->message->phoneNumberId, $contactName, $guardPersonalContacts),
             ]);
 
             return;
@@ -124,10 +136,6 @@ class RespondToWhatsAppMessage implements ShouldQueue
         if ($this->handleOptOut($kapso, $deduplicator, $optOuts)) {
             return;
         }
-
-        $provider = Provider::query()
-            ->where('whatsapp_phone_number_id', $this->message->phoneNumberId)
-            ->first();
 
         if ($provider === null) {
             // The number reached us but nobody in the database owns it, so there
@@ -164,9 +172,16 @@ class RespondToWhatsAppMessage implements ShouldQueue
      * The delivery's own contactName, unless this message is on the one
      * number guarded for personal contacts — where it is always null (see
      * handle()) and worth the extra request to get right.
+     *
+     * Skipped entirely when the guard does not apply, which is one fewer Kapso
+     * round trip on every message a receptionist answers.
      */
-    private function resolvedContactName(KapsoClient $kapso): ?string
+    private function resolvedContactName(KapsoClient $kapso, bool $guardPersonalContacts): ?string
     {
+        if (! $guardPersonalContacts) {
+            return $this->message->contactName;
+        }
+
         $guarded = config('services.kapso.personal_phone_number_id');
         $onGuardedNumber = is_string($guarded) && trim($guarded) !== '' && trim($guarded) === $this->message->phoneNumberId;
 

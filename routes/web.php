@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BioSuggestionController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\ClientPhotoController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LeadController;
 use App\Http\Controllers\Admin\ManualAppointmentController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ProfilePhotoController;
@@ -89,6 +90,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'appointment')->name('citas.cancel');
     Route::get('/citas/horas', [ManualAppointmentController::class, 'slots'])->name('citas.slots');
     Route::post('/citas', [ManualAppointmentController::class, 'store'])->name('citas.store');
+
+    // WhatsApp requests the receptionist collected. Booking one closes it on
+    // its own (see Appointment::booted), so this is only for the other endings.
+    Route::patch('/solicitudes/{lead}', [LeadController::class, 'update'])
+        ->can('update', 'lead')->name('solicitudes.update');
 
     Route::get('/clientes', [ClientController::class, 'index'])->name('clientes');
     Route::post('/clientes', [ClientController::class, 'store'])

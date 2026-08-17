@@ -108,6 +108,20 @@ class Appointment extends Model
                 // A concurrent booking already created the card. The card is a
                 // convenience; it must never break the booking that spawned it.
             }
+
+            // A booking is the ending a WhatsApp request was waiting for, so
+            // the card closes itself. Without this the professional would book
+            // her and then have to remember to tick the request off, which is
+            // exactly the kind of bookkeeping nobody does twice.
+            Lead::query()
+                ->where('provider_id', $appointment->provider_id)
+                ->where('phone', $phone)
+                ->where('status', Lead::STATUS_NEW)
+                ->update([
+                    'status' => Lead::STATUS_HANDLED,
+                    'answered_at' => now(),
+                    'updated_at' => now(),
+                ]);
         });
     }
 }
