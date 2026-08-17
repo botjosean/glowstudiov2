@@ -1,9 +1,10 @@
 {
+    "_comment": "Abre en iniciar-sesion, NO en la portada pública: la profesional que toca el ícono quiere entrar a trabajar, y esa pantalla ya lleva Google, el formulario y el enlace a crear cuenta. Si ya tiene la sesión abierta, el middleware 'guest' la manda derecho a su agenda, así que nunca ve un login de más. El id se mantiene estable para que una instalación existente se actualice sola en vez de convertirse en una app distinta.",
     "id": "/admin/citas",
     "name": "Glow Studio — Mi agenda",
     "short_name": "Mi agenda",
     "description": "Tu agenda, tus servicios y tus citas.",
-    "start_url": "/admin/citas",
+    "start_url": "/iniciar-sesion",
     "scope": "/",
     "display": "standalone",
     "background_color": "#ffffff",
