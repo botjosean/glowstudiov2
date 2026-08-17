@@ -443,7 +443,7 @@ class Receptionist
      */
     public static function defaultIntake(): string
     {
-        return 'Sigue con una clienta 🙈 pero no te olvidamos: te escribe en cuanto termine.'
+        return 'Sigue ocupada, pero no te olvidamos: te escribe en cuanto termine.'
             ."\n\nMientras tanto, si quieres ir adelantando, mándame por aquí:"
             ."\n\n• una foto de lo que te quieres hacer"
             ."\n• otra de referencia"
