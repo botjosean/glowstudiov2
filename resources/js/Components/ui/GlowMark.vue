@@ -1,61 +1,64 @@
 <script setup>
 /**
- * Marca provisional de Glow Studios, hasta que exista el logo real.
+ * La marca de Glow Studios: el loto.
  *
- * Reemplaza al 💈 y a las tijeras, que decían "barbería" en una app donde la
- * mayoría de las profesionales hacen uñas, pestañas o maquillaje.
+ * Sustituye al destello provisional que estuvo aquí desde agosto, y que a su
+ * vez había sustituido al 💈 y a las tijeras. Este ya es el logo de verdad —
+ * el mismo que existe en el archivo original, redibujado en trazos para que
+ * sea nítido a cualquier tamaño, pese unos cientos de bytes y, sobre todo,
+ * pueda dibujarse solo en la pantalla de carga (ver SplashScreen).
  *
- * Es un destello, no una herramienta de ningún oficio: sirve igual para una
- * manicurista que para un barbero. SVG puro con degradado y un brillo interior
- * para darle volumen — sin imágenes externas, nítido a cualquier tamaño, y se
- * cambia por el logo definitivo tocando solo este archivo.
+ * Sigue siendo una flor y no la herramienta de ningún oficio, que era la razón
+ * de ser del destello: vale igual para una manicurista que para un barbero.
  */
 defineProps({
     size: { type: Number, default: 28 },
+    // Un solo color plano, para cuando la marca va sobre un fondo de color y el
+    // degradado cobrizo compite en vez de acompañar.
+    flat: { type: String, default: '' },
 });
 
 // Los degradados viven en <defs> con id, así que dos marcas en la misma página
-// chocarían. Un id por instancia lo evita.
-const uid = `glow-${Math.random().toString(36).slice(2, 9)}`;
+// chocarían y la segunda se rompería. Un id por instancia lo evita.
+const uid = `lotus-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
 <template>
-    <svg :width="size" :height="size" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <defs>
-            <linearGradient :id="`${uid}-tile`" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#3B3F5C" />
-                <stop offset="55%" stop-color="#171A2C" />
-                <stop offset="100%" stop-color="#0B0D18" />
+    <svg
+        :width="size"
+        :height="size"
+        viewBox="0 0 200 148"
+        fill="none"
+        aria-hidden="true"
+        class="overflow-visible"
+    >
+        <defs v-if="!flat">
+            <linearGradient :id="uid" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#B4744A" />
+                <stop offset="45%" stop-color="#F5D9BC" />
+                <stop offset="100%" stop-color="#A9683F" />
             </linearGradient>
-            <linearGradient :id="`${uid}-spark`" x1="0.2" y1="0" x2="0.8" y2="1">
-                <stop offset="0%" stop-color="#FFF4D6" />
-                <stop offset="45%" stop-color="#E8C877" />
-                <stop offset="100%" stop-color="#C99B3F" />
-            </linearGradient>
-            <radialGradient :id="`${uid}-glow`" cx="0.5" cy="0.42" r="0.55">
-                <stop offset="0%" stop-color="#E8C877" stop-opacity="0.45" />
-                <stop offset="100%" stop-color="#E8C877" stop-opacity="0" />
-            </radialGradient>
         </defs>
 
-        <rect x="1" y="1" width="46" height="46" rx="13" :fill="`url(#${uid}-tile)`" />
-        <!-- Bisel: una línea clara arriba y una oscura abajo bastan para que la
-             ficha se lea con volumen sin recurrir a una sombra falsa. -->
-        <rect x="1.5" y="1.5" width="45" height="45" rx="12.5" stroke="#FFFFFF" stroke-opacity="0.16" />
-        <rect x="1.5" y="2.5" width="45" height="44" rx="12.5" stroke="#000000" stroke-opacity="0.35" />
-
-        <circle cx="24" cy="22" r="15" :fill="`url(#${uid}-glow)`" />
-
-        <!-- El destello de cuatro puntas: curvas cóncavas, que es lo que separa
-             un brillo de una estrella infantil. -->
-        <path
-            d="M24 8c1.4 7.6 4.9 11.1 12.5 12.5C28.9 21.9 25.4 25.4 24 33c-1.4-7.6-4.9-11.1-12.5-12.5C19.1 19.1 22.6 15.6 24 8Z"
-            :fill="`url(#${uid}-spark)`"
-        />
-        <path
-            d="M35 30c.6 3.2 2.1 4.7 5.3 5.3-3.2.6-4.7 2.1-5.3 5.3-.6-3.2-2.1-4.7-5.3-5.3 3.2-.6 4.7-2.1 5.3-5.3Z"
-            :fill="`url(#${uid}-spark)`"
-            opacity="0.75"
-        />
+        <g
+            :stroke="flat || `url(#${uid})`"
+            stroke-width="7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+        >
+            <!-- Exteriores -->
+            <path d="M100 132 C 68 132 30 122 8 94 C 40 84 82 104 100 132 Z" />
+            <path d="M100 132 C 132 132 170 122 192 94 C 160 84 118 104 100 132 Z" />
+            <!-- Medios -->
+            <path d="M100 132 C 76 116 58 92 56 60 C 78 74 96 104 100 132 Z" />
+            <path d="M100 132 C 124 116 142 92 144 60 C 122 74 104 104 100 132 Z" />
+            <!-- Puntas -->
+            <path d="M84 90 C 74 78 68 68 66 58 C 76 66 82 78 84 90" />
+            <path d="M116 90 C 126 78 132 68 134 58 C 124 66 118 78 116 90" />
+            <!-- Centro y detalle interior -->
+            <path d="M100 132 C 84 108 82 70 100 42 C 118 70 116 108 100 132 Z" />
+            <path d="M100 130 C 92 114 91 94 100 80 C 109 94 108 114 100 130 Z" />
+        </g>
     </svg>
 </template>
