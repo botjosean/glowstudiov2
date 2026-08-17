@@ -53,6 +53,7 @@ const whatsappPromptOptions = computed(() => [
 const businessLinks = [
     { href: '/admin/negocio', icon: Store, titleKey: 'admin.settingsBusinessInfo', hintKey: 'admin.settingsBusinessInfoHint' },
     { href: '/admin/servicios', icon: Sparkles, titleKey: 'nav.services', hintKey: 'admin.servicesSubtitle' },
+    { href: '/admin/asistente', icon: MessageCircle, titleKey: 'admin.settingsAssistant', hintKey: 'admin.settingsAssistantHint' },
     { href: '/admin/horario', icon: CalendarClock, titleKey: 'nav.schedule', hintKey: 'admin.settingsScheduleHint' },
     { href: '/admin/inicio', icon: House, titleKey: 'admin.settingsActivation', hintKey: 'admin.settingsActivationHint' },
 ];

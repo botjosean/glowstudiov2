@@ -37,8 +37,8 @@ class SystemPromptTest extends TestCase
     {
         $provider = Provider::factory()->published()->create([
             'bot_business_name' => 'Nails by Vane',
-            'bot_trade' => 'manicurista',
-            'public_name' => 'Vanessa',
+            'bot_display_name' => 'Vane',
+            'public_name' => 'Vanessa Rodríguez',
             // Her own notes too, or the shared negocio.md comes along and
             // brings the old salon's name with it — which is the point of the
             // assertion below.
@@ -48,8 +48,11 @@ class SystemPromptTest extends TestCase
         $prompt = app(SystemPrompt::class)->for($provider);
 
         $this->assertStringContainsString('Nails by Vane', $prompt);
-        $this->assertStringContainsString('Vanessa, manicurista', $prompt);
+        $this->assertStringContainsString('Atiendes en nombre de Vane.', $prompt);
         $this->assertStringNotContainsString('Glow Studio', $prompt);
+        // The profile name is hers to display; the assistant uses the one she
+        // is written to by.
+        $this->assertStringNotContainsString('Vanessa Rodríguez', $prompt);
     }
 
     /**

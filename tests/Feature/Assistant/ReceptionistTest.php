@@ -241,13 +241,40 @@ class ReceptionistTest extends TestCase
     {
         $provider = $this->provider([
             'bot_business_name' => 'Nails by Vane',
-            'bot_trade' => 'manicurista',
-            'bot_greeting' => 'Hola, soy :negocio. :profesional, :oficio, te responde en breve.',
+            'bot_greeting' => 'Hola, soy :negocio. :profesional te responde en breve.',
         ]);
 
         $reply = $this->reply($provider, 'hola');
 
-        $this->assertSame('Hola, soy Nails by Vane. Patricia moreno, manicurista, te responde en breve.', $reply);
+        $this->assertSame('Hola, soy Nails by Vane. Patricia moreno te responde en breve.', $reply);
+    }
+
+    /**
+     * Her profile can read "Patricia Moreno" while every client knows her as
+     * "Pati", and the name on the client's phone should be the one she
+     * answers to.
+     */
+    public function test_the_assistant_calls_her_what_she_asked_to_be_called(): void
+    {
+        $provider = $this->provider(['bot_display_name' => 'Pati']);
+
+        $reply = $this->reply($provider, 'hola');
+
+        $this->assertStringContainsString('Pati', $reply);
+        $this->assertStringNotContainsString('Patricia moreno', $reply);
+    }
+
+    /**
+     * An earlier version introduced the trade ("Soy el WhatsApp de Patricia,
+     * peluquera") and the owner rejected it outright: a name and nothing else.
+     */
+    public function test_the_greeting_never_announces_a_trade(): void
+    {
+        $reply = $this->reply($this->provider(), 'hola');
+
+        foreach (['peluquera', 'barbero', 'manicurista', 'estilista'] as $trade) {
+            $this->assertStringNotContainsString($trade, mb_strtolower($reply));
+        }
     }
 
     /**

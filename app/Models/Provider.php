@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
     'payment_methods',
-    'bot_mode', 'bot_trade', 'bot_business_name', 'bot_greeting', 'bot_greeting_returning',
+    'bot_mode', 'bot_display_name', 'bot_business_name', 'bot_greeting', 'bot_greeting_returning',
     'bot_intake', 'bot_offers_booking_link', 'bot_notes',
 ])]
 class Provider extends Model
@@ -95,6 +95,20 @@ class Provider extends Model
         $name = trim((string) $this->bot_business_name);
 
         return $name !== '' ? $name : self::DEFAULT_BUSINESS_NAME;
+    }
+
+    /**
+     * What the assistant calls this professional when it writes to a client.
+     *
+     * Her profile name unless she has said otherwise — the profile can read
+     * "Patricia Moreno" while every client knows her as "Pati", and the name
+     * a client reads on WhatsApp should be the one she answers to.
+     */
+    public function botDisplayName(): string
+    {
+        $name = trim((string) $this->bot_display_name);
+
+        return $name !== '' ? $name : $this->public_name;
     }
 
     /**

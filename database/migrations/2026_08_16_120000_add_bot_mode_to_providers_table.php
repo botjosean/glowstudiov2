@@ -38,9 +38,12 @@ return new class extends Migration
             //                   all, so it cannot invent an appointment.
             $table->string('bot_mode', 20)->default('agente');
 
-            // How the assistant names the trade to a stranger: "peluquera",
-            // "manicurista", "barbero". Null keeps the generic wording.
-            $table->string('bot_trade', 40)->nullable();
+            // What the assistant calls her to a client. Separate from
+            // public_name because the profile can read "Patricia Moreno" while
+            // the person everybody writes to is "Pati" — and the owner's rule
+            // of 2026-08-16 is that the assistant says a name and nothing
+            // else: no "soy la peluquera", no trade, no title.
+            $table->string('bot_display_name', 60)->nullable();
 
             // The business name the assistant introduces itself with. Null
             // falls back to the app-wide default, which is how "Glow Studio"

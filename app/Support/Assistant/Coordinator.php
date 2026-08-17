@@ -489,7 +489,10 @@ class Coordinator
             $appointment->service_name,
             $local->locale('es')->isoFormat('dddd D [de] MMMM'),
             $local->format('g:i A'),
-            $context->provider->public_name,
+            // The name the client knows her by, same as everywhere else the
+            // assistant speaks — this sentence is written by the server and
+            // goes straight onto her phone.
+            $context->provider->botDisplayName(),
         );
     }
 

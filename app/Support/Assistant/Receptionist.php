@@ -256,8 +256,8 @@ class Receptionist
         $name = $this->knownClientName($provider, $digits);
 
         $template = $name !== null
-            ? ($provider->bot_greeting_returning ?? $this->defaultReturningGreeting())
-            : ($provider->bot_greeting ?? $this->defaultGreeting($provider));
+            ? ($provider->bot_greeting_returning ?? self::defaultReturningGreeting())
+            : ($provider->bot_greeting ?? self::defaultGreeting());
 
         return $this->fill($template, $provider, $name);
     }
@@ -272,7 +272,7 @@ class Receptionist
      */
     private function intake(Provider $provider): string
     {
-        $template = $provider->bot_intake ?? $this->defaultIntake();
+        $template = $provider->bot_intake ?? self::defaultIntake();
 
         // Checked on the template, not on the filled text: after fill() the
         // placeholder is gone, so asking afterwards would append a second copy
@@ -282,7 +282,7 @@ class Receptionist
         $body = $this->fill($template, $provider, null);
 
         if ($provider->bot_offers_booking_link && ! $placesItsOwnLink) {
-            $body .= "\n\nY si prefieres elegir tu horario tú misma, aquí puedes: ".$this->bookingUrl($provider);
+            $body .= self::bookingLinkLine($this->bookingUrl($provider));
         }
 
         return $body;
@@ -332,8 +332,7 @@ class Receptionist
     {
         return strtr($template, [
             ':negocio' => $provider->botBusinessName(),
-            ':profesional' => $provider->public_name,
-            ':oficio' => (string) $provider->bot_trade,
+            ':profesional' => $provider->botDisplayName(),
             ':nombre' => (string) $clientName,
             ':enlace' => $this->bookingUrl($provider),
         ]);
@@ -347,31 +346,29 @@ class Receptionist
     /**
      * Introduces the line rather than impersonating the professional.
      *
-     * "Soy el WhatsApp de Patricia" is the honest half of what she asked for:
-     * the client knows whose number she reached — which is the doubt that
+     * "Soy el WhatsApp de Patricia" is the honest half of what the owner asked
+     * for: the client knows whose number she reached — which is the doubt that
      * started this ("será que me equivoqué el número") — without the assistant
-     * claiming to be a person typing. The trade is named when it is set,
-     * because a stranger writing to a number wants to know she found the
-     * hairdresser and not a shop.
+     * claiming to be a person typing.
+     *
+     * **A name and nothing else.** An earlier version added the trade ("Soy el
+     * WhatsApp de Patricia, peluquera") and the owner rejected it outright on
+     * 2026-08-16: a client writing to her number already knows what she does,
+     * and announcing it reads like a listing rather than like her.
      */
-    private function defaultGreeting(Provider $provider): string
+    public static function defaultGreeting(): string
     {
-        $trade = trim((string) $provider->bot_trade);
-
-        $intro = $trade === ''
-            ? '¡Hola! Bienvenida a :negocio 💛 Soy el WhatsApp de :profesional.'
-            : '¡Hola! Bienvenida a :negocio 💛 Soy el WhatsApp de :profesional, :oficio.';
-
-        return $intro."\n\nRecibí tu mensaje. Ahora mismo está atendiendo, pero ella te responde en cuanto se desocupe.";
+        return '¡Hola! Bienvenida a :negocio 💛 Soy el WhatsApp de :profesional.'
+            ."\n\nRecibí tu mensaje. Ahora mismo está atendiendo, pero ella te responde en cuanto se desocupe.";
     }
 
-    private function defaultReturningGreeting(): string
+    public static function defaultReturningGreeting(): string
     {
         return '¡Hola :nombre! Qué gusto leerte 💛'
             ."\n\nRecibí tu mensaje. :profesional está atendiendo ahora mismo y te responde en cuanto se desocupe.";
     }
 
-    private function defaultIntake(): string
+    public static function defaultIntake(): string
     {
         return 'Si quieres ir adelantando, mándame por aquí:'
             ."\n\n• una foto de lo que te quieres hacer"
@@ -379,5 +376,16 @@ class Receptionist
             ."\n• tu nombre"
             ."\n• y qué día te gustaría"
             ."\n\nAsí :profesional ya te llega con todo a la mano ✨";
+    }
+
+    /**
+     * The sentence appended to the intake when the booking link is offered.
+     *
+     * Public so the settings screen can preview exactly what a client will
+     * read, rather than an approximation of it.
+     */
+    public static function bookingLinkLine(string $url): string
+    {
+        return "\n\nY si prefieres elegir tu horario tú misma, aquí puedes: ".$url;
     }
 }

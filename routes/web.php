@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AppointmentStatusController;
+use App\Http\Controllers\Admin\AssistantSettingsController;
 use App\Http\Controllers\Admin\BioSuggestionController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\ClientPhotoController;
@@ -95,6 +96,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     // its own (see Appointment::booted), so this is only for the other endings.
     Route::patch('/solicitudes/{lead}', [LeadController::class, 'update'])
         ->can('update', 'lead')->name('solicitudes.update');
+
+    // How the WhatsApp assistant introduces her and what it says. Param-less,
+    // so it needs no policy: its target is always $request->user()->provider.
+    Route::get('/asistente', [AssistantSettingsController::class, 'edit'])->name('asistente');
+    Route::put('/asistente', [AssistantSettingsController::class, 'update'])->name('asistente.update');
 
     Route::get('/clientes', [ClientController::class, 'index'])->name('clientes');
     Route::post('/clientes', [ClientController::class, 'store'])
