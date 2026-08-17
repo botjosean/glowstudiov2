@@ -7,4 +7,10 @@ return [
     'publishBlockedNoServices' => 'Añade al menos un servicio activo para publicar tu perfil.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',
+    // Se le manda al cliente por Kapso cuando el WhatsApp de la profesional
+    // está conectado — copia idéntica a resources/js/i18n/*.json waMessage*
+    // (esa copia solo se MUESTRA, nunca se envía, cuando no hay bot que la mande sola).
+    'waMessageConfirmed' => '¡Hola :client! Soy :provider. Tu cita para :service el :date quedó confirmada. ¡Nos vemos!',
+    'waMessageRejected' => '¡Hola :client! Soy :provider. No podré atender tu solicitud de :service para el :date. Escríbeme y buscamos otro horario.',
+    'waMessageCancelled' => '¡Hola :client! Soy :provider. Tuve que cancelar tu cita de :service del :date. Lamento el inconveniente, escríbeme y la reprogramamos.',
 ];

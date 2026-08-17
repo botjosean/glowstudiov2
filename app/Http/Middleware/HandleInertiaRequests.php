@@ -69,6 +69,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
                 'booking' => fn () => $request->session()->get('booking'),
+                // Whether AppointmentStatusController auto-sent the WhatsApp
+                // notice via Kapso — the frontend skips its own manual prompt
+                // only when this is true, never on a static "bot connected" flag.
+                'notified' => fn () => $request->session()->get('notified'),
             ],
             // Drives the layout's "N steps left" banner. Null (banner hidden)
             // for guests, provider-less users, and fully set-up providers.

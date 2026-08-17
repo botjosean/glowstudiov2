@@ -8,6 +8,7 @@ use App\Models\Provider;
 use App\Models\Service;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -28,6 +29,74 @@ class AppointmentStatusTest extends TestCase
         $this->assertSame('confirmed', $appointment->status->value);
         $this->assertNotNull($appointment->confirmed_at);
         $this->assertSame('admin.appointmentConfirmed', session('success'));
+    }
+
+    public function test_confirming_auto_notifies_when_whatsapp_is_connected(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['messages' => [['id' => 'wamid.test']]])]);
+
+        $provider = Provider::factory()->published()->create(['whatsapp_phone_number_id' => '868324373028256']);
+        $appointment = Appointment::factory()->for($provider)->pending()->create(['client_phone' => '3055550142']);
+
+        $response = $this->actingAs($provider->user)->patch("/admin/citas/{$appointment->id}/confirmar");
+
+        $response->assertSessionHasNoErrors();
+        $this->assertTrue(session('notified'));
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.kapso.ai/meta/whatsapp/v24.0/868324373028256/messages'
+            && $request['to'] === '13055550142'
+            && str_contains($request['text']['body'], $appointment->client_name));
+    }
+
+    public function test_confirming_does_not_call_kapso_when_whatsapp_is_not_connected(): void
+    {
+        Http::fake();
+
+        $provider = Provider::factory()->published()->create(['whatsapp_phone_number_id' => null]);
+        $appointment = Appointment::factory()->for($provider)->pending()->create();
+
+        $this->actingAs($provider->user)->patch("/admin/citas/{$appointment->id}/confirmar");
+
+        $this->assertFalse(session('notified'));
+        Http::assertNothingSent();
+    }
+
+    public function test_confirming_still_succeeds_when_kapso_rejects_the_send(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['error' => 'boom'], 500)]);
+
+        $provider = Provider::factory()->published()->create(['whatsapp_phone_number_id' => '868324373028256']);
+        $appointment = Appointment::factory()->for($provider)->pending()->create();
+
+        $response = $this->actingAs($provider->user)->patch("/admin/citas/{$appointment->id}/confirmar");
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', $appointment->fresh()->status->value);
+        $this->assertFalse(session('notified'));
+    }
+
+    public function test_rejecting_a_pending_appointment_uses_the_rejected_message(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['messages' => [['id' => 'wamid.test']]])]);
+
+        $provider = Provider::factory()->published()->create(['whatsapp_phone_number_id' => '868324373028256']);
+        $appointment = Appointment::factory()->for($provider)->pending()->create();
+
+        $this->actingAs($provider->user)->patch("/admin/citas/{$appointment->id}/cancelar");
+
+        $this->assertTrue(session('notified'));
+        Http::assertSent(fn ($request) => str_contains($request['text']['body'], "can't take your"));
+    }
+
+    public function test_cancelling_a_confirmed_appointment_uses_the_cancelled_message(): void
+    {
+        Http::fake(['api.kapso.ai/*' => Http::response(['messages' => [['id' => 'wamid.test']]])]);
+
+        $provider = Provider::factory()->published()->create(['whatsapp_phone_number_id' => '868324373028256']);
+        $appointment = Appointment::factory()->for($provider)->confirmed()->create();
+
+        $this->actingAs($provider->user)->patch("/admin/citas/{$appointment->id}/cancelar");
+
+        Http::assertSent(fn ($request) => str_contains($request['text']['body'], 'had to cancel'));
     }
 
     public function test_rejecting_a_pending_appointment(): void
