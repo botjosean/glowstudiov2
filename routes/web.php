@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProfilePhotoController;
 use App\Http\Controllers\Admin\SalesController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\WhatsAppConnectionController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\InitialPasswordController;
@@ -101,6 +102,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     // so it needs no policy: its target is always $request->user()->provider.
     Route::get('/asistente', [AssistantSettingsController::class, 'edit'])->name('asistente');
     Route::put('/asistente', [AssistantSettingsController::class, 'update'])->name('asistente.update');
+
+    // Connecting her own WhatsApp. 'conectado' is where Kapso sends her back
+    // after Meta, so it is a GET she arrives at from another host — the
+    // connection is still verified against Kapso, never taken from the URL.
+    Route::post('/asistente/conectar', [WhatsAppConnectionController::class, 'store'])->name('asistente.conectar');
+    Route::get('/asistente/conectado', [WhatsAppConnectionController::class, 'callback'])->name('asistente.conectado');
 
     Route::get('/clientes', [ClientController::class, 'index'])->name('clientes');
     Route::post('/clientes', [ClientController::class, 'store'])

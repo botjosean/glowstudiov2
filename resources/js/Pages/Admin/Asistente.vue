@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { useForm, router, Link } from '@inertiajs/vue3';
 import { ArrowLeft, MessageCircle } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -44,6 +44,17 @@ const form = useForm({
 
 function submit() {
     form.put('/admin/asistente', { preserveScroll: true });
+}
+
+// Leaves the app for Kapso's hosted page, so the button stays disabled until
+// the browser actually navigates — a second tap would open a second setup link.
+const connecting = ref(false);
+
+function connect() {
+    connecting.value = true;
+    router.post('/admin/asistente/conectar', {}, {
+        onError: () => { connecting.value = false; },
+    });
 }
 
 const modeOptions = computed(() => [
@@ -108,6 +119,25 @@ const previewIntake = computed(() => {
                     <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('admin.botNotConnected') }}</span>
                 </div>
                 <p class="mt-1.5 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.botNotConnectedHint') }}</p>
+
+                <!-- What she needs before starting. Written out because the
+                     flow fails at Meta's door otherwise, and she would have no
+                     idea why — the WhatsApp Business app is the one people
+                     usually don't have. -->
+                <ul class="mt-3 flex flex-col gap-1 text-[12px] font-normal text-[var(--text-mute)]">
+                    <li>· {{ $t('admin.botNeedsBusinessApp') }}</li>
+                    <li>· {{ $t('admin.botNeedsFacebook') }}</li>
+                    <li>· {{ $t('admin.botKeepsEverything') }}</li>
+                </ul>
+
+                <button
+                    type="button"
+                    :disabled="connecting"
+                    class="mt-3 w-full rounded-xl bg-[var(--btn-bg)] py-3 text-[14px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-60"
+                    @click="connect"
+                >
+                    {{ $t('admin.botConnect') }}
+                </button>
             </div>
 
             <!-- What it does -->
