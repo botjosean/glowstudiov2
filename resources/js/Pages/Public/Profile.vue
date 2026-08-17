@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { MapPin, ChevronRight } from '@lucide/vue';
+import { MapPin, ChevronRight, X } from '@lucide/vue';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import GlowMark from '../../Components/ui/GlowMark.vue';
 import { serviceIcons } from '../../icons';
@@ -20,6 +20,26 @@ onMounted(() => {
         splash.value = false;
     }, 900);
 });
+
+// "Toca para ampliar" promised an enlarge and never delivered one — the grid
+// had no click handler at all. Index rather than a boolean so Prev/Next can
+// walk the same array without a second piece of state.
+const lightboxIndex = ref(null);
+
+function openLightbox(index) {
+    lightboxIndex.value = index;
+}
+
+function closeLightbox() {
+    lightboxIndex.value = null;
+}
+
+function onLightboxKeydown(event) {
+    if (event.key === 'Escape') closeLightbox();
+}
+
+onMounted(() => window.addEventListener('keydown', onLightboxKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
 </script>
 
 <template>
@@ -163,15 +183,44 @@ onMounted(() => {
                 }}</span>
             </div>
             <div class="grid grid-cols-3 gap-2.5">
-                <div
+                <button
                     v-for="(photo, index) in provider.gallery"
                     :key="index"
+                    type="button"
                     class="aspect-square overflow-hidden rounded-2xl bg-[var(--surface-mute)]"
+                    @click="openLightbox(index)"
                 >
                     <img :src="photo" :alt="`${provider.name} work ${index + 1}`" class="h-full w-full object-cover" />
-                </div>
+                </button>
             </div>
         </div>
+
+        <Transition
+            enter-active-class="transition-opacity duration-200"
+            leave-active-class="transition-opacity duration-150"
+            enter-from-class="opacity-0"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="lightboxIndex !== null"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+                @click.self="closeLightbox"
+            >
+                <button
+                    type="button"
+                    :aria-label="$t('common.close')"
+                    class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+                    @click="closeLightbox"
+                >
+                    <X :size="18" class="text-white" />
+                </button>
+                <img
+                    :src="provider.gallery[lightboxIndex]"
+                    :alt="`${provider.name} work ${lightboxIndex + 1}`"
+                    class="max-h-full max-w-full rounded-lg object-contain"
+                />
+            </div>
+        </Transition>
 
         <div class="px-6 pb-12 pt-8">
             <div class="mb-3.5 text-[13px] font-medium text-[var(--text-mute)]">

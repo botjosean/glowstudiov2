@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Ban, Camera, ChevronRight, Eye, MessageCircle, Pencil, Plus, Settings, Share2 } from '@lucide/vue';
+import { Ban, Camera, ChevronRight, Eye, MessageCircle, Plus, Settings, Share2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
@@ -117,8 +117,7 @@ function confirmDeletePhoto() {
 
 <template>
     <AdminLayout :provider-name="providerName" :avatar-src="avatarPhoto">
-        <!-- Cover with Booksy's overlay doors: pencil → edit, eye → preview,
-             share pill. The camera button keeps the cover changeable here. -->
+        <!-- Overlay doors: gear → business info (not a photo editor, hence gear not pencil), eye → preview, share pill; camera changes the cover. -->
         <div class="relative h-44 w-full overflow-hidden bg-[#131a2a]">
             <img v-if="bannerPhoto" :src="bannerPhoto" alt="" class="h-full w-full object-cover" />
             <input ref="bannerInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onBannerSelected" />

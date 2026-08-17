@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { Plus, Receipt, SlidersHorizontal, Trash2, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
@@ -20,6 +20,9 @@ const props = defineProps({
     acceptedMethods: { type: Array, required: true },
     allMethods: { type: Array, required: true },
     clients: { type: Array, required: true },
+    // { clientId, amount } | null — set by the server from ?clientPhone=&amount=
+    // on the "Registrar venta" link on a confirmed appointment.
+    prefill: { type: Object, default: null },
 });
 
 const { t } = useI18n();
@@ -71,6 +74,10 @@ const groups = computed(() => {
 });
 
 const registerOpen = ref(false);
+
+onMounted(() => {
+    if (props.prefill) registerOpen.value = true;
+});
 
 // ---- Accepted methods ------------------------------------------------------
 
@@ -200,7 +207,7 @@ function confirmDelete() {
             <Plus :size="22" class="text-white" />
         </button>
 
-        <RegisterSaleSheet v-model="registerOpen" :clients="clients" :methods="acceptedMethods" />
+        <RegisterSaleSheet v-model="registerOpen" :clients="clients" :methods="acceptedMethods" :prefill="prefill" />
 
         <BottomSheet v-model="methodsOpen">
             <div class="mb-2 flex items-center justify-between">

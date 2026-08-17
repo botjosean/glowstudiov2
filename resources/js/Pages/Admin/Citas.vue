@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { Bell, ChevronDown, Clock, Plus, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
@@ -352,9 +352,11 @@ function confirmAppointment() {
     router.patch(`/admin/citas/${selectedId.value}/confirmar`, {}, {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
             sheetOpen.value = false;
-            openWaPrompt(prompt);
+            // Kapso already sent it — opening the manual prompt too would
+            // notify the client twice.
+            if (!page.props.flash?.notified) openWaPrompt(prompt);
         },
         onFinish: () => {
             detailProcessing.value = false;
@@ -391,8 +393,8 @@ function confirmCancel() {
     router.patch(`/admin/citas/${pending.id}/cancelar`, {}, {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => {
-            openWaPrompt(pending.prompt);
+        onSuccess: (page) => {
+            if (!page.props.flash?.notified) openWaPrompt(pending.prompt);
         },
         onFinish: () => {
             cancelProcessing.value = false;
@@ -401,6 +403,18 @@ function confirmCancel() {
         },
     });
 }
+
+// Will lost track of an in-flight confirm/cancel after backing out mid-action
+// from the browser. The in-app dialogs already guard the click path; this
+// guards the one the click path can't see — the phone's own back gesture.
+function warnIfActionInFlight(event) {
+    if (!detailProcessing.value && !cancelProcessing.value) return;
+    event.preventDefault();
+    event.returnValue = '';
+}
+
+onMounted(() => window.addEventListener('beforeunload', warnIfActionInFlight));
+onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFlight));
 </script>
 
 <template>
