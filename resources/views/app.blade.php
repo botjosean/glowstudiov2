@@ -19,7 +19,7 @@
         @endphp
         <link rel="manifest" href="{{ $esPanel ? '/manifest-pro.webmanifest' : '/manifest.webmanifest' }}">
         <meta name="theme-color" content="#0E1626">
-        <link rel="apple-touch-icon" href="/icons/icon-180.png">
+        <link rel="apple-touch-icon" href="/icons/icon-180.png?v=20260817">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="Glow Studio">
