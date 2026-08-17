@@ -99,8 +99,21 @@ class Coordinator
      */
     public function reply(InboundMessage $message, Provider $provider): ?string
     {
-        $turns = $this->turns($message);
-        $humanReplied = $this->humanTookOver($turns);
+        // Fuera de hora el asistente no abre la boca, en el modo que sea.
+        // Se comprueba ANTES de pedirle el historial a Kapso: a las tres de la
+        // mañana no hay nada que decidir y no vale una llamada a la API.
+        $open = $provider->botIsOpenNow();
+
+        if (! $open && ! $provider->botIsReceptionist()) {
+            Log::info('Outside the assistant hours; staying quiet.', [
+                'provider' => $provider->slug,
+            ]);
+
+            return null;
+        }
+
+        $turns = $open ? $this->turns($message) : [];
+        $humanReplied = $open && $this->humanTookOver($turns);
 
         // A provider in receptionist mode never reaches the model, the tools
         // or the fabricated-booking guard: it acknowledges, asks, and hands
@@ -108,6 +121,9 @@ class Coordinator
         // receptionist gets the same "is a person already answering?" answer
         // the agent does — sending an intake on top of the professional's own
         // reply is the talking-over-each-other failure this check exists for.
+        // Fuera de hora la recepcionista igual pasa por aquí: no contesta, pero
+        // apunta la solicitud, así la clienta que escribe a medianoche aparece
+        // en el panel por la mañana en vez de perderse.
         if ($provider->botIsReceptionist()) {
             return $this->receptionist->reply($message, $provider, $humanReplied);
         }

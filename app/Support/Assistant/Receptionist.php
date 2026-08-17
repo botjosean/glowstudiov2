@@ -94,6 +94,19 @@ class Receptionist
 
         $lead = $this->recordContact($provider, $digits, $message);
 
+        // Fuera de hora la ficha ya quedó anotada arriba, que era el punto: la
+        // clienta que escribe a medianoche aparece en el panel por la mañana.
+        // Callarse es lo que haría el salón — nadie contesta un timbre a las
+        // tres —, y cuando ella vuelva a escribir dentro del horario recibe su
+        // saludo como si fuera la primera vez, porque el contador no se movió.
+        if (! $provider->botIsOpenNow()) {
+            Log::info('Receptionist staying quiet: outside the assistant hours.', [
+                'provider' => $provider->slug,
+            ]);
+
+            return null;
+        }
+
         if ($humanReplied) {
             // A person is already on it. Marking it here is what lets the
             // panel tell "waiting" from "being handled" without anybody

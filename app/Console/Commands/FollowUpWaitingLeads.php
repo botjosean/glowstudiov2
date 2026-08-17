@@ -53,6 +53,12 @@ class FollowUpWaitingLeads extends Command
         $sent = 0;
 
         foreach ($providers as $provider) {
+            // Un seguimiento a las tres de la mañana es peor que ninguno. La
+            // solicitud no se pierde: sigue en la lista y saldrá cuando abra.
+            if (! $provider->botIsOpenNow()) {
+                continue;
+            }
+
             $waiting = $provider->leads()->waiting()
                 ->where('bot_messages_sent', 1)
                 ->whereNull('answered_at')

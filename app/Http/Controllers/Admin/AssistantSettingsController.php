@@ -41,6 +41,8 @@ class AssistantSettingsController extends Controller
                 'intake' => $provider->bot_intake,
                 'offersBookingLink' => $provider->bot_offers_booking_link,
                 'notes' => $provider->bot_notes,
+                'startMinute' => $provider->bot_start_minute,
+                'endMinute' => $provider->bot_end_minute,
             ],
             // What she gets if she leaves a box empty. Sent rather than
             // duplicated in the Vue file so the preview shows the real text the
@@ -78,6 +80,11 @@ class AssistantSettingsController extends Controller
             'intake' => ['nullable', 'string', 'max:1000'],
             'offersBookingLink' => ['required', 'boolean'],
             'notes' => ['nullable', 'string', 'max:20000'],
+            // Misma rejilla de 15 que el resto del horario, y el fin después
+            // del principio: una ventana invertida dejaría al bot mudo todo el
+            // día sin decir por qué.
+            'startMinute' => ['required', 'integer', 'between:0,1440', 'multiple_of:15'],
+            'endMinute' => ['required', 'integer', 'between:0,1440', 'multiple_of:15', 'gt:startMinute'],
         ]);
 
         $provider->update([
@@ -91,6 +98,8 @@ class AssistantSettingsController extends Controller
             'bot_intake' => $this->nullIfBlank($validated['intake'] ?? null),
             'bot_offers_booking_link' => $validated['offersBookingLink'],
             'bot_notes' => $this->nullIfBlank($validated['notes'] ?? null),
+            'bot_start_minute' => $validated['startMinute'],
+            'bot_end_minute' => $validated['endMinute'],
         ]);
 
         return to_route('admin.asistente')->with('success', 'admin.assistantSaved');

@@ -392,7 +392,9 @@
         "statMonthSales": "Sales this month",
         "settingsSearch": "Search settings…",
         "importContacts": "Import from your contacts",
-        "clientsImported": "Contacts imported to your book."
+        "clientsImported": "Contacts imported to your book.",
+        "botHours": "When it replies",
+        "botHoursHint": "Outside these hours it says nothing, but the request still reaches your panel."
     },
     "nav": {
         "appointments": "Appointments",

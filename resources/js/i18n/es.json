@@ -392,7 +392,9 @@
         "statMonthSales": "Ventas del mes",
         "settingsSearch": "Buscar en configuración…",
         "importContacts": "Importar de tus contactos",
-        "clientsImported": "Contactos importados a tu libro."
+        "clientsImported": "Contactos importados a tu libro.",
+        "botHours": "A qué horas contesta",
+        "botHoursHint": "Fuera de este horario no responde nada, pero la solicitud igual te llega al panel."
     },
     "nav": {
         "appointments": "Citas",

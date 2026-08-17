@@ -42,6 +42,12 @@ class ProviderFactory extends Factory
             'lunch_start_minute' => 13 * 60,
             'lunch_end_minute' => 14 * 60,
             'buffer_minutes' => 15,
+            // Los mismos valores que el default de la base. Sin esto el modelo
+            // recién creado los tiene en null (los defaults de la columna no
+            // vuelven de la inserción) y botIsOpenNow() daría "siempre abierto"
+            // en los tests mientras en producción lee las horas de verdad.
+            'bot_start_minute' => 9 * 60,
+            'bot_end_minute' => 22 * 60,
         ];
     }
 

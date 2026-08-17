@@ -7,6 +7,7 @@ import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Input from '../../Components/ui/Input.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
+import TimeWheel from '../../Components/ui/TimeWheel.vue';
 
 /**
  * Configuración → Asistente de WhatsApp.
@@ -40,6 +41,8 @@ const form = useForm({
     intake: props.settings.intake ?? '',
     offersBookingLink: props.settings.offersBookingLink,
     notes: props.settings.notes ?? '',
+    startMinute: props.settings.startMinute,
+    endMinute: props.settings.endMinute,
 });
 
 function submit() {
@@ -166,6 +169,21 @@ const previewIntake = computed(() => {
                     />
                     <p v-if="form.errors.businessName" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.businessName }}</p>
                 </div>
+            </section>
+
+            <!-- A qué horas contesta. Aparte del horario del salón: ella abre
+                 a las 10 y el asistente saluda desde las 9, porque acusar
+                 recibo no es lo mismo que estar disponible. -->
+            <section class="flex flex-col gap-3">
+                <div>
+                    <h2 class="text-[13px] font-bold uppercase tracking-wide text-[var(--text-mute)]">{{ $t('admin.botHours') }}</h2>
+                    <p class="mt-1 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.botHoursHint') }}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <TimeWheel v-model="form.startMinute" :label="$t('admin.startTime')" />
+                    <TimeWheel v-model="form.endMinute" :label="$t('admin.endTime')" />
+                </div>
+                <p v-if="form.errors.endMinute" class="text-[13px] font-normal text-[var(--danger)]">{{ form.errors.endMinute }}</p>
             </section>
 
             <!-- The two messages. Only receptionist mode sends them; an agent

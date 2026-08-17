@@ -467,6 +467,74 @@ class ReceptionistTest extends TestCase
         ];
     }
 
+    // ---- Horario del asistente --------------------------------------------
+
+    /**
+     * De 9 a 22, hora de la profesional. Fuera de eso no dice nada — nadie
+     * contesta un timbre a las tres de la mañana.
+     */
+    public function test_it_says_nothing_outside_its_hours(): void
+    {
+        $provider = $this->provider();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-18 03:30', 'America/New_York'));
+
+        $this->assertNull($this->reply($provider, 'hola, quiero una cita'));
+
+        CarbonImmutable::setTestNow();
+    }
+
+    /**
+     * Pero la solicitud SÍ queda anotada: para eso existe la bandeja. Quien
+     * escribe a medianoche aparece en el panel por la mañana.
+     */
+    public function test_a_message_at_night_still_reaches_the_panel(): void
+    {
+        $provider = $this->provider();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-18 02:00', 'America/New_York'));
+
+        $this->reply($provider, 'quiero un balayage');
+
+        $lead = Lead::query()->sole();
+        $this->assertStringContainsString('quiero un balayage', $lead->message);
+        $this->assertSame(Lead::STATUS_NEW, $lead->status);
+        // Y el contador no se movió, así que por la mañana recibe su saludo
+        // completo en vez de empezar por el segundo mensaje.
+        $this->assertSame(0, $lead->bot_messages_sent);
+
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_it_answers_again_once_the_hours_start(): void
+    {
+        $provider = $this->provider();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-18 02:00', 'America/New_York'));
+        $this->assertNull($this->reply($provider, 'hola'));
+
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-18 09:05', 'America/New_York'));
+        $reply = $this->reply($provider, '¿hola?');
+
+        $this->assertNotNull($reply);
+        $this->assertStringContainsString('Recibí tu mensaje', $reply);
+
+        CarbonImmutable::setTestNow();
+    }
+
+    /**
+     * La hora es la de la profesional, no la del servidor: un bot que se
+     * callara a las 22:00 UTC dejaría de contestar en Atlanta a las seis de la
+     * tarde.
+     */
+    public function test_the_hours_are_read_in_her_own_timezone(): void
+    {
+        $provider = $this->provider();
+        // 02:00 UTC del día 19 son las 22:00 del 18 en Atlanta: cerrado.
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 02:00', 'UTC'));
+
+        $this->assertNull($this->reply($provider, 'hola'));
+
+        CarbonImmutable::setTestNow();
+    }
+
     private function assertNoModelWasConsulted(): void
     {
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'openrouter.ai'));

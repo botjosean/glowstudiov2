@@ -58,6 +58,8 @@ class AssistantSettingsTest extends TestCase
             'intake' => '',
             'offersBookingLink' => false,
             'notes' => '',
+            'startMinute' => 9 * 60,
+            'endMinute' => 22 * 60,
         ])->assertRedirect('/admin/asistente');
 
         $provider->refresh();
@@ -89,6 +91,8 @@ class AssistantSettingsTest extends TestCase
             'intake' => '',
             'offersBookingLink' => true,
             'notes' => '',
+            'startMinute' => 9 * 60,
+            'endMinute' => 22 * 60,
         ]);
 
         $provider->refresh();
@@ -130,6 +134,8 @@ class AssistantSettingsTest extends TestCase
             'mode' => Provider::BOT_RECEPTIONIST,
             'displayName' => 'Pati',
             'offersBookingLink' => true,
+            'startMinute' => 9 * 60,
+            'endMinute' => 22 * 60,
         ]);
 
         $this->assertSame('Vane', $theirs->fresh()->bot_display_name);

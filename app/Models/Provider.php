@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
     'payment_methods',
     'bot_mode', 'bot_display_name', 'bot_business_name', 'bot_greeting', 'bot_greeting_returning',
-    'bot_intake', 'bot_offers_booking_link', 'bot_notes',
+    'bot_intake', 'bot_offers_booking_link', 'bot_notes', 'bot_start_minute', 'bot_end_minute',
 ])]
 class Provider extends Model
 {
@@ -71,6 +71,8 @@ class Provider extends Model
             'buffer_minutes' => 'int',
             'payment_methods' => 'array',
             'bot_offers_booking_link' => 'bool',
+            'bot_start_minute' => 'int',
+            'bot_end_minute' => 'int',
         ];
     }
 
@@ -95,6 +97,31 @@ class Provider extends Model
         $name = trim((string) $this->bot_business_name);
 
         return $name !== '' ? $name : self::DEFAULT_BUSINESS_NAME;
+    }
+
+    /**
+     * Whether the assistant is within its answering hours right now.
+     *
+     * Read in the professional's own timezone, never the server's: a bot that
+     * goes quiet at 22:00 UTC would stop answering Atlanta at six in the
+     * evening.
+     *
+     * Separate from the salon's opening hours on purpose — she opens at 10 and
+     * the assistant starts at 9, because acknowledging a message is not the
+     * same as being available. A window that does not make sense (end at or
+     * before start) is treated as always open rather than never: silence is
+     * the more expensive failure, and it is invisible.
+     */
+    public function botIsOpenNow(): bool
+    {
+        if ($this->bot_end_minute <= $this->bot_start_minute) {
+            return true;
+        }
+
+        $now = $this->currentTime();
+        $minute = $now->hour * 60 + $now->minute;
+
+        return $minute >= $this->bot_start_minute && $minute < $this->bot_end_minute;
     }
 
     /**
