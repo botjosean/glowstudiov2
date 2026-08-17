@@ -137,6 +137,199 @@ class KapsoClient
         return is_string($name) && $name !== '' ? $name : null;
     }
 
+    /**
+     * The Kapso customer that stands for this provider, creating it if this is
+     * the first time.
+     *
+     * Keyed by `external_customer_id`, which carries the provider's slug — the
+     * same identifier used everywhere else in this app. Doing it by lookup
+     * rather than by storing a second id means a customer created by hand in
+     * Kapso's panel (which is how Vanessa's got there) is adopted instead of
+     * duplicated.
+     *
+     * @throws RuntimeException
+     */
+    public function findOrCreateCustomer(string $externalId, string $name): string
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->get("{$base}/platform/v1/customers", [
+            'external_customer_id' => $externalId,
+            'per_page' => 100,
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso returned HTTP {$response->status()} listing customers.");
+        }
+
+        // Filtered again here rather than trusted: an unrecognised query
+        // parameter is ignored by Kapso instead of rejected (see
+        // recentMessages), so a server that does not support this filter would
+        // hand back somebody else's customer as the first row.
+        foreach ((array) $response->json('data') as $row) {
+            if (is_array($row) && ($row['external_customer_id'] ?? null) === $externalId && is_string($row['id'] ?? null)) {
+                return $row['id'];
+            }
+        }
+
+        $created = $this->request()->post("{$base}/platform/v1/customers", [
+            'customer' => ['name' => $name, 'external_customer_id' => $externalId],
+        ]);
+
+        if ($created->failed()) {
+            throw new RuntimeException("Kapso rejected the customer with HTTP {$created->status()}.");
+        }
+
+        $id = $created->json('data.id');
+
+        if (! is_string($id) || $id === '') {
+            throw new RuntimeException('Kapso created a customer without returning its id.');
+        }
+
+        return $id;
+    }
+
+    /**
+     * A one-time hosted page where a professional connects her own WhatsApp.
+     *
+     * Locked to `coexistence` on purpose: the alternative provisions a fresh
+     * number that cannot be used from a phone at all, which would leave a
+     * professional reading her messages in a browser while her hands are in
+     * somebody's hair. Never `provision_phone_number` for the same reason.
+     *
+     * @return array{url: string, id: string}
+     *
+     * @throws RuntimeException
+     */
+    public function createSetupLink(string $customerId, string $successUrl, string $failureUrl): array
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->post("{$base}/platform/v1/customers/{$customerId}/setup_links", [
+            'setup_link' => [
+                'success_redirect_url' => $successUrl,
+                'failure_redirect_url' => $failureUrl,
+                'provision_phone_number' => false,
+                'allowed_connection_types' => ['coexistence'],
+                'meta_billing_mode' => 'customer_managed',
+                'language' => 'es',
+            ],
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso rejected the setup link with HTTP {$response->status()}.");
+        }
+
+        $url = $response->json('data.url');
+
+        if (! is_string($url) || $url === '') {
+            throw new RuntimeException('Kapso returned a setup link without a URL.');
+        }
+
+        return ['url' => $url, 'id' => (string) $response->json('data.id')];
+    }
+
+    /**
+     * The connected number belonging to one customer, or null when the
+     * professional has not finished (or abandoned) the hosted flow.
+     *
+     * @return array{phone_number_id: string, display_phone_number: ?string}|null
+     *
+     * @throws RuntimeException
+     */
+    public function connectedNumberFor(string $customerId): ?array
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->get("{$base}/platform/v1/whatsapp/phone_numbers", [
+            'customer_id' => $customerId,
+            'per_page' => 50,
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso returned HTTP {$response->status()} listing phone numbers.");
+        }
+
+        foreach ((array) $response->json('data') as $row) {
+            // Same defensive re-filter as above, and the status matters: a row
+            // exists from the moment the flow starts, so claiming it before
+            // Meta says CONNECTED would wire the assistant to a dead number.
+            if (! is_array($row)
+                || ($row['customer_id'] ?? null) !== $customerId
+                || ($row['status'] ?? null) !== 'CONNECTED'
+                || ! is_string($row['phone_number_id'] ?? null)) {
+                continue;
+            }
+
+            return [
+                'phone_number_id' => $row['phone_number_id'],
+                'display_phone_number' => is_string($row['display_phone_number'] ?? null) ? $row['display_phone_number'] : null,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Points a freshly connected number at this app's webhook.
+     *
+     * Without this the number is connected and completely silent: Kapso has it,
+     * and nothing ever reaches the queue. The buffering values mirror what the
+     * live numbers were configured with by hand — a few seconds of grace so a
+     * client typing three short lines gets one answer instead of three.
+     *
+     * @throws RuntimeException
+     */
+    public function createWebhook(string $phoneNumberId, string $url, string $secret): void
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->post("{$base}/platform/v1/whatsapp/phone_numbers/{$phoneNumberId}/webhooks", [
+            'whatsapp_webhook' => [
+                'url' => $url,
+                'kind' => 'kapso',
+                'secret_key' => $secret,
+                'active' => true,
+                'events' => ['whatsapp.message.received'],
+                'buffer_enabled' => true,
+                'buffer_window_seconds' => 8,
+                'max_buffer_size' => 10,
+            ],
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso rejected the webhook with HTTP {$response->status()}.");
+        }
+    }
+
+    /**
+     * Whether this number already delivers to the given URL.
+     *
+     * Used to tell "connected and listening" from "connected and deaf" after
+     * the hosted flow — the difference between a working assistant and one
+     * that never hears anybody, which is invisible from the panel otherwise.
+     *
+     * @throws RuntimeException
+     */
+    public function hasWebhookFor(string $phoneNumberId, string $url): bool
+    {
+        $base = rtrim((string) config('services.kapso.base_url'), '/');
+
+        $response = $this->request()->get("{$base}/platform/v1/whatsapp/phone_numbers/{$phoneNumberId}/webhooks");
+
+        if ($response->failed()) {
+            throw new RuntimeException("Kapso returned HTTP {$response->status()} listing webhooks.");
+        }
+
+        foreach ((array) $response->json('data') as $row) {
+            if (is_array($row) && ($row['url'] ?? null) === $url && ($row['active'] ?? false)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function request(): PendingRequest
     {
         $apiKey = config('services.kapso.api_key');

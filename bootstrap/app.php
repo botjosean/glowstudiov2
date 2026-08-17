@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\AlertWaitingLeads;
 use App\Console\Commands\CloseFinishedAppointments;
 use App\Console\Commands\PruneWhatsAppClaims;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -33,6 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command(CloseFinishedAppointments::class)->hourly()->withoutOverlapping();
         $schedule->command(PruneWhatsAppClaims::class)->dailyAt('04:10')->withoutOverlapping();
+        // Hourly, but each request is only ever alerted about once — see the
+        // command. Nothing runs for a provider still in agent mode.
+        $schedule->command(AlertWaitingLeads::class)->hourly()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

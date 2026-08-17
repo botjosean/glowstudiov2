@@ -88,6 +88,7 @@ class Coordinator
         private readonly AssistantTools $tools,
         private readonly SystemPrompt $prompt,
         private readonly KapsoClient $kapso,
+        private readonly Receptionist $receptionist,
     ) {}
 
     /**
@@ -98,11 +99,22 @@ class Coordinator
      */
     public function reply(InboundMessage $message, Provider $provider): ?string
     {
+        $turns = $this->turns($message);
+        $humanReplied = $this->humanTookOver($turns);
+
+        // A provider in receptionist mode never reaches the model, the tools
+        // or the fabricated-booking guard: it acknowledges, asks, and hands
+        // over. The branch sits here, after the history is loaded, so the
+        // receptionist gets the same "is a person already answering?" answer
+        // the agent does — sending an intake on top of the professional's own
+        // reply is the talking-over-each-other failure this check exists for.
+        if ($provider->botIsReceptionist()) {
+            return $this->receptionist->reply($message, $provider, $humanReplied);
+        }
+
         $context = ToolContext::for($provider, (string) $message->fromPhone, $message->contactName);
 
-        $turns = $this->turns($message);
-
-        if ($this->humanTookOver($turns)) {
+        if ($humanReplied) {
             Log::info('A person from the salon answered by hand recently; staying quiet.', [
                 'phone_number_id' => $message->phoneNumberId,
                 'provider' => $provider->slug,
@@ -278,13 +290,23 @@ class Coordinator
      * whether it lands is no longer left to the model, for the same reason
      * nothing else on this path is.
      *
-     * Only the unambiguous case is touched. `__` and `##` are left alone:
-     * they have never been seen in a real reply, and a rewrite rule that
-     * fires on text nobody sent is a bug waiting for its first client.
+     * Hyphen bullets get the same treatment, and for the same reason: the
+     * prompt forbids them in as many words, and on 2026-08-16 deepseek offered
+     * a client four appointment times as `- *10:00 AM*`. WhatsApp renders no
+     * list at all, so she reads a stray dash before every hour. `•` is what a
+     * person would have typed.
+     *
+     * `__` and `##` are still left alone: they have never been seen in a real
+     * reply, and a rewrite rule that fires on text nobody sent is a bug
+     * waiting for its first client.
      */
     private function asWhatsAppText(string $reply): string
     {
-        return preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '*$1*', $reply) ?? $reply;
+        $bolded = preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '*$1*', $reply) ?? $reply;
+
+        // Anchored to the start of a line so a dash inside a sentence — or a
+        // phone number, or a date range — is never touched.
+        return preg_replace('/^[ \t]*[-*][ \t]+(?=\S)/mu', '• ', $bolded) ?? $bolded;
     }
 
     /**
@@ -477,7 +499,10 @@ class Coordinator
             $appointment->service_name,
             $local->locale('es')->isoFormat('dddd D [de] MMMM'),
             $local->format('g:i A'),
-            $context->provider->public_name,
+            // The name the client knows her by, same as everywhere else the
+            // assistant speaks — this sentence is written by the server and
+            // goes straight onto her phone.
+            $context->provider->botDisplayName(),
         );
     }
 

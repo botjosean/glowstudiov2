@@ -42,7 +42,7 @@ class SystemPrompt
             $this->catalogue($provider),
             $this->schedule($provider),
             $this->location($provider),
-            $this->ownerNotes(),
+            $this->ownerNotes($provider),
             // Deliberately near the end: this changes once a day, so
             // everything above it stays a cacheable prefix all day.
             $this->today($provider),
@@ -111,9 +111,16 @@ class SystemPrompt
 
     private function rules(Provider $provider): string
     {
+        // The business identity comes from the provider row, not from a
+        // string in this file. It was hardcoded as "Glow Studio" until
+        // 2026-08-16, which is the single line that made this app not
+        // multi-tenant in the only way clients could hear.
+        $negocio = $provider->botBusinessName();
+        $profesional = $provider->botDisplayName();
+
         return <<<PROMPT
-        Eres el asistente de WhatsApp de Glow Studio, un salón de belleza en Atlanta (Georgia).
-        Atiendes en nombre de {$provider->public_name}.
+        Eres el asistente de WhatsApp de {$negocio}.
+        Atiendes en nombre de {$profesional}.
 
         CÓMO HABLAS
         - Cálida, cercana y profesional, como una recepcionista latina que conoce a sus clientas.
@@ -125,7 +132,7 @@ class SystemPrompt
 
         CÓMO RESERVAS
         - Cuando ella quiera reservar, ofrécele las dos formas en una sola frase: que se la agendes tú ahí mismo, o que elija ella con calma en su enlace ({$this->bookingUrl($provider)}), donde ve todos los servicios y los días libres. Ofrécelo una vez, sin insistir: si te dice que se la agendes tú, agéndasela y no vuelvas a mandarle el enlace.
-        - Si te dice que ya reservó por su cuenta (o que acaba de agendar en la página), NO le crees otra cita. Compruébalo con listar_mis_citas: si aparece, dale las gracias, dile que quedó pendiente de que {$provider->public_name} la confirme y que le avisan; si no aparece todavía, dile que a veces tarda un momento en verse y ofrécele revisarlo de nuevo o agendársela tú.
+        - Si te dice que ya reservó por su cuenta (o que acaba de agendar en la página), NO le crees otra cita. Compruébalo con listar_mis_citas: si aparece, dale las gracias, dile que quedó pendiente de que {$profesional} la confirme y que le avisan; si no aparece todavía, dile que a veces tarda un momento en verse y ofrécele revisarlo de nuevo o agendársela tú.
         - Los precios y duraciones son EXACTAMENTE los de la lista de abajo. No los cambies, ni los redondees, ni añadas servicios que no estén.
         - Para las horas libres usa siempre buscar_disponibilidad. Nunca ofrezcas una hora que no te haya devuelto esa herramienta.
         - Al ofrecer horas, dale tres o cuatro repartidas por el día, no la lista completa: un muro de veinte horas en WhatsApp no se lee. Si ninguna le sirve, ofrécele otras.
@@ -226,7 +233,7 @@ class SystemPrompt
         }
 
         $lines[] = 'Si te pide una hora más temprana que la apertura (por ejemplo 7:00 AM u 8:00 AM), '
-            ."no la agendes tú: dile que a veces se puede coordinándolo directamente con {$provider->public_name}, "
+            .'no la agendes tú: dile que a veces se puede coordinándolo directamente con '.$provider->botDisplayName().', '
             .'y usa solicitar_atencion_humana para que se lo confirmen. Nunca crees tú una cita fuera del horario.';
 
         $lines[] = 'Si te preguntan qué días u horas se atiende, responde con esto y nada más. '
@@ -318,7 +325,7 @@ class SystemPrompt
         if ($provider->home_service) {
             $zona = $provider->service_area !== null ? " en la zona de {$provider->service_area}" : '';
             $location .= "\nAlgunos servicios (los marcados en la lista) también se ofrecen a domicilio{$zona}, "
-                ."ÚNICAMENTE previa coordinación con {$provider->public_name}. Si te piden a domicilio: dilo así, "
+                .'ÚNICAMENTE previa coordinación con '.$provider->botDisplayName().'. Si te piden a domicilio: dilo así, '
                 .'usa solicitar_atencion_humana para que lo coordinen, y NUNCA crees tú esa cita — crear_cita '
                 .'reserva siempre en el salón. Los servicios sin esa marca no se hacen a domicilio; no lo negocies.';
         }
@@ -374,8 +381,23 @@ class SystemPrompt
         return implode("\n", $lines);
     }
 
-    private function ownerNotes(): ?string
+    /**
+     * The provider's own notes when she has them, falling back to the shared
+     * file otherwise.
+     *
+     * The column wins on purpose: one negocio.md shared by every professional
+     * was the other half of "not really multi-tenant". Null in the column
+     * keeps reading the file, so nothing moved for anybody the day this
+     * shipped.
+     */
+    private function ownerNotes(Provider $provider): ?string
     {
+        $own = trim((string) $provider->bot_notes);
+
+        if ($own !== '') {
+            return "INFORMACIÓN DEL NEGOCIO\n".$own;
+        }
+
         $paths = [
             storage_path('app/'.self::OWNER_NOTES),
             resource_path('assistant/'.self::OWNER_NOTES),

@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
     'payment_methods',
+    'bot_mode', 'bot_display_name', 'bot_business_name', 'bot_greeting', 'bot_greeting_returning',
+    'bot_intake', 'bot_offers_booking_link', 'bot_notes',
 ])]
 class Provider extends Model
 {
@@ -27,6 +29,28 @@ class Provider extends Model
     use HasFactory;
 
     public const MAX_GALLERY_PHOTOS = 6;
+
+    /**
+     * The assistant answers, quotes from the catalogue and books — what every
+     * provider has had since the assistant existed.
+     */
+    public const BOT_AGENT = 'agente';
+
+    /**
+     * The assistant says the message arrived, asks for a few things and hands
+     * the conversation to a person. No catalogue, no prices, no booking, and
+     * no model call at all.
+     */
+    public const BOT_RECEPTIONIST = 'recepcionista';
+
+    /**
+     * The business name used when a provider has not set her own.
+     *
+     * Here rather than in SystemPrompt because it is now a fallback for a
+     * column, not an identity: two salons on this app must be able to
+     * introduce themselves differently.
+     */
+    public const DEFAULT_BUSINESS_NAME = 'Glow Studio';
 
     /**
      * Get the attributes that should be cast.
@@ -46,7 +70,45 @@ class Provider extends Model
             'lunch_end_minute' => 'int',
             'buffer_minutes' => 'int',
             'payment_methods' => 'array',
+            'bot_offers_booking_link' => 'bool',
         ];
+    }
+
+    /**
+     * Whether this provider's WhatsApp answers as a receptionist rather than
+     * as a booking agent.
+     *
+     * Read in three places that must agree — the reply policy, the coordinator
+     * and the panel — so it is a method rather than a scattered string
+     * comparison.
+     */
+    public function botIsReceptionist(): bool
+    {
+        return $this->bot_mode === self::BOT_RECEPTIONIST;
+    }
+
+    /**
+     * The name the assistant introduces the business with.
+     */
+    public function botBusinessName(): string
+    {
+        $name = trim((string) $this->bot_business_name);
+
+        return $name !== '' ? $name : self::DEFAULT_BUSINESS_NAME;
+    }
+
+    /**
+     * What the assistant calls this professional when it writes to a client.
+     *
+     * Her profile name unless she has said otherwise — the profile can read
+     * "Patricia Moreno" while every client knows her as "Pati", and the name
+     * a client reads on WhatsApp should be the one she answers to.
+     */
+    public function botDisplayName(): string
+    {
+        $name = trim((string) $this->bot_display_name);
+
+        return $name !== '' ? $name : $this->public_name;
     }
 
     /**
@@ -95,6 +157,14 @@ class Provider extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
+    }
+
+    /**
+     * @return HasMany<Lead, $this>
+     */
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class);
     }
 
     /**

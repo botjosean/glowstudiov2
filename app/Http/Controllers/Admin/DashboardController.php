@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Lead;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Support\Format;
@@ -123,7 +124,38 @@ class DashboardController extends Controller
                 // language and 12h/24h preference (both client-only).
                 'startsAt' => $appointment->starts_at->toIso8601String(),
             ])->values()->all(),
+            // People who wrote on WhatsApp and are still waiting for a person.
+            // Only present for a receptionist: an agent books them itself, so a
+            // waiting list would be a list of nothing.
+            'leads' => $provider->botIsReceptionist() ? $this->waitingLeadsFor($provider) : [],
         ]);
+    }
+
+    /**
+     * The WhatsApp requests nobody has dealt with, oldest first.
+     *
+     * Oldest first on purpose, unlike every other list in this panel: this one
+     * is a queue of people waiting, and the one who has waited longest is the
+     * one about to give up.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function waitingLeadsFor(Provider $provider): array
+    {
+        return $provider->leads()->waiting()
+            ->orderBy('first_contact_at')
+            ->limit(50)
+            ->get()
+            ->map(fn (Lead $lead) => [
+                'id' => $lead->id,
+                'name' => $lead->name,
+                'phone' => Format::usPhone($lead->phone),
+                // Feeds the "Crear cita" prefill, same shape the agenda uses.
+                'phoneDigits' => $lead->phone,
+                'message' => $lead->message,
+                'firstContactAt' => $lead->first_contact_at->toIso8601String(),
+                'lastContactAt' => $lead->last_contact_at->toIso8601String(),
+            ])->values()->all();
     }
 
     public function servicios(Request $request): Response
@@ -297,8 +329,14 @@ class DashboardController extends Controller
 
     public function ajustes(Request $request): Response
     {
+        $support = (string) config('services.support.whatsapp');
+
         return Inertia::render('Admin/Ajustes', [
             'providerName' => $request->user()->provider->public_name,
+            // Where the help pill goes. Null until a support number is set, and
+            // the pill says so rather than opening nothing — a help centre is
+            // its own piece of work.
+            'supportUrl' => $support === '' ? null : 'https://wa.me/'.preg_replace('/\D/', '', $support),
         ]);
     }
 }

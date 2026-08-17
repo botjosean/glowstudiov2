@@ -41,6 +41,20 @@ return [
         // will answer you" — trying again right away is what produced two
         // wait messages in a row for a real client.
         'handoff_pause_minutes' => env('ASSISTANT_HANDOFF_PAUSE_MINUTES', 120),
+        // Receptionist mode only. How cold a conversation has to go before its
+        // two messages are offered again — without it a client who comes back
+        // months later is met with silence.
+        'receptionist_rearm_days' => env('ASSISTANT_RECEPTIONIST_REARM_DAYS', 7),
+        // How long a request may sit unanswered before the professional is
+        // told. The receptionist hands every conversation to a person, so a
+        // person forgetting is the failure this mode introduces.
+        'lead_alert_hours' => env('ASSISTANT_LEAD_ALERT_HOURS', 3),
+    ],
+
+    // Where the panel's help pill sends a professional who needs a person.
+    // Unset means the pill says help is coming instead of opening nothing.
+    'support' => [
+        'whatsapp' => env('SUPPORT_WHATSAPP'),
     ],
 
     'google' => [

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { Bell, ChevronDown, Clock, Plus, X } from '@lucide/vue';
+import { Bell, ChevronDown, Clock, MessageCircle, Plus, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Badge from '../../Components/ui/Badge.vue';
@@ -26,6 +26,10 @@ const props = defineProps({
     //   timeOff: [{ startsOn, endsOn, reason }] } — what the timeline shades.
     clients: { type: Array, default: () => [] },
     // [{ id, name, phone, phoneDigits }] — the create sheet's client picker.
+    leads: { type: Array, default: () => [] },
+    // [{ id, name, phone, phoneDigits, message, firstContactAt, lastContactAt }]
+    // — people who wrote on WhatsApp and are still waiting. Always empty while
+    // the assistant answers as an agent: it books them itself.
 });
 
 const { t } = useI18n();
@@ -233,27 +237,78 @@ watch(newClientOpen, (isOpen) => {
 // "Cita nueva" from a client card lands here with her name and phone in the
 // query string: the sheet opens already filled, and stays bound to her for
 // as long as those params live in the URL.
+// Refs rather than constants: the query string is one way to fill the sheet,
+// and a WhatsApp request is another — and that one happens without leaving
+// this page, so the values have to be able to change after setup.
 const urlParams = new URLSearchParams(window.location.search);
-const prefillName = urlParams.get('nombre') ?? '';
-const prefillPhone = urlParams.get('tel') ?? '';
+const prefillName = ref(urlParams.get('nombre') ?? '');
+const prefillPhone = ref(urlParams.get('tel') ?? '');
 
 onMounted(() => {
-    if (prefillName) createOpen.value = true;
+    if (prefillName.value) createOpen.value = true;
 });
 
 function openCreate() {
+    clearPrefill();
     createPreselect.value = '';
     clientsBefore.value = new Set(props.clients.map((client) => client.phoneDigits).filter(Boolean));
     createOpen.value = true;
+}
+
+// Cleared on every other way into the sheet, so a name that arrived from a
+// request (or from the query string) cannot follow her into the next, unrelated
+// appointment she creates.
+function clearPrefill() {
+    prefillName.value = '';
+    prefillPhone.value = '';
 }
 
 // A tap on a free quarter hour proposes that time in the create sheet. The
 // sheet still validates against the real availability endpoint, so a slot the
 // buffer already ate simply comes back unselected.
 function handleCreateAt(minute) {
+    clearPrefill();
     createPreselect.value = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
     clientsBefore.value = new Set(props.clients.map((client) => client.phoneDigits).filter(Boolean));
     createOpen.value = true;
+}
+
+// ---- WhatsApp requests -----------------------------------------------------
+
+// Booking her is what the request was waiting for, so the sheet opens with
+// what she already told the assistant. The request closes itself once the
+// appointment exists (server side, see Appointment::booted) — there is nothing
+// left to tick off here.
+function createFromLead(lead) {
+    prefillName.value = lead.name ?? '';
+    prefillPhone.value = lead.phoneDigits ?? '';
+    createPreselect.value = '';
+    clientsBefore.value = new Set(props.clients.map((client) => client.phoneDigits).filter(Boolean));
+    createOpen.value = true;
+}
+
+const leadProcessingId = ref(null);
+
+function markLead(lead, status) {
+    if (leadProcessingId.value) return;
+    leadProcessingId.value = lead.id;
+    router.patch(`/admin/solicitudes/${lead.id}`, { status }, {
+        preserveScroll: true,
+        onFinish: () => {
+            leadProcessingId.value = null;
+        },
+    });
+}
+
+// How long she has been waiting, in the coarsest unit that is still true —
+// "hace 3 h" is what decides whether to answer now, "hace 3 h 12 min" is not.
+function waitedSince(iso) {
+    const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+
+    if (minutes < 60) return t('admin.leadWaitedMinutes', { count: minutes });
+    if (minutes < 60 * 24) return t('admin.leadWaitedHours', { count: Math.floor(minutes / 60) });
+
+    return t('admin.leadWaitedDays', { count: Math.floor(minutes / (60 * 24)) });
 }
 
 // A phone was captured → offer to notify her by WhatsApp right away, same
@@ -432,10 +487,10 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                 >
                     <Bell :size="21" class="text-[var(--text-strong)]" />
                     <span
-                        v-if="counts.pending > 0"
+                        v-if="counts.pending + leads.length > 0"
                         class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d97706] px-1 text-[9px] font-bold text-white"
                     >
-                        {{ counts.pending }}
+                        {{ counts.pending + leads.length }}
                     </span>
                 </button>
                 <span class="h-8 w-px shrink-0 bg-[var(--surface-mute)]" />
@@ -519,6 +574,77 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
             </template>
 
             <template v-else>
+                <!-- People who wrote on WhatsApp and are still waiting for a
+                     person. Above the pending appointments on purpose: a
+                     pending appointment is already in the book, this is
+                     somebody who is not in it yet. -->
+                <template v-if="activeTab === 'pending' && leads.length > 0">
+                    <div class="flex items-center gap-1.5 px-1">
+                        <MessageCircle :size="14" class="text-[var(--text-mute)]" />
+                        <span class="text-[11px] font-bold uppercase tracking-wide text-[var(--text-mute)]">
+                            {{ $t('admin.leadsTitle') }} · {{ leads.length }}
+                        </span>
+                    </div>
+                    <div
+                        v-for="lead in leads"
+                        :key="`lead-${lead.id}`"
+                        class="rounded-2xl border border-[#d97706]/30 bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                    >
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="truncate text-[15px] font-bold text-[var(--text-strong)]">
+                                    {{ lead.name || lead.phone }}
+                                </div>
+                                <div v-if="lead.name" class="text-[13px] font-normal tabular-nums text-[var(--text-mute)]">
+                                    {{ lead.phone }}
+                                </div>
+                            </div>
+                            <span class="shrink-0 text-[11px] font-medium text-[var(--text-faint)]">
+                                {{ waitedSince(lead.firstContactAt) }}
+                            </span>
+                        </div>
+                        <p
+                            v-if="lead.message"
+                            class="mt-2 whitespace-pre-line rounded-xl bg-[var(--surface-mute)] px-3 py-2 text-[13px] font-normal text-[var(--text-mute)]"
+                        >{{ lead.message }}</p>
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                class="rounded-xl bg-[var(--btn-bg)] py-2.5 text-[13px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+                                @click="createFromLead(lead)"
+                            >
+                                {{ $t('admin.leadBook') }}
+                            </button>
+                            <a
+                                :href="`https://wa.me/1${lead.phoneDigits}`"
+                                target="_blank"
+                                rel="noopener"
+                                class="rounded-xl border border-[var(--border-strong)] py-2.5 text-center text-[13px] font-semibold text-[var(--text-strong)] hover:bg-[var(--surface-mute)]"
+                            >
+                                {{ $t('admin.leadReply') }}
+                            </a>
+                        </div>
+                        <div class="mt-2 flex justify-between">
+                            <button
+                                type="button"
+                                class="text-[12px] font-medium text-[var(--text-faint)] hover:text-[var(--text-mute)] disabled:opacity-50"
+                                :disabled="leadProcessingId === lead.id"
+                                @click="markLead(lead, 'atendido')"
+                            >
+                                {{ $t('admin.leadHandled') }}
+                            </button>
+                            <button
+                                type="button"
+                                class="text-[12px] font-medium text-[var(--text-faint)] hover:text-[var(--danger)] disabled:opacity-50"
+                                :disabled="leadProcessingId === lead.id"
+                                @click="markLead(lead, 'descartado')"
+                            >
+                                {{ $t('admin.leadDismiss') }}
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
                 <button
                     v-for="appt in filtered"
                     :key="appt.id"

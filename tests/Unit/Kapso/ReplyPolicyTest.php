@@ -119,6 +119,35 @@ class ReplyPolicyTest extends TestCase
     }
 
     /**
+     * A receptionist sends one short "got your message, she'll reply" and
+     * stops, which is welcome even from somebody's own mother — the owner
+     * asked for exactly this on 2026-08-16. The guard exists because an
+     * *agent* chats, so it is scoped to agent mode rather than deleted.
+     */
+    public function test_the_guard_does_not_apply_to_a_number_answering_as_a_receptionist(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'everyone',
+            'services.kapso.personal_phone_number_id' => self::NUMBER,
+        ]);
+
+        $this->assertTrue($this->policy()->allows('14045551234', self::NUMBER, 'Su Prima', guardPersonalContacts: false));
+    }
+
+    public function test_the_reason_stops_blaming_the_personal_guard_when_it_did_not_run(): void
+    {
+        config([
+            'services.kapso.reply_mode' => 'allowlist',
+            'services.kapso.personal_phone_number_id' => self::NUMBER,
+        ]);
+
+        $this->assertSame(
+            'not in the allowlist',
+            $this->policy()->refusalReason('14045551234', self::NUMBER, 'Su Prima', guardPersonalContacts: false),
+        );
+    }
+
+    /**
      * The guard is scoped to one number. Patricia's number must behave exactly
      * as before even though the config has a guarded number configured for
      * Vanessa's.

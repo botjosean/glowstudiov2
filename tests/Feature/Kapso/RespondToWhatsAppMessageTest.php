@@ -116,6 +116,29 @@ class RespondToWhatsAppMessageTest extends TestCase
     }
 
     /**
+     * The owner's decision of 2026-08-16: a receptionist's two short messages
+     * are welcome even on a number shared with personal use, because it does
+     * not chat — "un msj automático no molesta, antes molestaba porque
+     * chateaba de forma normal". So the guard follows the mode, not the
+     * number.
+     */
+    public function test_a_saved_contact_is_answered_when_that_number_is_a_receptionist(): void
+    {
+        $this->fake($this->text('irrelevante: no se consulta el modelo'));
+        $this->provider()->update(['bot_mode' => Provider::BOT_RECEPTIONIST]);
+
+        config(['services.kapso.personal_phone_number_id' => self::PHONE_NUMBER_ID]);
+
+        $this->runJob($this->job());
+
+        $this->assertSame(1, $this->sentMessages());
+
+        // And it did not spend a Kapso round trip resolving a contact name it
+        // no longer needs.
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/platform/v1/whatsapp/conversations/'));
+    }
+
+    /**
      * The other half of the guard: a stranger with no saved name is still a
      * potential new client and must be answered normally. Kapso's default
      * lookup response for someone it does not know carries no name at all.

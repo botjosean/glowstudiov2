@@ -17,16 +17,24 @@ namespace App\Support\Kapso;
  * (KAPSO_REPLY_MODE=everyone), which is the last switch to flip when the
  * assistant is genuinely ready.
  *
- * **One extra guard, only for a number still shared with personal use.** A
- * professional migrating a personal WhatsApp number into the business (see
+ * **One extra guard, only for a number still shared with personal use, and
+ * only while that number answers as an agent.** A professional migrating a
+ * personal WhatsApp number into the business (see
  * KAPSO_PERSONAL_PHONE_NUMBER_ID) still has her own contacts saved on that
  * phone. Kapso echoes the sender's saved contact name when one exists — but
  * *not* as null when there is none: it falls back to the bare phone number
  * as the "name" instead, confirmed against real conversations on Patricia's
  * number. So the signal is not "a name is present", it is "the name is not
- * just the sender's own digits". Temporary, needs no list to maintain, and
- * stops applying the day she gives the number to the business alone (unset
- * the id and this guard is inert).
+ * just the sender's own digits".
+ *
+ * The guard exists because an *agent* chats: it asks a professional's mother
+ * what service she wants and offers her times. A receptionist sends one short
+ * "got your message, she'll reply" and stops, which is why the owner asked on
+ * 2026-08-16 for that number to answer everybody — "un msj automático no
+ * molesta, antes molestaba porque chateaba de forma normal". So the guard is
+ * now scoped to agent mode rather than deleted: turning it off for a number
+ * that still chats would be the original complaint, not a fix. It disappears
+ * on its own once every provider is a receptionist.
  */
 final class ReplyPolicy
 {
@@ -36,10 +44,13 @@ final class ReplyPolicy
      * @param  string  $phoneNumberId  the business number the message arrived on
      * @param  ?string  $contactName  the sender's name as Kapso reports it —
      *                                present only when saved as a contact on that phone
+     * @param  bool  $guardPersonalContacts  false when this number answers as a
+     *                                       receptionist, whose two short messages are
+     *                                       welcome even on a shared personal line
      */
-    public function allows(?string $phoneDigits, string $phoneNumberId, ?string $contactName): bool
+    public function allows(?string $phoneDigits, string $phoneNumberId, ?string $contactName, bool $guardPersonalContacts = true): bool
     {
-        if ($this->isSavedContactOnAGuardedNumber($phoneDigits, $phoneNumberId, $contactName)) {
+        if ($guardPersonalContacts && $this->isSavedContactOnAGuardedNumber($phoneDigits, $phoneNumberId, $contactName)) {
             return false;
         }
 
@@ -61,8 +72,12 @@ final class ReplyPolicy
      * which is a decision for the owner, and needs the reason to be reachable
      * without reading anybody's conversations.
      */
-    public function refusalReason(?string $phoneDigits, string $phoneNumberId, ?string $contactName): string
+    public function refusalReason(?string $phoneDigits, string $phoneNumberId, ?string $contactName, bool $guardPersonalContacts = true): string
     {
+        if (! $guardPersonalContacts) {
+            return 'not in the allowlist';
+        }
+
         return $this->personalContactVerdict($phoneDigits, $phoneNumberId, $contactName) ?? 'not in the allowlist';
     }
 
