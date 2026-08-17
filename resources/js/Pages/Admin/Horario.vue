@@ -4,6 +4,7 @@ import { useForm, router } from '@inertiajs/vue3';
 import { Clock4, UtensilsCrossed, Timer, Info, CalendarOff, Plus, Trash2, OctagonX } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Select from '../../Components/ui/Select.vue';
+import TimeWheel from '../../Components/ui/TimeWheel.vue';
 import Input from '../../Components/ui/Input.vue';
 import { useFormat } from '../../composables/useFormat';
 import { usePreferences } from '../../composables/usePreferences';
@@ -74,13 +75,6 @@ function dayName(weekday) {
     return new Date(Date.UTC(2026, 7, 9 + weekday))
         .toLocaleDateString(locale.value === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', timeZone: 'UTC' });
 }
-
-const timeOptions = computed(() =>
-    Array.from({ length: 96 }, (_, i) => i * 15).map((minutes) => ({
-        value: minutes,
-        label: formatTime(Math.floor(minutes / 60), minutes % 60),
-    })),
-);
 
 const bufferOptions = computed(() =>
     Array.from({ length: 21 }, (_, i) => i * 15).map((minutes) => ({
@@ -236,9 +230,12 @@ function timeOffLabel(off) {
                                 />
                             </button>
                         </div>
+                        <!-- Wheels rather than two dropdowns of ninety-six
+                             options: the same choice, a completely different
+                             gesture. See TimeWheel. -->
                         <div v-if="day.isOpen" class="mt-2.5 grid grid-cols-2 gap-3">
-                            <Select v-model="day.workStart" :label="$t('admin.startTime')" :options="timeOptions" />
-                            <Select v-model="day.workEnd" :label="$t('admin.endTime')" :options="timeOptions" />
+                            <TimeWheel v-model="day.workStart" :label="$t('admin.startTime')" />
+                            <TimeWheel v-model="day.workEnd" :label="$t('admin.endTime')" />
                         </div>
                         <div v-else class="mt-1 text-[13px] font-normal text-[var(--text-faint)]">
                             {{ $t('admin.dayClosed') }}
@@ -281,8 +278,8 @@ function timeOffLabel(off) {
                     </button>
                 </div>
                 <div v-if="lunchEnabled" class="grid grid-cols-2 gap-3">
-                    <Select v-model="form.lunchStart" :label="$t('admin.startTime')" :options="timeOptions" />
-                    <Select v-model="form.lunchEnd" :label="$t('admin.endTime')" :options="timeOptions" />
+                    <TimeWheel v-model="form.lunchStart" :label="$t('admin.startTime')" />
+                    <TimeWheel v-model="form.lunchEnd" :label="$t('admin.endTime')" />
                 </div>
                 <div v-else class="text-[13px] font-normal text-[var(--text-faint)]">
                     {{ $t('admin.lunchOff') }}

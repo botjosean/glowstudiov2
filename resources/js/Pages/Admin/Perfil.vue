@@ -5,6 +5,7 @@ import { Ban, Camera, ChevronRight, Eye, MessageCircle, Plus, Settings, Share2 }
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
+import FloatingAction from '../../Components/ui/FloatingAction.vue';
 import QrShareSheet from '../../Components/admin/QrShareSheet.vue';
 
 /**
@@ -117,19 +118,27 @@ function confirmDeletePhoto() {
 
 <template>
     <AdminLayout :provider-name="providerName" :avatar-src="avatarPhoto">
-        <!-- Overlay doors: gear → business info (not a photo editor, hence gear not pencil), eye → preview, share pill; camera changes the cover. -->
+        <!-- Overlay doors, Booksy's: pencil → change the cover, eye → preview,
+             share pill. The pencil pointed at the business-info form until
+             2026-08-17, which is why it briefly became a gear — but its icon
+             had been dropped from the imports in the same change, so it
+             rendered as an empty black square on every professional's profile.
+             It now does what a pencil on a photo is expected to do. -->
         <div class="relative h-44 w-full overflow-hidden bg-[#131a2a]">
             <img v-if="bannerPhoto" :src="bannerPhoto" alt="" class="h-full w-full object-cover" />
             <input ref="bannerInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onBannerSelected" />
 
             <div class="absolute left-3 top-3">
-                <Link
-                    href="/admin/negocio"
-                    :aria-label="$t('admin.settingsBusinessInfo')"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-black/45 backdrop-blur-sm hover:bg-black/60"
+                <button
+                    type="button"
+                    :disabled="bannerForm.processing"
+                    :aria-label="$t('admin.changeCover')"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-black/45 backdrop-blur-sm hover:bg-black/60 disabled:opacity-60"
+                    @click="bannerInput?.click()"
                 >
-                    <Pencil :size="17" class="text-white" />
-                </Link>
+                    <span v-if="bannerForm.processing" class="text-[11px] font-bold text-white">{{ bannerForm.progress?.percentage ?? 0 }}%</span>
+                    <Pencil v-else :size="17" class="text-white" />
+                </button>
             </div>
             <div class="absolute right-3 top-3 flex items-center gap-2">
                 <a
@@ -152,15 +161,6 @@ function confirmDeletePhoto() {
                     <Share2 :size="14" />
                 </button>
             </div>
-            <button
-                type="button"
-                :disabled="bannerForm.processing"
-                class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[12px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                @click="bannerInput?.click()"
-            >
-                <Camera :size="12" />
-                {{ bannerForm.processing ? `${bannerForm.progress?.percentage ?? 0}%` : $t('admin.changeCover') }}
-            </button>
         </div>
 
         <!-- Avatar overlapping the cover, Booksy-style -->
@@ -318,13 +318,11 @@ function confirmDeletePhoto() {
 
         <QrShareSheet v-model="shareOpen" :url="publicUrl" :provider-name="publicName" />
 
-        <!-- Booksy's floating Configuración pill -->
-        <Link
-            href="/admin/ajustes"
-            class="fixed bottom-24 right-4 z-20 flex items-center gap-2 rounded-full bg-[#101010] py-3.5 pl-4 pr-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:bg-black sm:right-[calc(50vw-224px)]"
-        >
-            <Settings :size="18" class="text-[#e3c26d]" />
-            {{ $t('admin.settings') }}
-        </Link>
+        <!-- The same pill that says "Chat de ayuda" one screen further in. -->
+        <FloatingAction href="/admin/ajustes" :label="$t('admin.settings')">
+            <template #icon>
+                <Settings :size="18" class="text-[#e3c26d]" />
+            </template>
+        </FloatingAction>
     </AdminLayout>
 </template>

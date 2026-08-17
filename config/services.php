@@ -51,6 +51,12 @@ return [
         'lead_alert_hours' => env('ASSISTANT_LEAD_ALERT_HOURS', 3),
     ],
 
+    // Where the panel's help pill sends a professional who needs a person.
+    // Unset means the pill says help is coming instead of opening nothing.
+    'support' => [
+        'whatsapp' => env('SUPPORT_WHATSAPP'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

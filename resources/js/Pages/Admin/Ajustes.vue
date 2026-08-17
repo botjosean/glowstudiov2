@@ -19,15 +19,31 @@ import {
     FileText,
     ShieldCheck,
     House,
+    CircleQuestionMark,
 } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
+import FloatingAction from '../../Components/ui/FloatingAction.vue';
 import { useTheme } from '../../composables/useTheme';
 import { usePreferences } from '../../composables/usePreferences';
 
-defineProps({
+const props = defineProps({
     providerName: { type: String, default: 'Pati' },
+    // wa.me link for support, or null until one is configured.
+    supportUrl: { type: String, default: null },
 });
+
+const helpUnavailable = ref(false);
+
+function openHelpChat() {
+    if (props.supportUrl) {
+        window.open(props.supportUrl, '_blank', 'noopener');
+
+        return;
+    }
+
+    helpUnavailable.value = true;
+}
 
 const { t } = useI18n();
 const { theme, setTheme } = useTheme();
@@ -234,5 +250,22 @@ const searching = computed(() => search.value.trim() !== '');
                 {{ $t('admin.logOut') }}
             </button>
         </div>
+
+        <!-- Same pill as on Perfil, one step further in: there it offers
+             Configuración, here it offers help. A help centre is its own piece
+             of work, so for now this reaches a person on WhatsApp — and when
+             no support number is configured it says so instead of being a
+             button that opens nothing. -->
+        <FloatingAction :label="$t('admin.helpChat')" @click="openHelpChat">
+            <template #icon>
+                <CircleQuestionMark :size="18" class="text-[#e3c26d]" />
+            </template>
+        </FloatingAction>
+        <p
+            v-if="helpUnavailable"
+            class="fixed bottom-40 right-4 z-20 max-w-[220px] rounded-xl bg-[#101010] px-3 py-2 text-[12px] font-medium text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] sm:right-[calc(50vw-224px)]"
+        >
+            {{ $t('admin.helpChatSoon') }}
+        </p>
     </AdminLayout>
 </template>

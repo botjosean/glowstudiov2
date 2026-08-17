@@ -329,8 +329,14 @@ class DashboardController extends Controller
 
     public function ajustes(Request $request): Response
     {
+        $support = (string) config('services.support.whatsapp');
+
         return Inertia::render('Admin/Ajustes', [
             'providerName' => $request->user()->provider->public_name,
+            // Where the help pill goes. Null until a support number is set, and
+            // the pill says so rather than opening nothing — a help centre is
+            // its own piece of work.
+            'supportUrl' => $support === '' ? null : 'https://wa.me/'.preg_replace('/\D/', '', $support),
         ]);
     }
 }
