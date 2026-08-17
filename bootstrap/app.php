@@ -5,6 +5,7 @@ use App\Console\Commands\CloseFinishedAppointments;
 use App\Console\Commands\FollowUpWaitingLeads;
 use App\Console\Commands\PruneWhatsAppClaims;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RedirectToCanonicalHost;
 use App\Http\Middleware\SetLocaleFromCookie;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -23,7 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(
-            prepend: [SetLocaleFromCookie::class],
+            // Antes que nada: si llega por el dominio viejo, se redirige sin
+            // gastar sesión ni consultas. Inerte hasta que APP_URL cambie.
+            prepend: [RedirectToCanonicalHost::class, SetLocaleFromCookie::class],
             append: [HandleInertiaRequests::class],
         );
 
