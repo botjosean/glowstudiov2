@@ -9,6 +9,12 @@ import InstallPrompt from '../Components/ui/InstallPrompt.vue';
 import SplashScreen from '../Components/ui/SplashScreen.vue';
 import GlowMark from '../Components/ui/GlowMark.vue';
 
+// El perfil público de una profesional trae su propio saludo con el nombre de
+// ella, así que ahí la marca no se anuncia otra vez.
+defineProps({
+    noSplash: { type: Boolean, default: false },
+});
+
 const menuOpen = ref(false);
 const { theme, toggleTheme } = useTheme();
 const { locale, setLanguage } = usePreferences();
@@ -23,7 +29,7 @@ function toggleLanguage() {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--surface)]">
-        <SplashScreen />
+        <SplashScreen :disabled="noSplash" />
         <InstallPrompt />
         <FlashMessage />
 

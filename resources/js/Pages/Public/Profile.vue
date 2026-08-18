@@ -43,7 +43,7 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
 </script>
 
 <template>
-    <PublicLayout>
+    <PublicLayout no-splash>
         <Transition
             leave-active-class="transition-opacity duration-500"
             leave-to-class="opacity-0"

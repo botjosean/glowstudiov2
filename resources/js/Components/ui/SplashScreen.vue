@@ -15,40 +15,56 @@ import { onMounted, onUnmounted, ref } from 'vue';
  *
  * **Cuándo se ve**, que importa tanto como cómo se ve:
  *
- * - En la app instalada, cada vez que se abre. Es el momento para el que
- *   existe y es lo que el dueño pidió cuidar por encima de todo.
- * - En el navegador, sólo del lado del panel, y una vez por sesión: tres
- *   segundos son un regalo la primera vez y un peaje a la tercera.
- * - **Nunca en la página pública de una profesional.** Ahí llega una clienta
- *   desde un enlace de WhatsApp queriendo ver a Pati, no la marca; y esa
- *   página ya la saluda con el nombre de la profesional. Dos pantallas de
- *   bienvenida seguidas son cuatro segundos antes de lo que vino a hacer.
+ * - **Siempre que se abre la app**, instalada o en el navegador, y también al
+ *   recargar. La primera versión sólo lo mostraba una vez por sesión y sólo en
+ *   el panel: el dueño lo pidió cambiado el 2026-08-17 porque el logo
+ *   desaparecía y no volvía.
+ * - **No al cambiar de pestaña dentro de la app.** Las capas se vuelven a
+ *   montar en cada navegación de Inertia, así que sin freno la animación se
+ *   repetiría en cada toque de la barra inferior.
+ * - **No en la página pública de una profesional** (`disabled`). Ahí llega una
+ *   clienta desde un enlace de WhatsApp queriendo ver a Pati, y esa página ya
+ *   la saluda con su nombre: dos bienvenidas seguidas son cuatro segundos
+ *   antes de lo que vino a hacer.
  * - Nunca para quien pidió menos movimiento (prefers-reduced-motion).
  */
+const props = defineProps({
+    disabled: { type: Boolean, default: false },
+});
 const DURATION = 3200;
 
 const visible = ref(false);
 const leaving = ref(false);
-const SEEN = 'glow.splashSeen';
+
+/**
+ * Ya se vio en ESTA carga de la página.
+ *
+ * Una variable de módulo, no sessionStorage, y la diferencia es justo el fallo
+ * que tenía: sessionStorage sobrevive a cerrar el navegador —Chrome restaura la
+ * pestaña con su almacenamiento intacto— así que el logo aparecía una vez y no
+ * volvía nunca. Esto vive lo que vive el bundle: se borra en cualquier carga
+ * completa, y no en una navegación interna.
+ *
+ * Resultado: sale al abrir la app y al recargar, y NO sale al cambiar de
+ * pestaña dentro de la app — donde las capas se vuelven a montar y si no
+ * repetiría la animación en cada toque de la barra inferior.
+ */
+let shownThisLoad = false;
 
 let timers = [];
 
 onMounted(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-    const quiet = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const panel = /^\/(admin|iniciar-sesion|crear-cuenta)/.test(window.location.pathname);
-
-    if (quiet) {
+    // Quien pidió menos movimiento no quiere tres segundos de animación cada
+    // vez que abre.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         return;
     }
 
-    // Fuera de la app instalada sólo se ve en el panel, y una vez por sesión.
-    if (!standalone && (!panel || sessionStorage.getItem(SEEN) === '1')) {
+    if (shownThisLoad || props.disabled) {
         return;
     }
 
-    sessionStorage.setItem(SEEN, '1');
+    shownThisLoad = true;
     visible.value = true;
     // El fondo del documento no puede desplazarse debajo de la pantalla.
     document.documentElement.style.overflow = 'hidden';
