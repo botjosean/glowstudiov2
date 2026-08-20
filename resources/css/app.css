@@ -17,8 +17,16 @@
     --text-strong: #111827;
     --text-heading: #1f2937;
     --text-body: #4b5563;
-    --text-mute: #6b7280;
-    --text-faint: #9ca3af;
+    /* The bottom of the light ramp is measured, not eyeballed. The old pair
+       (#6b7280 / #9ca3af) put faint at 2.31:1 on --surface-mute — under even
+       the 3:1 floor for large text, on a token used 110 times, including the
+       price footnote a client reads on the public booking page. Darkening
+       faint alone collides with mute, so both moved: five levels only fit in
+       this range once the bottom two are spread. Every level now clears
+       4.5:1 on --surface AND on --surface-mute, the harsher of the two.
+       ColorContrastTest holds the line. */
+    --text-mute: #5b6270;
+    --text-faint: #69707d;
     --btn-bg: #111827;
     --btn-hover: #000000;
     --btn-green: #059669;
@@ -62,7 +70,8 @@
     --text-heading: #e2e8f0;
     --text-body: #b6c2d4;
     --text-mute: #8b99ad;
-    --text-faint: #64748b;
+    /* Dark faint was 3.28:1 on --surface-mute; lightened to clear 4.5:1 there. */
+    --text-faint: #7e8c9f;
     --btn-bg: #2e3a52;
     --btn-hover: #3b4a68;
     --btn-green: #059669;

@@ -203,7 +203,7 @@ function submitBooking() {
                     </div>
                     <div class="text-right">
                         <span class="block text-base font-bold text-[var(--text-strong)]">${{ service.price }}</span>
-                        <span class="block text-[9px] font-bold text-[var(--text-faint)]">{{ $t('booking.payInStore') }}</span>
+                        <span class="block text-[11px] font-semibold text-[var(--text-mute)]">{{ $t('booking.payInStore') }}</span>
                     </div>
                 </div>
 
@@ -232,7 +232,7 @@ function submitBooking() {
                         <span
                             v-for="wd in weekdayLabels"
                             :key="wd"
-                            class="text-center text-[9px] font-bold uppercase text-[var(--text-faint)]"
+                            class="text-center text-[11px] font-semibold uppercase text-[var(--text-mute)]"
                             >{{ wd }}</span
                         >
                     </div>
@@ -347,7 +347,7 @@ function submitBooking() {
                     </div>
                     <div class="text-right">
                         <span class="block text-base font-bold text-[var(--text-strong)]">${{ service.price }}</span>
-                        <span class="block text-[9px] font-bold text-[var(--text-faint)]">{{ $t('booking.payInStore') }}</span>
+                        <span class="block text-[11px] font-semibold text-[var(--text-mute)]">{{ $t('booking.payInStore') }}</span>
                     </div>
                 </div>
 
