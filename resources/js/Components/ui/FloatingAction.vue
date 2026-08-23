@@ -28,7 +28,7 @@ defineEmits(['click']);
         :is="href ? Link : 'button'"
         :href="href ?? undefined"
         :type="href ? undefined : 'button'"
-        class="fixed bottom-24 right-4 z-20 flex items-center gap-2 rounded-full bg-[#101010] py-3.5 pl-4 pr-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:bg-black sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
+        class="fixed bottom-24 right-4 z-20 flex items-center gap-2 rounded-full bg-[#101010] py-3.5 pl-4 pr-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:bg-black sm:right-[calc(50vw-224px)] min-[700px]:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
         @click="$emit('click')"
     >
         <slot name="icon" />

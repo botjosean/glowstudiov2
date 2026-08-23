@@ -171,7 +171,7 @@ function submitBooking() {
 
 <template>
     <div class="flex min-h-screen items-end justify-center bg-[var(--backdrop)] sm:items-center">
-        <div class="w-full max-w-[480px] rounded-t-3xl bg-[var(--surface)] p-6 shadow-[0_-10px_40px_rgba(15,23,42,0.2)] sm:rounded-3xl md:max-w-[600px]">
+        <div class="w-full max-w-[480px] rounded-t-3xl bg-[var(--surface)] p-6 shadow-[0_-10px_40px_rgba(15,23,42,0.2)] sm:rounded-3xl min-[700px]:max-w-[600px]">
             <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--border-strong)]" />
 
             <!-- Step: date & time -->

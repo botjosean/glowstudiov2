@@ -73,7 +73,7 @@ function dismiss() {
             v-if="visible"
             :role="variants[variant].role"
             aria-live="polite"
-            class="fixed left-1/2 top-3 z-[60] w-[calc(100%-2rem)] max-w-[448px] -translate-x-1/2 md:max-w-[560px]"
+            class="fixed left-1/2 top-3 z-[60] w-[calc(100%-2rem)] max-w-[448px] -translate-x-1/2 min-[700px]:max-w-[560px]"
         >
             <div
                 class="flex items-start gap-2.5 rounded-2xl border p-4 text-[13px] font-normal leading-relaxed shadow-[0_12px_32px_rgba(15,23,42,0.18)]"

@@ -89,7 +89,7 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                 </p>
             </div>
 
-            <div class="fixed left-1/2 top-[220px] z-20 w-full max-w-[480px] -translate-x-1/2 px-4 md:max-w-[820px] lg:max-w-[1024px]">
+            <div class="fixed left-1/2 top-[220px] z-20 w-full max-w-[480px] -translate-x-1/2 px-4 min-[700px]:max-w-[820px] lg:max-w-[1024px]">
                 <div class="flex flex-col items-end gap-3">
                     <a
                         v-if="provider.social?.whatsapp"

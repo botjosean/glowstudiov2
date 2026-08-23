@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
                     <div
                         role="dialog"
                         aria-modal="true"
-                        class="max-h-[92%] w-full max-w-[480px] overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--surface)] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(15,23,42,0.2)] md:max-w-[600px]"
+                        class="max-h-[92%] w-full max-w-[480px] overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--surface)] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(15,23,42,0.2)] min-[700px]:max-w-[600px]"
                     >
                         <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--border-strong)]" />
                         <slot />

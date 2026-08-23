@@ -263,7 +263,7 @@ const searching = computed(() => search.value.trim() !== '');
         </FloatingAction>
         <p
             v-if="helpUnavailable"
-            class="fixed bottom-40 right-4 z-20 max-w-[220px] rounded-xl bg-[#101010] px-3 py-2 text-[12px] font-medium text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
+            class="fixed bottom-40 right-4 z-20 max-w-[220px] rounded-xl bg-[#101010] px-3 py-2 text-[12px] font-medium text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] sm:right-[calc(50vw-224px)] min-[700px]:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
         >
             {{ $t('admin.helpChatSoon') }}
         </p>

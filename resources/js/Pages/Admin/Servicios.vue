@@ -228,7 +228,7 @@ function activateFromSheet() {
             v-if="services.length > 0"
             type="button"
             :aria-label="$t('admin.servicesEmptyCta')"
-            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
+            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)] min-[700px]:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
             @click="openCreate"
         >
             <Plus :size="22" class="text-white" />

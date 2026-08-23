@@ -602,13 +602,13 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                 />
             </template>
 
-            <div v-else class="flex flex-col gap-3 md:block md:columns-2 md:gap-x-4">
+            <div v-else class="flex flex-col gap-3 min-[700px]:block min-[700px]:columns-2 min-[700px]:gap-x-4">
                 <!-- People who wrote on WhatsApp and are still waiting for a
                      person. Above the pending appointments on purpose: a
                      pending appointment is already in the book, this is
                      somebody who is not in it yet. -->
                 <template v-if="activeTab === 'pending' && leads.length > 0">
-                    <div class="flex items-center gap-1.5 px-1 md:break-inside-avoid">
+                    <div class="flex items-center gap-1.5 px-1 min-[700px]:break-inside-avoid">
                         <MessageCircle :size="14" class="text-[var(--text-mute)]" />
                         <span class="text-[11px] font-bold uppercase tracking-wide text-[var(--text-mute)]">
                             {{ $t('admin.leadsTitle') }} · {{ leads.length }}
@@ -617,7 +617,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                     <div
                         v-for="lead in leads"
                         :key="`lead-${lead.id}`"
-                        class="rounded-2xl border border-[#d97706]/30 bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] md:mb-3 md:break-inside-avoid"
+                        class="rounded-2xl border border-[#d97706]/30 bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] min-[700px]:mb-3 min-[700px]:break-inside-avoid"
                     >
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -678,7 +678,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                     v-for="appt in filtered"
                     :key="appt.id"
                     type="button"
-                    class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[var(--border-strong)] md:mb-3 md:break-inside-avoid"
+                    class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[var(--border-strong)] min-[700px]:mb-3 min-[700px]:break-inside-avoid"
                     @click="openDetail(appt)"
                 >
                     <div class="flex items-start justify-between">
@@ -690,10 +690,10 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                         {{ appt.dateLabel }} · {{ appt.duration }} · ${{ appt.price }}
                     </div>
                 </button>
-                <p v-if="filtered.length === 0" class="py-6 text-center text-sm font-medium text-[var(--text-mute)]">
+                <p v-if="filtered.length === 0" class="py-6 text-center text-sm font-medium text-[var(--text-mute)] min-[700px]:[column-span:all]">
                     {{ $t('admin.noAppointments') }}
                 </p>
-                <p v-else class="mt-1 text-center text-[12px] font-normal text-[var(--text-faint)]">
+                <p v-else class="mt-1 text-center text-[12px] font-normal text-[var(--text-faint)] min-[700px]:[column-span:all]">
                     {{ $t('admin.tapForDetail') }}
                 </p>
             </div>
@@ -717,7 +717,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
         />
         <div
             v-if="speedDialOpen"
-            class="fixed bottom-40 right-4 z-30 flex flex-col items-end gap-3 sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
+            class="fixed bottom-40 right-4 z-30 flex flex-col items-end gap-3 sm:right-[calc(50vw-224px)] min-[700px]:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
         >
             <button
                 type="button"
@@ -747,7 +747,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
             v-if="activeTab === 'agenda' && services.length > 0"
             type="button"
             :aria-label="$t('admin.addAppointment')"
-            class="fixed bottom-24 right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] transition-transform hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
+            class="fixed bottom-24 right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] transition-transform hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)] min-[700px]:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
             :class="speedDialOpen && 'rotate-90'"
             @click="speedDialOpen = !speedDialOpen"
         >
