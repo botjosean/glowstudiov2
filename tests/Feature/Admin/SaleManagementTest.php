@@ -89,6 +89,63 @@ class SaleManagementTest extends TestCase
         $this->assertSame('Ana Sosa', $sale->client_name);
     }
 
+    public function test_a_sale_can_be_filed_under_a_name_that_is_not_in_the_book(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientId' => null,
+            'clientName' => '  Vecina de Ana  ',
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasNoErrors();
+
+        $sale = $provider->sales()->sole();
+        $this->assertNull($sale->client_id);
+        $this->assertSame('Vecina de Ana', $sale->client_name);
+    }
+
+    public function test_a_picked_client_wins_over_a_typed_name(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $client = Client::factory()->for($provider)->create(['name' => 'Ana Sosa']);
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientId' => $client->id,
+            'clientName' => 'Otro nombre',
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasNoErrors();
+
+        $sale = $provider->sales()->sole();
+        $this->assertSame($client->id, $sale->client_id);
+        $this->assertSame('Ana Sosa', $sale->client_name);
+    }
+
+    public function test_a_blank_typed_name_records_as_nobody(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientName' => '   ',
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull($provider->sales()->sole()->client_name);
+    }
+
+    public function test_a_typed_name_cannot_overflow_the_ledger_column(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientName' => str_repeat('a', 121),
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasErrors('clientName');
+    }
+
     public function test_a_foreign_client_id_records_as_nobody(): void
     {
         $provider = Provider::factory()->published()->create();

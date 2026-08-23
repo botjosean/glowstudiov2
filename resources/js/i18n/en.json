@@ -349,6 +349,8 @@
         "saleMethod": "Payment method",
         "saleClient": "Client (optional)",
         "saleClientNone": "No client",
+        "saleClientOther": "Someone else",
+        "saleClientOtherName": "Their name",
         "saleCreated": "Sale recorded.",
         "saleDeleted": "Sale deleted.",
         "saleDeleteTitle": "Delete this sale?",

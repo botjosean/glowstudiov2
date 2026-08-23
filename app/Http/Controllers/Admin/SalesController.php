@@ -85,6 +85,9 @@ class SalesController extends Controller
 
         $validated = $request->validate([
             'clientId' => ['nullable', 'integer'],
+            // The walk-in who is not a card yet: a name for the ledger, not a
+            // client. Only read when no client from the book was picked.
+            'clientName' => ['nullable', 'string', 'max:120'],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:99999'],
             'tip' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             // Only what she actually accepts: the register never offers a
@@ -98,9 +101,13 @@ class SalesController extends Controller
             ? $provider->clients()->whereKey($validated['clientId'])->first()
             : null;
 
+        // A card's name always wins over a typed one; the typed name only
+        // stands in when the sale belongs to nobody in the book.
+        $typedName = trim((string) ($validated['clientName'] ?? ''));
+
         $provider->sales()->create([
             'client_id' => $client?->id,
-            'client_name' => $client?->name,
+            'client_name' => $client?->name ?? ($typedName !== '' ? $typedName : null),
             'amount' => round((float) $validated['amount'], 2),
             'tip' => round((float) ($validated['tip'] ?? 0), 2),
             'payment_method' => $validated['paymentMethod'],

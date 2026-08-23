@@ -28,8 +28,16 @@ const open = defineModel({ type: Boolean, default: false });
 const { t } = useI18n();
 const haptics = useHaptics();
 
+/**
+ * The select's escape hatch: the walk-in nobody added to the book yet. Picking
+ * it opens a name field and the sale is filed under that name with no link to
+ * a card — the ledger snapshots names anyway, so nothing is lost.
+ */
+const OTHER_CLIENT = 'other';
+
 const form = useForm({
     clientId: null,
+    clientName: '',
     amount: '',
     tip: 0,
     paymentMethod: null,
@@ -72,20 +80,29 @@ const total = computed(() => Math.round((amountNumber.value + tipNumber.value) *
 const clientOptions = computed(() => [
     { value: null, label: t('admin.saleClientNone') },
     ...props.clients.map((client) => ({ value: client.id, label: client.name })),
+    { value: OTHER_CLIENT, label: t('admin.saleClientOther') },
 ]);
+
+const isOtherClient = computed(() => form.clientId === OTHER_CLIENT);
 
 const methodKey = {
     cash: 'admin.pmCash', card: 'admin.pmCard', zelle: 'admin.pmZelle', cashapp: 'admin.pmCashapp',
     venmo: 'admin.pmVenmo', paypal: 'admin.pmPaypal', check: 'admin.pmCheck', other: 'admin.pmOther',
 };
 
-const incomplete = computed(() => amountNumber.value <= 0 || !form.paymentMethod);
+// "Otra persona" without a name is just "Sin clienta" with extra steps, so the
+// button waits for it.
+const incomplete = computed(() => amountNumber.value <= 0
+    || !form.paymentMethod
+    || (isOtherClient.value && form.clientName.trim() === ''));
 
 function submit() {
     if (incomplete.value || form.processing) return;
 
     form.transform((data) => ({
         ...data,
+        clientId: isOtherClient.value ? null : data.clientId,
+        clientName: isOtherClient.value ? data.clientName.trim() : '',
         amount: amountNumber.value,
         tip: tipNumber.value,
     })).post('/admin/ventas', {
@@ -122,6 +139,16 @@ function submit() {
             :label="$t('admin.saleClient')"
             :options="clientOptions"
             :error="form.errors.clientId"
+        />
+
+        <OutlinedInput
+            v-if="isOtherClient"
+            id="sale-client-name"
+            v-model="form.clientName"
+            class="mb-5"
+            :label="$t('admin.saleClientOtherName')"
+            :error="form.errors.clientName"
+            clearable
         />
 
         <OutlinedInput

@@ -349,6 +349,8 @@
         "saleMethod": "Método de pago",
         "saleClient": "Clienta (opcional)",
         "saleClientNone": "Sin clienta",
+        "saleClientOther": "Otra persona",
+        "saleClientOtherName": "Nombre de la persona",
         "saleCreated": "Venta registrada.",
         "saleDeleted": "Venta borrada.",
         "saleDeleteTitle": "¿Borrar la venta?",
