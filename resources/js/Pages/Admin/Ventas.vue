@@ -168,16 +168,16 @@ function confirmDelete() {
             <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.salesEmptyHint') }}</p>
         </div>
 
-        <div v-else class="flex flex-col px-4 pb-4">
+        <div v-else class="flex flex-col px-4 pb-4 md:block md:columns-2 md:gap-x-6">
             <template v-for="group in groups" :key="group.key">
-                <div class="flex items-baseline justify-between px-1 pb-1 pt-5">
+                <div class="flex items-baseline justify-between px-1 pb-1 pt-5 md:break-inside-avoid">
                     <span class="text-[13px] font-semibold capitalize text-[var(--text-mute)]">{{ group.label }}</span>
                     <span class="text-[13px] font-semibold tabular-nums text-[var(--text-mute)]">${{ group.total.toFixed(2) }}</span>
                 </div>
                 <div
                     v-for="sale in group.sales"
                     :key="sale.id"
-                    class="flex items-center gap-3 border-b border-[var(--surface-mute)] px-1 py-3 last:border-b-0"
+                    class="flex items-center gap-3 border-b border-[var(--surface-mute)] px-1 py-3 last:border-b-0 md:break-inside-avoid"
                 >
                     <div class="min-w-0 flex-1">
                         <div class="truncate text-[15px] font-semibold text-[var(--text-strong)]">
@@ -205,7 +205,7 @@ function confirmDelete() {
         <button
             type="button"
             :aria-label="$t('admin.registerSale')"
-            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)]"
+            class="fixed bottom-24 right-4 z-20 flex h-13 w-13 items-center justify-center rounded-full bg-[var(--btn-bg)] shadow-[0_8px_20px_rgba(0,0,0,0.25)] hover:bg-[var(--btn-hover)] sm:right-[calc(50vw-224px)] md:right-[calc(50vw-394px)] lg:right-[calc(50vw-496px)]"
             @click="registerOpen = true"
         >
             <Plus :size="22" class="text-white" />

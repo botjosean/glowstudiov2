@@ -28,7 +28,7 @@ function toggleLanguage() {
 </script>
 
 <template>
-    <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--surface)]">
+    <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--surface)] md:max-w-[820px] lg:max-w-[1024px]">
         <SplashScreen :disabled="noSplash" />
         <InstallPrompt />
         <FlashMessage />

@@ -56,7 +56,7 @@ function isActive(href) {
 </script>
 
 <template>
-    <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)]">
+    <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)] md:max-w-[820px] lg:max-w-[1024px]">
         <SplashScreen />
         <InstallPrompt />
         <FlashMessage />

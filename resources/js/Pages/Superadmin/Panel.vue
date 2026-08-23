@@ -61,7 +61,7 @@ const statusKey = {
 </script>
 
 <template>
-    <div class="mx-auto flex min-h-screen w-full max-w-[560px] flex-col bg-[var(--bg-canvas)]">
+    <div class="mx-auto flex min-h-screen w-full max-w-[560px] flex-col bg-[var(--bg-canvas)] md:max-w-[820px] lg:max-w-[1024px]">
         <FlashMessage />
 
         <header class="flex items-center justify-between border-b border-[var(--surface-mute)] bg-[var(--surface)] px-5 py-3">
