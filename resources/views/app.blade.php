@@ -45,7 +45,11 @@
              aviso dejó de salir y el ícono guardado era solo un acceso directo
              del navegador. Registrado después de load para no competir con el
              primer render, y sin romper nada si el navegador no lo soporta. --}}
-        <script>
+        {{-- El nonce es lo que le deja a ESTE script pasar la CSP sin tener
+             que abrirle la puerta a todo script inline. Se comprueba `bound`
+             porque una vista puede renderizarse fuera del ciclo web (una
+             prueba, un comando) y ahí el middleware no ha corrido. --}}
+        <script @if (app()->bound('csp-nonce')) nonce="{{ app('csp-nonce') }}" @endif>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function () {
                     navigator.serviceWorker.register('/sw.js').catch(function () {});

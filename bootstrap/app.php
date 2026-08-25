@@ -4,6 +4,7 @@ use App\Console\Commands\AlertWaitingLeads;
 use App\Console\Commands\CloseFinishedAppointments;
 use App\Console\Commands\FollowUpWaitingLeads;
 use App\Console\Commands\PruneWhatsAppClaims;
+use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectToCanonicalHost;
 use App\Http\Middleware\SetLocaleFromCookie;
@@ -26,7 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(
             // Antes que nada: si llega por el dominio viejo, se redirige sin
             // gastar sesión ni consultas. Inerte hasta que APP_URL cambie.
-            prepend: [RedirectToCanonicalHost::class, SetLocaleFromCookie::class],
+            // AddSecurityHeaders va de PRIMERO por dos razones: genera el
+            // nonce antes de que nada renderice, y así hasta un 301 sale con
+            // sus cabeceras puestas.
+            prepend: [AddSecurityHeaders::class, RedirectToCanonicalHost::class, SetLocaleFromCookie::class],
             append: [HandleInertiaRequests::class],
         );
 
