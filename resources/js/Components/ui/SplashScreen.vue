@@ -21,13 +21,14 @@ import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
  *
  * **Cuándo se ve**, que importa tanto como cómo se ve:
  *
- * - **Siempre que se abre la app**, instalada o en el navegador, y también al
- *   recargar. La primera versión sólo lo mostraba una vez por sesión y sólo en
- *   el panel: el dueño lo pidió cambiado el 2026-08-17 porque el logo
- *   desaparecía y no volvía.
- * - **No al cambiar de pestaña dentro de la app.** Las capas se vuelven a
- *   montar en cada navegación de Inertia, así que sin freno la animación se
- *   repetiría en cada toque de la barra inferior.
+ * - **Siempre que se abre la app**, instalada o en el navegador, al recargar,
+ *   y **también al cambiar de pestaña dentro de la app** — como en Booksy.
+ *   La primera versión sólo lo mostraba una vez por sesión: el dueño lo pidió
+ *   cambiado el 2026-08-17 porque el logo desaparecía y no volvía, y de nuevo
+ *   el 2026-08-24 porque seguía sin salir al pasar de pestañas. Las capas se
+ *   vuelven a montar en cada navegación de Inertia — antes había un freno a
+ *   propósito para no repetirlo ahí; ahora no hay freno, es justo lo que se
+ *   pidió.
  * - **No en la página pública de una profesional** (`disabled`). Ahí llega una
  *   clienta desde un enlace de WhatsApp queriendo ver a Pati, y esa página ya
  *   la saluda con su nombre: dos bienvenidas seguidas son cuatro segundos
@@ -42,21 +43,6 @@ const DURATION = 3200;
 const visible = ref(false);
 const leaving = ref(false);
 
-/**
- * Ya se vio en ESTA carga de la página.
- *
- * Una variable de módulo, no sessionStorage, y la diferencia es justo el fallo
- * que tenía: sessionStorage sobrevive a cerrar el navegador —Chrome restaura la
- * pestaña con su almacenamiento intacto— así que el logo aparecía una vez y no
- * volvía nunca. Esto vive lo que vive el bundle: se borra en cualquier carga
- * completa, y no en una navegación interna.
- *
- * Resultado: sale al abrir la app y al recargar, y NO sale al cambiar de
- * pestaña dentro de la app — donde las capas se vuelven a montar y si no
- * repetiría la animación en cada toque de la barra inferior.
- */
-let shownThisLoad = false;
-
 let timers = [];
 
 onMounted(() => {
@@ -66,11 +52,10 @@ onMounted(() => {
         return;
     }
 
-    if (shownThisLoad || props.disabled) {
+    if (props.disabled) {
         return;
     }
 
-    shownThisLoad = true;
     visible.value = true;
     // El fondo del documento no puede desplazarse debajo de la pantalla.
     document.documentElement.style.overflow = 'hidden';
