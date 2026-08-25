@@ -442,7 +442,12 @@
         "footerCta": "Citas rápidas con",
         "openMap": "Abrir mapa",
         "homeAvailable": "a domicilio disponible",
-        "reserve": "Reservar"
+        "reserve": "Reservar",
+        "nextToday": "Hoy {time}",
+        "nextTomorrow": "Mañana {time}",
+        "nextOn": "{day} · {time}",
+        "usualTitle": "Lo de siempre",
+        "usualCta": "Repetir"
     },
     "common": {
         "cancel": "Cancelar",

@@ -1,7 +1,9 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { MapPin, ChevronRight, X } from '@lucide/vue';
+import { MapPin, ChevronRight, X, RotateCcw } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
+import { useFormat } from '../../composables/useFormat';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import GlowMark from '../../Components/ui/GlowMark.vue';
 import { serviceIcons } from '../../icons';
@@ -11,11 +13,64 @@ const props = defineProps({
     // provider: { slug, name, bio, availableNow, bannerPhoto, avatarPhoto, location: { title, subtitle },
     //             gallery: [url], services: [{ id, icon, name, duration, price }] }
 });
+const { t } = useI18n();
+const { formatTime, formatDayLabel } = useFormat();
+
 // Booksy-style splash: the brand greets, then gets out of the way. Pure CSS
 // fade — no external assets, nothing to load.
 const splash = ref(true);
 
+/**
+ * «Hoy 3:30 PM» debajo del precio.
+ *
+ * El servidor manda hora y a cuántos días queda; el texto se arma aquí porque
+ * el reloj de 12 o 24 horas y el idioma son preferencias del que mira, y el
+ * servidor no las conoce.
+ */
+function proximoHuecoLabel(hueco) {
+    const hora = formatTime(hueco.h, hueco.m);
+
+    if (hueco.daysAway === 0) return t('profile.nextToday', { time: hora });
+    if (hueco.daysAway === 1) return t('profile.nextTomorrow', { time: hora });
+
+    // Partido a mano en vez de `new Date(cadena)`: esa forma interpreta la
+    // fecha como UTC y, según el huso, enseña el día de antes.
+    const [anio, mes, dia] = hueco.date.split('-').map(Number);
+
+    return t('profile.nextOn', {
+        day: formatDayLabel(new Date(anio, mes - 1, dia)),
+        time: hora,
+    });
+}
+
+/**
+ * «Lo de siempre», la mitad que lee. Ver Booking.vue para la que escribe.
+ *
+ * Caduca a los seis meses: lo que alguien se hizo hace un año no es «lo de
+ * siempre», es historia, y ofrecérselo se siente raro.
+ */
+const CADUCIDAD_MS = 180 * 24 * 60 * 60 * 1000;
+const loDeSiempre = ref(null);
+
+function leerLoDeSiempre() {
+    try {
+        const crudo = localStorage.getItem(`glow:lo-de-siempre:${props.provider.slug}`);
+        if (!crudo) return;
+
+        const guardado = JSON.parse(crudo);
+        if (!guardado?.at || Date.now() - guardado.at > CADUCIDAD_MS) return;
+
+        // El servicio pudo borrarse o desactivarse desde entonces; si ya no
+        // está en la lista, no existe el atajo. Nunca se enlaza a ciegas.
+        loDeSiempre.value = props.provider.services.find((s) => s.id === guardado.id) ?? null;
+    } catch {
+        // Modo privado o almacenamiento bloqueado: la ficha funciona igual.
+    }
+}
+
 onMounted(() => {
+    leerLoDeSiempre();
+
     setTimeout(() => {
         splash.value = false;
     }, 900);
@@ -248,6 +303,29 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
             </div>
             <div class="flex flex-col gap-3">
                 <!--
+                    «Lo de siempre»: sale sólo si esta clienta ya reservó aquí
+                    desde ESTE teléfono. Va arriba y repetido en la lista de
+                    abajo a propósito — es un atajo, no un menú aparte.
+                -->
+                <Link
+                    v-if="loDeSiempre"
+                    :href="`/reservar/${provider.slug}/${loDeSiempre.id}`"
+                    class="flex items-center gap-3.5 rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-soft)] p-4 transition-colors hover:border-[var(--gold)]"
+                >
+                    <RotateCcw :size="18" class="shrink-0 text-[var(--gold-text)]" />
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[11px] font-bold uppercase tracking-wide text-[var(--gold-text)]">
+                            {{ $t('profile.usualTitle') }}
+                        </div>
+                        <div class="mt-0.5 truncate text-[15px] font-semibold leading-snug text-[var(--text-strong)]">
+                            {{ loDeSiempre.name }}
+                        </div>
+                    </div>
+                    <span class="shrink-0 rounded-lg bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[var(--gold-text)] ring-1 ring-inset ring-[var(--gold-border)]">
+                        {{ $t('profile.usualCta') }}
+                    </span>
+                </Link>
+                <!--
                     La tarjeta entera es el enlace. Antes había dos bloques
                     oscuros por fila —el azulejo del ícono y el botón— peleando
                     por la atención, y un nombre largo empujaba el botón y
@@ -265,6 +343,17 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                         <div class="text-[15px] font-semibold leading-snug text-[var(--text-strong)]">{{ service.name }}</div>
                         <div class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">
                             {{ service.duration }}<template v-if="service.homeAvailable"> · {{ $t('profile.homeAvailable') }}</template>
+                        </div>
+                        <!--
+                            Sin hueco en dos semanas no se dice nada: «sin
+                            disponibilidad» ahuyenta, y una agenda llena es
+                            buena noticia, no un error que haya que anunciar.
+                        -->
+                        <div
+                            v-if="service.nextOpening"
+                            class="mt-1 text-[13px] font-semibold text-[var(--green-text)]"
+                        >
+                            {{ proximoHuecoLabel(service.nextOpening) }}
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2.5">

@@ -153,6 +153,31 @@ function onPhoneInput(event) {
     bookingForm.phone = formatUsPhone(event.target.value);
 }
 
+/**
+ * «Lo de siempre», la mitad que escribe.
+ *
+ * En la vitrina no hay cuenta ni sesión: la clienta llega de un enlace de
+ * WhatsApp, reserva y se va. Así que lo que reservó se guarda en SU teléfono,
+ * y sólo ahí — no viaja al servidor ni se cruza con nada. La ficha lo lee la
+ * próxima vez y le ofrece repetir de un toque en vez de recorrer el menú
+ * entero otra vez, que es de lo que más hace que una clienta vuelva.
+ *
+ * Se guarda al confirmar, no al enviar: si la reserva falla, no hay nada que
+ * repetir. Y va en try/catch porque el almacenamiento del navegador falla
+ * solo —modo privado, cuota llena, permisos— y quedarse sin este atajo no es
+ * motivo para romperle a nadie una reserva que ya salió bien.
+ */
+function recordarLoDeSiempre() {
+    try {
+        localStorage.setItem(
+            `glow:lo-de-siempre:${props.provider.slug}`,
+            JSON.stringify({ id: props.service.id, at: Date.now() }),
+        );
+    } catch {
+        // Sin atajo la próxima vez. La cita ya está hecha, que es lo que importa.
+    }
+}
+
 function submitBooking() {
     const slot = slots.value[selectedSlotIndex.value];
     if (!slot) return;
@@ -164,6 +189,7 @@ function submitBooking() {
         preserveScroll: true,
         onSuccess: () => {
             step.value = 'confirmation';
+            recordarLoDeSiempre();
         },
     });
 }

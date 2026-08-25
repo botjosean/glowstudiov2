@@ -442,7 +442,12 @@
         "footerCta": "Quick appointments with",
         "openMap": "Open map",
         "homeAvailable": "home visit available",
-        "reserve": "Book"
+        "reserve": "Book",
+        "nextToday": "Today {time}",
+        "nextTomorrow": "Tomorrow {time}",
+        "nextOn": "{day} · {time}",
+        "usualTitle": "Your usual",
+        "usualCta": "Book again"
     },
     "common": {
         "cancel": "Cancel",

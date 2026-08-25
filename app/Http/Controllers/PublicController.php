@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Booking\FindNextOpening;
 use App\Actions\Booking\GenerateAvailableSlots;
 use App\Models\Provider;
 use App\Models\Service;
@@ -78,8 +79,11 @@ class PublicController extends Controller
         ]);
     }
 
-    public function profile(Provider $provider): Response
-    {
+    public function profile(
+        Provider $provider,
+        FindNextOpening $nextOpening,
+        GenerateAvailableSlots $slots,
+    ): Response {
         abort_if($provider->published_at === null, 404);
 
         $provider->load([
@@ -89,6 +93,11 @@ class PublicController extends Controller
                 ->orderBy('position')
                 ->orderBy('id'),
         ]);
+
+        // El primer hueco de cada servicio, para que la ficha diga «Hoy 3:30
+        // PM» en vez de obligar a abrir el calendario a ver si hay suerte.
+        // Una sola consulta para toda la ficha; ver FindNextOpening.
+        $aperturas = $nextOpening->forServices($provider, $provider->services, $slots);
 
         return Inertia::render('Public/Profile', [
             'provider' => [
@@ -115,6 +124,10 @@ class PublicController extends Controller
                     // Badge only in "both" mode: for a pure-mobile provider
                     // everything already happens at the client's place.
                     'homeAvailable' => $service->home_available && $provider->home_service && ! $provider->is_mobile,
+                    // null cuando no hay nada libre en dos semanas. La ficha
+                    // no dice nada en ese caso: «sin huecos» ahuyenta, y una
+                    // agenda llena es buena noticia, no un error.
+                    'nextOpening' => $aperturas[$service->id] ?? null,
                 ])->values()->all(),
             ],
         ]);
