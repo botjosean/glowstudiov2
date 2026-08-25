@@ -12,6 +12,7 @@ return [
     // (esa copia solo se MUESTRA, nunca se envía, cuando no hay bot que la mande sola).
     'waMessageConfirmed' => '¡Hola :client! Soy :provider. Tu cita para :service el :date quedó confirmada. ¡Nos vemos!',
     'waMessageRejected' => '¡Hola :client! Soy :provider. No podré atender tu solicitud de :service para el :date. Escríbeme y buscamos otro horario.',
+    'waMessageReviewAsk' => '¡Hola :client! Soy :provider. Gracias por venir hoy 💛 ¿Me dejas una reseña? Es un toque: :link',
     'waMessageRescheduled' => '¡Hola :client! Soy :provider. Cambié tu cita de :service: ahora es el :date. Si no te sirve, escríbeme.',
     'waMessageCancelled' => '¡Hola :client! Soy :provider. Tuve que cancelar tu cita de :service del :date. Lamento el inconveniente, escríbeme y la reprogramamos.',
 ];

@@ -12,6 +12,7 @@ return [
     // ever shown, never sent, when there's no bot to send it automatically).
     'waMessageConfirmed' => 'Hi :client! This is :provider. Your :service appointment on :date is confirmed. See you then!',
     'waMessageRejected' => "Hi :client! This is :provider. I can't take your :service request for :date. Message me and we'll find another time.",
+    'waMessageReviewAsk' => 'Hi :client! This is :provider. Thanks for coming in today 💛 Would you leave me a review? It is one tap: :link',
     'waMessageRescheduled' => 'Hi :client! This is :provider. I moved your :service appointment: it is now on :date. Message me if that does not work.',
     'waMessageCancelled' => "Hi :client! This is :provider. I had to cancel your :service appointment on :date. Sorry about that, message me and we'll reschedule.",
 ];

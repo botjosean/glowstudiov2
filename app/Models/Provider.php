@@ -274,6 +274,11 @@ class Provider extends Model
         return $this->schedule_saved_at !== null;
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
     #[Scope]
     protected function published(Builder $query): void
     {

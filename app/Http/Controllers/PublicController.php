@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Booking\FindNextOpening;
 use App\Actions\Booking\GenerateAvailableSlots;
 use App\Models\Provider;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\ServiceType;
 use App\Support\Format;
@@ -94,6 +95,13 @@ class PublicController extends Controller
                 ->orderBy('id'),
         ]);
 
+        // Las estrellas. Solo las contestadas: una invitacion sin contestar
+        // existe en la tabla —es la que guarda el token del enlace— pero no es
+        // una resena y no puede mover el promedio.
+        $resenas = $provider->reviews()->answered()->latest('answered_at')->limit(6)->get();
+        $conteo = $provider->reviews()->answered()->count();
+        $promedio = $conteo > 0 ? round((float) $provider->reviews()->answered()->avg('rating'), 1) : null;
+
         // El primer hueco de cada servicio, para que la ficha diga «Hoy 3:30
         // PM» en vez de obligar a abrir el calendario a ver si hay suerte.
         // Una sola consulta para toda la ficha; ver FindNextOpening.
@@ -115,6 +123,19 @@ class PublicController extends Controller
                     'facebook' => $provider->facebook_url,
                 ]),
                 'gallery' => $provider->photos->pluck('url')->map(fn (string $url) => MediaUrl::resolve($url))->values()->all(),
+                'rating' => [
+                    'average' => $promedio,
+                    'count' => $conteo,
+                    'recent' => $resenas->map(fn (Review $r) => [
+                        'id' => $r->id,
+                        'rating' => $r->rating,
+                        'comment' => $r->comment,
+                        // Solo el nombre de pila: la clienta no pidio salir
+                        // con nombre y apellido en una pagina publica.
+                        'name' => explode(' ', trim($r->client_name))[0],
+                        'at' => $r->answered_at?->toIso8601String(),
+                    ])->values()->all(),
+                ],
                 'services' => $provider->services->map(fn (Service $service) => [
                     'id' => $service->id,
                     'icon' => $service->icon->value,

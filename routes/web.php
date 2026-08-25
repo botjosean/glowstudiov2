@@ -18,6 +18,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\InitialPasswordController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SuperadminController;
 use App\Http\Middleware\EnsureUserHasPassword;
 use App\Http\Middleware\EnsureUserHasProvider;
@@ -43,6 +44,14 @@ Route::post('/reservar/{provider}/{service}', [AppointmentController::class, 'st
     ->scopeBindings()
     ->middleware('throttle:booking')
     ->name('booking.store');
+
+// La resena. Publica y sin cuenta, como todo lo que ve una clienta: la llave
+// es el token del enlace que le llego por WhatsApp. Va con el mismo tope que
+// reservar, porque es el otro sitio donde un desconocido escribe en la base.
+Route::get('/resena/{token}', [ReviewController::class, 'show'])->name('resena.show');
+Route::post('/resena/{token}', [ReviewController::class, 'store'])
+    ->middleware('throttle:booking')
+    ->name('resena.store');
 
 Route::middleware('guest')->group(function () {
     Route::get('/iniciar-sesion', [PublicController::class, 'signIn'])->name('sign-in');

@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { MapPin, ChevronRight, X, RotateCcw } from '@lucide/vue';
+import { MapPin, ChevronRight, X, RotateCcw, Star } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { useFormat } from '../../composables/useFormat';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
@@ -11,7 +11,8 @@ import { serviceIcons } from '../../icons';
 const props = defineProps({
     provider: { type: Object, required: true },
     // provider: { slug, name, bio, availableNow, bannerPhoto, avatarPhoto, location: { title, subtitle },
-    //             gallery: [url], services: [{ id, icon, name, duration, price }] }
+    //             gallery: [url], services: [{ id, icon, name, duration, price, nextOpening }],
+    //             rating: { average, count, recent: [{ id, rating, comment, name, at }] } }
 });
 const { t } = useI18n();
 const { formatTime, formatDayLabel } = useFormat();
@@ -278,6 +279,58 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                 />
             </div>
         </Transition>
+
+        <!--
+            Las estrellas antes que los precios y antes que las fotos: es lo
+            primero que mira quien no la conoce. Sin resenas todavia no se
+            enseña un cero -- una profesional nueva no empieza en cero, empieza
+            sin datos, y un cero grande la hunde sin haber hecho nada.
+        -->
+        <div v-if="provider.rating.count > 0" class="border-t border-[var(--surface-mute)] px-6 pt-7">
+            <div class="flex items-baseline gap-2.5">
+                <span class="text-[28px] font-bold leading-none tabular-nums text-[var(--text-strong)]">
+                    {{ provider.rating.average.toFixed(1) }}
+                </span>
+                <span class="flex gap-0.5">
+                    <Star
+                        v-for="n in 5"
+                        :key="n"
+                        :size="16"
+                        :class="n <= Math.round(provider.rating.average)
+                            ? 'fill-[var(--gold)] text-[var(--gold)]'
+                            : 'text-[var(--text-faint)]'"
+                    />
+                </span>
+                <span class="text-[13px] font-medium text-[var(--text-mute)]">
+                    {{ $t('profile.reviewsCount', provider.rating.count) }}
+                </span>
+            </div>
+
+            <div v-if="provider.rating.recent.length" class="mt-5 flex flex-col gap-3">
+                <div
+                    v-for="resena in provider.rating.recent"
+                    :key="resena.id"
+                    class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="flex gap-0.5">
+                            <Star
+                                v-for="n in 5"
+                                :key="n"
+                                :size="12"
+                                :class="n <= resena.rating
+                                    ? 'fill-[var(--gold)] text-[var(--gold)]'
+                                    : 'text-[var(--text-faint)]'"
+                            />
+                        </span>
+                        <span class="text-[13px] font-semibold text-[var(--text-heading)]">{{ resena.name }}</span>
+                    </div>
+                    <p v-if="resena.comment" class="mt-1.5 text-[14px] leading-relaxed text-[var(--text-body)]">
+                        {{ resena.comment }}
+                    </p>
+                </div>
+            </div>
+        </div>
 
         <div class="px-6 pb-12 pt-8">
             <div class="mb-3.5 text-[13px] font-medium text-[var(--text-mute)]">
