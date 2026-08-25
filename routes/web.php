@@ -90,6 +90,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'appointment')->name('citas.confirm');
     Route::patch('/citas/{appointment}/cancelar', [AppointmentStatusController::class, 'cancel'])
         ->can('update', 'appointment')->name('citas.cancel');
+    // Mover de hora, no cambiar de estado. Mismo permiso que las de arriba:
+    // la dueña de la cita y nadie más.
+    Route::patch('/citas/{appointment}/reagendar', [AppointmentStatusController::class, 'reschedule'])
+        ->can('update', 'appointment')->name('citas.reschedule');
     Route::get('/citas/horas', [ManualAppointmentController::class, 'slots'])->name('citas.slots');
     Route::post('/citas', [ManualAppointmentController::class, 'store'])->name('citas.store');
 

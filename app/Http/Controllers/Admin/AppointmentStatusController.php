@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Booking\RescheduleAppointment;
 use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RescheduleAppointmentRequest;
 use App\Models\Appointment;
 use App\Support\Kapso\KapsoClient;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +55,32 @@ class AppointmentStatusController extends Controller
         $notified = $this->notifyClient($appointment, $variant);
 
         return to_route('admin.citas')->with('success', 'admin.appointmentCancelled')->with('notified', $notified);
+    }
+
+    /**
+     * Mover una cita de hora sin cancelarla.
+     *
+     * Antes esto era cancelar y volver a reservar, y en el hueco entre las dos
+     * la hora vieja quedaba libre y la nueva sin apartar: otra clienta podía
+     * llevarse cualquiera de las dos. La acción lo hace todo dentro de un
+     * candado; aquí sólo se avisa a la clienta después.
+     *
+     * El aviso va DESPUÉS de mover, nunca antes: si el movimiento falla
+     * porque la hora se ocupó, no se le puede haber mandado ya un mensaje
+     * diciéndole que su cita cambió.
+     */
+    public function reschedule(
+        RescheduleAppointmentRequest $request,
+        Appointment $appointment,
+        RescheduleAppointment $action,
+    ): RedirectResponse {
+        $movida = $action->handle($appointment, $request->newLocalStart());
+
+        $notified = $this->notifyClient($movida->fresh(), 'Rescheduled');
+
+        return to_route('admin.citas')
+            ->with('success', 'admin.appointmentRescheduled')
+            ->with('notified', $notified);
     }
 
     private function transition(Appointment $appointment, AppointmentStatus $target): void

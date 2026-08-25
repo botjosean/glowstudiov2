@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { Phone, X, Check, Ban, Receipt } from '@lucide/vue';
+import { Phone, X, Check, Ban, Receipt, CalendarClock } from '@lucide/vue';
 import BottomSheet from '../ui/BottomSheet.vue';
 import Badge from '../ui/Badge.vue';
 
@@ -10,7 +10,7 @@ const props = defineProps({
 });
 
 const open = defineModel({ type: Boolean, default: false });
-const emit = defineEmits(['confirm', 'reject', 'cancel']);
+const emit = defineEmits(['confirm', 'reject', 'cancel', 'reschedule']);
 
 const badgeVariant = {
     confirmed: 'confirmed',
@@ -114,6 +114,21 @@ const statusKey = {
                     <Receipt :size="15" />
                     {{ $t('admin.registerSale') }}
                 </Link>
+                <!--
+                    Mover, antes que cancelar. Cancelar y volver a reservar era
+                    lo unico que habia hasta hoy, y entre las dos cosas la hora
+                    quedaba suelta: otra clienta podia llevarsela.
+                -->
+                <button
+                    v-if="!['cancelled', 'closed'].includes(appointment.status)"
+                    type="button"
+                    :disabled="processing"
+                    class="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] py-3.5 text-[14px] font-semibold text-[var(--text-heading)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
+                    @click="emit('reschedule')"
+                >
+                    <CalendarClock :size="15" />
+                    {{ $t('admin.reschedule') }}
+                </button>
                 <button
                     v-if="!['cancelled', 'closed'].includes(appointment.status)"
                     type="button"

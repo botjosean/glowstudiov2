@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import { Bell, ChevronDown, Clock, MessageCircle, Plus, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -9,6 +9,7 @@ import AgendaTimeline from '../../Components/admin/AgendaTimeline.vue';
 import AppointmentDetailSheet from '../../Components/admin/AppointmentDetailSheet.vue';
 import CreateAppointmentSheet from '../../Components/admin/CreateAppointmentSheet.vue';
 import MonthPickerSheet from '../../Components/admin/MonthPickerSheet.vue';
+import BottomSheet from '../../Components/ui/BottomSheet.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import WhatsAppPromptSheet from '../../Components/admin/WhatsAppPromptSheet.vue';
 import { useFormat } from '../../composables/useFormat';
@@ -447,6 +448,50 @@ const pendingCancel = ref(null);
 // The detail sheet's `reject` (pending) and `cancel` (confirmed) both map to
 // the same server transition. Close the detail sheet first, then open the
 // confirmation dialog — stacking BottomSheets breaks their shared scroll lock.
+// ---- Reagendar -------------------------------------------------------
+//
+// Dia y hora a mano, sin lista de huecos libres. Es a proposito: quien decide
+// si esa hora esta libre es el servidor, DENTRO del candado, porque entre
+// pintar una lista y tocar el boton cabe otra reserva. Si esta ocupada vuelve
+// el error y no se mueve nada.
+//
+// El paso de 900 segundos hace que el reloj del telefono salte de cuarto en
+// cuarto de hora, que es como se reparten los huecos (STEP_MINUTES).
+const rescheduleOpen = ref(false);
+const rescheduleProcessing = ref(false);
+const rescheduleForm = useForm({ date: '', time: '' });
+
+function askReschedule() {
+    if (!selectedId.value) return;
+
+    const inicio = new Date(selected.value.startsAt);
+    const p2 = (n) => String(n).padStart(2, '0');
+
+    rescheduleForm.clearErrors();
+    rescheduleForm.date = `${inicio.getFullYear()}-${p2(inicio.getMonth() + 1)}-${p2(inicio.getDate())}`;
+    rescheduleForm.time = `${p2(inicio.getHours())}:${p2(inicio.getMinutes())}`;
+
+    sheetOpen.value = false;
+    rescheduleOpen.value = true;
+}
+
+function doReschedule() {
+    if (!selectedId.value) return;
+
+    rescheduleProcessing.value = true;
+
+    rescheduleForm.patch(`/admin/citas/${selectedId.value}/reagendar`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            rescheduleOpen.value = false;
+            haptics.success();
+        },
+        onFinish: () => {
+            rescheduleProcessing.value = false;
+        },
+    });
+}
+
 function askCancel() {
     if (!selectedId.value) return;
     const variant = selected.value.status === 'pending' ? 'rejected' : 'cancelled';
@@ -778,7 +823,39 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
             @confirm="confirmAppointment"
             @reject="askCancel"
             @cancel="askCancel"
+            @reschedule="askReschedule"
         />
+
+        <BottomSheet v-model="rescheduleOpen">
+            <div class="mb-4 text-lg font-bold text-[var(--text-strong)]">{{ $t('admin.rescheduleTitle') }}</div>
+            <p class="mb-4 text-[13px] text-[var(--text-mute)]">{{ $t('admin.rescheduleBody') }}</p>
+
+            <label class="mb-1 block text-[13px] font-semibold text-[var(--text-heading)]">{{ $t('admin.rescheduleDate') }}</label>
+            <input
+                v-model="rescheduleForm.date"
+                type="date"
+                class="mb-1 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[15px] text-[var(--text-strong)]"
+            />
+            <p v-if="rescheduleForm.errors.date" class="mb-2 text-[13px] font-medium text-[var(--danger)]">{{ rescheduleForm.errors.date }}</p>
+
+            <label class="mb-1 mt-3 block text-[13px] font-semibold text-[var(--text-heading)]">{{ $t('admin.rescheduleTime') }}</label>
+            <input
+                v-model="rescheduleForm.time"
+                type="time"
+                step="900"
+                class="mb-1 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[15px] text-[var(--text-strong)]"
+            />
+            <p v-if="rescheduleForm.errors.time" class="mb-2 text-[13px] font-medium text-[var(--danger)]">{{ rescheduleForm.errors.time }}</p>
+
+            <button
+                type="button"
+                :disabled="rescheduleProcessing"
+                class="mt-5 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                @click="doReschedule"
+            >
+                {{ $t('admin.rescheduleGo') }}
+            </button>
+        </BottomSheet>
 
         <ConfirmDialog
             v-model="cancelConfirmOpen"
