@@ -16,10 +16,6 @@ const props = defineProps({
 const { t } = useI18n();
 const { formatTime, formatDayLabel } = useFormat();
 
-// Booksy-style splash: the brand greets, then gets out of the way. Pure CSS
-// fade — no external assets, nothing to load.
-const splash = ref(true);
-
 /**
  * «Hoy 3:30 PM» debajo del precio.
  *
@@ -68,13 +64,11 @@ function leerLoDeSiempre() {
     }
 }
 
-onMounted(() => {
-    leerLoDeSiempre();
-
-    setTimeout(() => {
-        splash.value = false;
-    }, 900);
-});
+// Sin pantalla de carga aqui a proposito: la corona se queda en el panel, que
+// es la app de la profesional. La clienta llega de un enlace de WhatsApp a ver
+// precios y horarios, y esta pagina ya la saluda con el nombre de Pati; dos
+// bienvenidas seguidas son un segundo de nada antes de lo que vino a hacer.
+onMounted(leerLoDeSiempre);
 
 // "Toca para ampliar" promised an enlarge and never delivered one — the grid
 // had no click handler at all. Index rather than a boolean so Prev/Next can
@@ -99,18 +93,6 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 <template>
     <PublicLayout no-splash>
-        <Transition
-            leave-active-class="transition-opacity duration-500"
-            leave-to-class="opacity-0"
-        >
-            <div
-                v-if="splash"
-                class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[var(--surface)]"
-            >
-                <GlowMark :size="64" class="splash-mark" />
-                <span class="text-[20px] font-bold tracking-tight text-[var(--text-strong)]">{{ provider.name }}</span>
-            </div>
-        </Transition>
         <div class="relative">
             <div class="relative h-48 w-full overflow-hidden bg-[var(--banner-bg)]">
                 <img v-if="provider.bannerPhoto" :src="provider.bannerPhoto" :alt="`${provider.name} banner`" class="h-full w-full object-cover opacity-75" />
@@ -374,15 +356,3 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
         </div>
     </PublicLayout>
 </template>
-
-<style scoped>
-.splash-mark {
-    animation: splash-pop 0.9s ease-out;
-}
-
-@keyframes splash-pop {
-    0% { transform: scale(0.6); opacity: 0; }
-    45% { transform: scale(1.08); opacity: 1; }
-    100% { transform: scale(1); }
-}
-</style>
