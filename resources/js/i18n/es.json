@@ -351,6 +351,8 @@
         "saleClientNone": "Sin clienta",
         "saleClientOther": "Otra persona",
         "saleClientOtherName": "Nombre de la persona",
+        "saleClientFromContacts": "Elegir de contactos",
+        "saleClientOtherPhoneHint": "Con el teléfono queda guardada como clienta para la próxima vez.",
         "saleCreated": "Venta registrada.",
         "saleDeleted": "Venta borrada.",
         "saleDeleteTitle": "¿Borrar la venta?",

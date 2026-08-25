@@ -351,6 +351,8 @@
         "saleClientNone": "No client",
         "saleClientOther": "Someone else",
         "saleClientOtherName": "Their name",
+        "saleClientFromContacts": "Choose from contacts",
+        "saleClientOtherPhoneHint": "With a phone she's saved as a client for next time.",
         "saleCreated": "Sale recorded.",
         "saleDeleted": "Sale deleted.",
         "saleDeleteTitle": "Delete this sale?",

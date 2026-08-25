@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { X } from '@lucide/vue';
+import { Contact, X } from '@lucide/vue';
 import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
 import OutlinedSelect from '../ui/OutlinedSelect.vue';
@@ -38,10 +38,41 @@ const OTHER_CLIENT = 'other';
 const form = useForm({
     clientId: null,
     clientName: '',
+    clientPhone: '',
     amount: '',
     tip: 0,
     paymentMethod: null,
 });
+
+// Same live US mask as ClientFormSheet and the appointment forms.
+watch(() => form.clientPhone, (value) => {
+    const digits = (value || '').replace(/\D/g, '').replace(/^1(?=\d{10})/, '').slice(0, 10);
+    let out = digits;
+    if (digits.length > 6) out = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    else if (digits.length > 3) out = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (out !== value) form.clientPhone = out;
+});
+
+// Contact Picker API: same feature-detected pattern as Clientas — the button
+// simply is not there on browsers that lack it (iPhone/desktop today).
+const pickerSupported = ref(false);
+
+onMounted(() => {
+    pickerSupported.value = 'contacts' in navigator && 'select' in navigator.contacts;
+});
+
+async function pickContact() {
+    let picked;
+    try {
+        picked = await navigator.contacts.select(['name', 'tel'], { multiple: false });
+    } catch {
+        return; // cancelado o denegado — nada que reportar
+    }
+    const contact = (picked ?? [])[0];
+    if (!contact) return;
+    form.clientName = (contact.name?.[0] ?? '').trim();
+    form.clientPhone = contact.tel?.[0] ?? '';
+}
 
 // Percentages, not fixed dollars: a $40 haircut and a $200 balayage deserve
 // different suggestions and the math is the register's job, not hers.
@@ -103,6 +134,7 @@ function submit() {
         ...data,
         clientId: isOtherClient.value ? null : data.clientId,
         clientName: isOtherClient.value ? data.clientName.trim() : '',
+        clientPhone: isOtherClient.value ? data.clientPhone : '',
         amount: amountNumber.value,
         tip: tipNumber.value,
     })).post('/admin/ventas', {
@@ -141,15 +173,38 @@ function submit() {
             :error="form.errors.clientId"
         />
 
-        <OutlinedInput
-            v-if="isOtherClient"
-            id="sale-client-name"
-            v-model="form.clientName"
-            class="mb-5"
-            :label="$t('admin.saleClientOtherName')"
-            :error="form.errors.clientName"
-            clearable
-        />
+        <template v-if="isOtherClient">
+            <div class="mb-5 flex items-end gap-2">
+                <OutlinedInput
+                    id="sale-client-name"
+                    v-model="form.clientName"
+                    class="min-w-0 flex-1"
+                    :label="$t('admin.saleClientOtherName')"
+                    :error="form.errors.clientName"
+                    clearable
+                />
+                <button
+                    v-if="pickerSupported"
+                    type="button"
+                    :aria-label="$t('admin.saleClientFromContacts')"
+                    class="flex h-13.5 w-13.5 shrink-0 items-center justify-center rounded-xl border border-[var(--border-strong)] hover:bg-[var(--surface-mute)]"
+                    @click="pickContact"
+                >
+                    <Contact :size="19" class="text-[var(--text-strong)]" />
+                </button>
+            </div>
+
+            <OutlinedInput
+                id="sale-client-phone"
+                v-model="form.clientPhone"
+                class="mb-5"
+                type="tel"
+                inputmode="tel"
+                :label="$t('admin.appointmentPhone')"
+                :error="form.errors.clientPhone"
+            />
+            <p class="-mt-4 mb-5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.saleClientOtherPhoneHint') }}</p>
+        </template>
 
         <OutlinedInput
             id="sale-amount"

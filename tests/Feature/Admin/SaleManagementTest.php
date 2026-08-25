@@ -105,6 +105,43 @@ class SaleManagementTest extends TestCase
         $this->assertSame('Vecina de Ana', $sale->client_name);
     }
 
+    public function test_a_typed_name_with_a_phone_becomes_a_real_client(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientName' => 'Maria',
+            'clientPhone' => '(305) 555-0142',
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasNoErrors();
+
+        $sale = $provider->sales()->sole();
+        $client = $provider->clients()->sole();
+        $this->assertSame('Maria', $client->name);
+        $this->assertSame('3055550142', $client->phone);
+        $this->assertSame($client->id, $sale->client_id);
+        $this->assertSame('Maria', $sale->client_name);
+    }
+
+    public function test_a_typed_name_with_a_known_phone_reuses_that_card_instead_of_a_new_one(): void
+    {
+        $provider = Provider::factory()->published()->create();
+        $existing = Client::factory()->for($provider)->create(['name' => 'Maria Gomez', 'phone' => '3055550142']);
+
+        $this->actingAs($provider->user)->post('/admin/ventas', [
+            'clientName' => 'Maria',
+            'clientPhone' => '3055550142',
+            'amount' => 30,
+            'paymentMethod' => 'cash',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $provider->clients()->count());
+        $sale = $provider->sales()->sole();
+        $this->assertSame($existing->id, $sale->client_id);
+        $this->assertSame('Maria Gomez', $sale->client_name);
+    }
+
     public function test_a_picked_client_wins_over_a_typed_name(): void
     {
         $provider = Provider::factory()->published()->create();

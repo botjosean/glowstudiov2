@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Provider;
 use App\Models\Sale;
+use App\Support\Format;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -85,9 +86,11 @@ class SalesController extends Controller
 
         $validated = $request->validate([
             'clientId' => ['nullable', 'integer'],
-            // The walk-in who is not a card yet: a name for the ledger, not a
-            // client. Only read when no client from the book was picked.
+            // A walk-in not in the book yet. Given alongside a phone, she
+            // becomes a real card — same as adding her from Clientas — so
+            // next time she is a pick, not a name to retype.
             'clientName' => ['nullable', 'string', 'max:120'],
+            'clientPhone' => ['nullable', 'string', 'max:30'],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:99999'],
             'tip' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             // Only what she actually accepts: the register never offers a
@@ -96,14 +99,25 @@ class SalesController extends Controller
         ]);
 
         // Resolved through her own book, so a foreign id is simply "nobody"
-        // instead of a probe — and the name is snapshotted for bookkeeping.
+        // instead of a probe.
         $client = isset($validated['clientId'])
             ? $provider->clients()->whereKey($validated['clientId'])->first()
             : null;
 
-        // A card's name always wins over a typed one; the typed name only
-        // stands in when the sale belongs to nobody in the book.
         $typedName = trim((string) ($validated['clientName'] ?? ''));
+        $phoneDigits = Format::digitsOnly($validated['clientPhone'] ?? '');
+        $phoneDigits = strlen($phoneDigits) === 10 ? $phoneDigits : null;
+
+        // A phone is what turns a typed name into a real card — same rule as
+        // ClientController::import ("no usable phone, no card"): a nameless
+        // walk-in with no phone stays a ledger-only snapshot, exactly as
+        // before, instead of cluttering the book with cards nothing can ever
+        // match again. A phone already on the book reuses that card instead
+        // of splitting her history across two (ClientController::store's
+        // same dedup rule).
+        if ($client === null && $typedName !== '' && $phoneDigits !== null) {
+            $client = $provider->clients()->firstOrCreate(['phone' => $phoneDigits], ['name' => $typedName]);
+        }
 
         $provider->sales()->create([
             'client_id' => $client?->id,
