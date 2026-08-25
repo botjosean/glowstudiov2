@@ -356,7 +356,7 @@
         "saleMethod": "Método de pago",
         "saleClient": "Clienta (opcional)",
         "saleClientNone": "Sin clienta",
-        "saleClientOther": "Otra persona",
+        "saleClientOther": "+ Añadir clienta nueva",
         "saleClientOtherName": "Nombre de la persona",
         "saleClientFromContacts": "Elegir de contactos",
         "saleClientOtherPhoneHint": "Con el teléfono queda guardada como clienta para la próxima vez.",

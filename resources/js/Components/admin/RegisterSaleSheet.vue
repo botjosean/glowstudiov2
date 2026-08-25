@@ -108,10 +108,14 @@ const tipNumber = computed(() => {
 
 const total = computed(() => Math.round((amountNumber.value + tipNumber.value) * 100) / 100);
 
+// Añadir va ARRIBA, antes de la libreta. Estaba de ultima y habia que bajar
+// por todas las clientas para llegar: con una libreta que crece, eso es un
+// boton que desaparece solo. Crear primero y elegir despues es lo que hace
+// cualquier selector que deja crear.
 const clientOptions = computed(() => [
     { value: null, label: t('admin.saleClientNone') },
-    ...props.clients.map((client) => ({ value: client.id, label: client.name })),
     { value: OTHER_CLIENT, label: t('admin.saleClientOther') },
+    ...props.clients.map((client) => ({ value: client.id, label: client.name })),
 ]);
 
 const isOtherClient = computed(() => form.clientId === OTHER_CLIENT);

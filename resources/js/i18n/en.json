@@ -356,7 +356,7 @@
         "saleMethod": "Payment method",
         "saleClient": "Client (optional)",
         "saleClientNone": "No client",
-        "saleClientOther": "Someone else",
+        "saleClientOther": "+ Add new client",
         "saleClientOtherName": "Their name",
         "saleClientFromContacts": "Choose from contacts",
         "saleClientOtherPhoneHint": "With a phone she's saved as a client for next time.",
