@@ -78,6 +78,10 @@ class HandleInertiaRequests extends Middleware
             // for guests, provider-less users, and fully set-up providers.
             // Closure so partial reloads that don't request it skip the queries.
             'onboarding' => fn () => $this->onboardingFor($user?->provider),
+            // Aviso aparte del contador de arriba, y sin poder cerrarse: si no
+            // ha guardado su semana no recibe NINGUNA cita, y enterarse de eso
+            // no puede depender de que no haya cerrado un banner hace un mes.
+            'scheduleUnsaved' => $user?->provider !== null && ! $user->provider->hasSavedSchedule(),
         ];
     }
 

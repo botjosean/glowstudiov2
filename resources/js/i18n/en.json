@@ -449,6 +449,11 @@
         "usualTitle": "Your usual",
         "usualCta": "Book again"
     },
+    "scheduleGate": {
+        "title": "You are not taking bookings yet",
+        "body": "Save your schedule and the app starts showing you as available. Until then nobody can book you.",
+        "cta": "Save my schedule"
+    },
     "common": {
         "cancel": "Cancel",
         "or": "OR",

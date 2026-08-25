@@ -48,6 +48,10 @@ class ProviderFactory extends Factory
             // en los tests mientras en producción lee las horas de verdad.
             'bot_start_minute' => 9 * 60,
             'bot_end_minute' => 22 * 60,
+            // Una profesional de prueba es una que ya se configuro: sin esto
+            // no seria reservable ningun dia y media suite se caeria. El caso
+            // contrario tiene su propio estado, scheduleUnsaved().
+            'schedule_saved_at' => now(),
         ];
     }
 
@@ -89,6 +93,18 @@ class ProviderFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_available_now' => true,
+        ]);
+    }
+
+    /**
+     * Recien registrada: tiene sus siete dias sembrados por Provider::booted()
+     * pero nunca abrio la pantalla de Horario. No es reservable ningun dia y
+     * le sale el aviso en el panel.
+     */
+    public function scheduleUnsaved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'schedule_saved_at' => null,
         ]);
     }
 

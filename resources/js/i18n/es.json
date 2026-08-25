@@ -449,6 +449,11 @@
         "usualTitle": "Lo de siempre",
         "usualCta": "Repetir"
     },
+    "scheduleGate": {
+        "title": "Todavía no recibes citas",
+        "body": "Guardá tu horario y la app empieza a mostrarte disponible. Hasta entonces nadie puede reservarte.",
+        "cta": "Guardar mi horario"
+    },
     "common": {
         "cancel": "Cancelar",
         "or": "O",

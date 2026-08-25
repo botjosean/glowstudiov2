@@ -33,6 +33,11 @@ class ScheduleController extends Controller
             'lunch_start_minute' => $data['lunchStart'],
             'lunch_end_minute' => $data['lunchEnd'],
             'buffer_minutes' => $data['bufferMinutes'],
+            // La constancia de que esta semana la puso ella y no la siembra.
+            // Hasta que existe, la profesional no es reservable ningún día:
+            // ver Provider::workingWindowOn(). Se reescribe en cada guardado
+            // a propósito — cuesta nada y deja ver cuándo fue la última vez.
+            'schedule_saved_at' => now(),
             // The two columns on `providers` are no longer what availability
             // reads, but plenty still does — the fallback for a provider with
             // no rows, and the window a brand-new day inherits. Kept as the

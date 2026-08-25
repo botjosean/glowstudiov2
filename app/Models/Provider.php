@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'is_mobile', 'home_service', 'is_available_now', 'published_at', 'service_area', 'address_line',
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
+    'schedule_saved_at',
     'payment_methods',
     'bot_mode', 'bot_display_name', 'bot_business_name', 'bot_greeting', 'bot_greeting_returning',
     'bot_intake', 'bot_offers_booking_link', 'bot_notes', 'bot_start_minute', 'bot_end_minute',
@@ -66,6 +67,7 @@ class Provider extends Model
             'published_at' => 'immutable_datetime',
             'work_start_minute' => 'int',
             'work_end_minute' => 'int',
+            'schedule_saved_at' => 'immutable_datetime',
             'lunch_start_minute' => 'int',
             'lunch_end_minute' => 'int',
             'buffer_minutes' => 'int',
@@ -215,6 +217,17 @@ class Provider extends Model
      * takes no appointments that day — either the weekday is closed or the
      * date falls inside a time-off block.
      *
+     * **Nadie es reservable hasta que guarda su semana.** Antes, una
+     * profesional que nunca abrió la pantalla de Horario quedaba disponible
+     * los siete días — y eso no era una suposición razonable, era la siembra
+     * de `booted()` tomada por una decisión suya. Una clienta podía reservar
+     * un domingo a las nueve de la mañana y nadie le avisaba a ella.
+     *
+     * Ojo con arreglarlo sólo en la rama de «no hay fila»: normalmente SÍ hay
+     * filas, y abiertas, porque `booted()` las siembra así. Desde fuera los
+     * dos caminos son indistinguibles. Por eso la puerta está antes, en la
+     * marca de haber guardado, y cubre los dos.
+     *
      * Falls back to the provider's own columns when no row exists for the
      * weekday. That is not dead code: a provider created before its seven rows
      * are written (or by a seeder that skips them) must keep its schedule
@@ -224,6 +237,12 @@ class Provider extends Model
      */
     public function workingWindowOn(CarbonImmutable $localDate): ?array
     {
+        // Antes que nada: si no ha guardado su semana, no hay semana que
+        // interpretar. Ver el comentario de arriba.
+        if (! $this->hasSavedSchedule()) {
+            return null;
+        }
+
         $date = $localDate->startOfDay();
 
         $isOff = $this->relationLoaded('timeOff')
@@ -243,6 +262,16 @@ class Provider extends Model
         }
 
         return $hours->is_open ? [$hours->work_start_minute, $hours->work_end_minute] : null;
+    }
+
+    /**
+     * Si la profesional confirmó su semana alguna vez. Lo pone
+     * ScheduleController al guardar; la migración que creó la columna se lo
+     * dedujo a las que ya tenían un horario distinto de la siembra.
+     */
+    public function hasSavedSchedule(): bool
+    {
+        return $this->schedule_saved_at !== null;
     }
 
     #[Scope]

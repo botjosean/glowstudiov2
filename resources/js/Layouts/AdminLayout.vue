@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Settings, ArrowLeft, X } from '@lucide/vue';
+import { Settings, ArrowLeft, X, TriangleAlert } from '@lucide/vue';
 import NavCalendar from '../Components/icons/NavCalendar.vue';
 import NavClients from '../Components/icons/NavClients.vue';
 import NavSales from '../Components/icons/NavSales.vue';
@@ -21,6 +21,11 @@ const currentPath = computed(() => page.url.split('?')[0]);
 
 // Shared prop computed server-side; null once every onboarding step is done.
 const onboarding = computed(() => page.props.onboarding ?? null);
+
+// Aparte del contador de onboarding y sin poder cerrarse: mientras esto sea
+// cierto la profesional no recibe NINGUNA cita, y no puede enterarse por un
+// banner que quizás cerró hace un mes.
+const scheduleUnsaved = computed(() => page.props.scheduleUnsaved === true);
 
 // Collapsible, not dismissible: closing it lasts for the browser session and
 // it returns on the next visit, because the steps it points to are still
@@ -106,6 +111,25 @@ function isActive(href) {
                 <X :size="15" class="text-[var(--green-deep)]" />
             </button>
         </div>
+
+        <!--
+            No se puede cerrar y no se esconde en ninguna pantalla: es la
+            diferencia entre recibir citas y no recibir ninguna.
+        -->
+        <Link
+            v-if="scheduleUnsaved && currentPath !== '/admin/horario'"
+            href="/admin/horario"
+            class="mx-4 mb-3 flex items-center gap-3 rounded-2xl border border-[var(--pending)]/40 bg-[var(--pending)]/5 p-4"
+        >
+            <TriangleAlert :size="20" class="shrink-0 text-[var(--pending)]" />
+            <div class="min-w-0 flex-1">
+                <div class="text-[14px] font-bold text-[var(--text-strong)]">{{ $t('scheduleGate.title') }}</div>
+                <div class="mt-0.5 text-[13px] text-[var(--text-mute)]">{{ $t('scheduleGate.body') }}</div>
+            </div>
+            <span class="shrink-0 rounded-lg bg-[var(--pending)] px-3 py-1.5 text-[13px] font-bold text-white">
+                {{ $t('scheduleGate.cta') }}
+            </span>
+        </Link>
 
         <main class="flex-1 pb-4">
             <slot />
