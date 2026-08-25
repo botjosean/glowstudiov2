@@ -57,14 +57,14 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
             </div>
         </Transition>
         <div class="relative">
-            <div class="relative h-48 w-full overflow-hidden bg-[#131a2a]">
+            <div class="relative h-48 w-full overflow-hidden bg-[var(--banner-bg)]">
                 <img v-if="provider.bannerPhoto" :src="provider.bannerPhoto" :alt="`${provider.name} banner`" class="h-full w-full object-cover opacity-75" />
                 <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
             </div>
 
             <div class="relative z-10 -mt-16 flex justify-center">
                 <div class="h-32 w-32 rounded-full bg-[var(--surface)] p-1 shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
-                    <div class="box-border h-full w-full overflow-hidden rounded-full border-4 border-[#10b981] bg-[var(--surface-mute)]">
+                    <div class="box-border h-full w-full overflow-hidden rounded-full border-4 border-[var(--green-text)] bg-[var(--surface-mute)]">
                         <img v-if="provider.avatarPhoto" :src="provider.avatarPhoto" :alt="provider.name" class="h-full w-full object-cover" />
                         <span v-else class="flex h-full w-full items-center justify-center text-3xl font-semibold text-[var(--text-faint)]">{{ provider.name?.charAt(0)?.toUpperCase() }}</span>
                     </div>
@@ -81,7 +81,7 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                     v-if="provider.availableNow"
                     class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--green-border)] bg-[var(--green-soft)] px-3 py-1 text-[13px] font-medium text-[var(--green-text)]"
                 >
-                    <span class="h-2 w-2 rounded-full bg-[#10b981]" />
+                    <span class="h-2 w-2 rounded-full bg-[var(--green-text)]" />
                     {{ $t('profile.availableNow') }}
                 </div>
                 <p class="mx-auto mt-4 max-w-sm text-sm font-medium leading-relaxed text-[var(--text-body)]">
@@ -89,11 +89,25 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                 </p>
             </div>
 
-            <div class="fixed left-1/2 top-[220px] z-20 w-full max-w-[480px] -translate-x-1/2 px-4 min-[700px]:max-w-[820px] lg:max-w-[1024px]">
+            <!--
+                Anclados al bloque de la cabecera, no a la ventana. Con
+                `fixed` se quedaban flotando encima de la galeria y de los
+                precios al bajar; hoy no se nota solo porque ninguna
+                profesional tiene redes configuradas todavia.
+            -->
+            <div class="absolute left-1/2 top-[220px] z-20 w-full max-w-[480px] -translate-x-1/2 px-4 min-[700px]:max-w-[820px] lg:max-w-[1024px]">
                 <div class="flex flex-col items-end gap-3">
+                    <!--
+                        En pestana nueva, los cuatro. Iban en la misma y se
+                        llevaban a la clienta a mitad de la reserva.
+                        `noopener` impide que la pagina abierta manipule
+                        esta; sin el, `target="_blank"` es un agujero.
+                    -->
                     <a
                         v-if="provider.social?.whatsapp"
                         :href="provider.social.whatsapp"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         class="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] shadow-[0_4px_12px_rgba(37,211,102,0.35)]"
                         aria-label="WhatsApp"
                     >
@@ -106,6 +120,8 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                     <a
                         v-if="provider.social?.instagram"
                         :href="provider.social.instagram"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         class="flex h-10 w-10 items-center justify-center rounded-full shadow-[0_4px_12px_rgba(214,36,159,0.3)]"
                         style="background: radial-gradient(circle at 30% 110%, #fdf497, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%)"
                         aria-label="Instagram"
@@ -119,6 +135,8 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                     <a
                         v-if="provider.social?.tiktok"
                         :href="provider.social.tiktok"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         class="flex h-10 w-10 items-center justify-center rounded-full bg-black shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
                         aria-label="TikTok"
                     >
@@ -131,6 +149,8 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                     <a
                         v-if="provider.social?.facebook"
                         :href="provider.social.facebook"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         class="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] shadow-[0_4px_12px_rgba(24,119,242,0.35)]"
                         aria-label="Facebook"
                     >
@@ -248,7 +268,7 @@ onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown));
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2.5">
-                        <span class="text-[17px] font-bold tabular-nums text-[var(--text-strong)]">${{ service.price }}</span>
+                        <span class="text-[18px] font-bold tabular-nums text-[var(--text-strong)]">${{ service.price }}</span>
                         <span class="rounded-lg bg-[var(--gold-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--gold-text)] ring-1 ring-inset ring-[var(--gold-border)]">
                             {{ $t('profile.reserve') }}
                         </span>
