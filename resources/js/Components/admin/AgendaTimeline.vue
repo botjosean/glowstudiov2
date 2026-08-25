@@ -272,7 +272,7 @@ function handleCanvasClick(event) {
             <template v-if="block.detail === 'full'">
                 <div class="flex items-center gap-1.5 text-[11px] font-semibold tabular-nums" :class="block.status === 'closed' ? 'text-[var(--text-mute)]' : 'text-[var(--gold-text)]'">
                     {{ block.timeLabel }}
-                    <span v-if="block.status === 'pending'" class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#d97706]" />
+                    <span v-if="block.status === 'pending'" class="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--pending)]" />
                 </div>
                 <div class="truncate text-[13px] font-semibold leading-tight text-[var(--text-strong)]">{{ block.clientName }}</div>
                 <div class="truncate text-[11px] font-normal text-[var(--text-mute)]">{{ block.service }}</div>
@@ -280,7 +280,7 @@ function handleCanvasClick(event) {
             <template v-else>
                 <div class="flex items-center gap-1.5 truncate leading-tight" :class="block.detail === 'slim' ? 'text-[10px]' : 'text-[12px]'">
                     <span class="font-semibold tabular-nums" :class="block.status === 'closed' ? 'text-[var(--text-mute)]' : 'text-[var(--gold-text)]'">{{ block.timeLabel }}</span>
-                    <span v-if="block.status === 'pending'" class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#d97706]" />
+                    <span v-if="block.status === 'pending'" class="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--pending)]" />
                     <span class="truncate font-semibold text-[var(--text-strong)]">{{ block.clientName }}</span>
                 </div>
             </template>

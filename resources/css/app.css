@@ -58,6 +58,27 @@
     --gold-border: #eed9a8;
     --gold: #b3852f;
     --gold-text: #8a6a25;
+
+    /* El naranja de "pendiente". Estaba escrito a mano en cuatro sitios
+       —el aviso de Inicio, dos puntos de la agenda y el contador de
+       Citas— y ninguno lo cambiaba en tema oscuro, asi que el aviso de
+       Inicio quedaba justo en el limite de legible. Un solo sitio. */
+    --pending: #d97706;
+
+    /* La barra negra de abajo NO es una superficie: es el ancla de la
+       marca y es negra en los dos temas a proposito (ver AdminLayout).
+       Por eso vive fuera del juego claro/oscuro y no se repite abajo:
+       estos tres valen igual en ambos. Antes estaban escritos a mano en
+       la barra, en el boton flotante y en el globo de ayuda. */
+    --nav-bg: #101010;
+    --nav-fg: #9ca3af;
+    --nav-active: #e3c26d;
+
+    /* El azul oscuro sobre el que va la foto de cabecera, en el perfil
+       publico, en Inicio y en el panel. Constante en los dos temas por
+       la misma razon que la barra: es el fondo de una foto, no una
+       superficie de la interfaz. Estaba escrito a mano en los tres. */
+    --banner-bg: #131a2a;
 }
 
 [data-theme='dark'] {
@@ -103,6 +124,10 @@
     --gold-border: #5a4a20;
     --gold: #e3c26d;
     --gold-text: #e8c877;
+
+    /* Mas claro sobre fondo oscuro: el mismo #d97706 sobre el lienzo
+       oscuro se queda en el limite, y este naranja es TEXTO en Inicio. */
+    --pending: #f59e0b;
 }
 
 html {

@@ -517,7 +517,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                     <Bell :size="21" class="text-[var(--text-strong)]" />
                     <span
                         v-if="counts.pending + leads.length > 0"
-                        class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d97706] px-1 text-[9px] font-bold text-white"
+                        class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--pending)] px-1 text-[11px] font-bold text-white"
                     >
                         {{ counts.pending + leads.length }}
                     </span>
@@ -558,8 +558,8 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                         >{{ $t(tab.key) }}</span
                     >
                     <span
-                        class="text-[9px] font-bold"
-                        :class="tab.value === 'pending' ? 'text-[#d97706]' : tab.value === 'agenda' ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'"
+                        class="text-[11px] font-bold"
+                        :class="tab.value === 'pending' ? 'text-[var(--pending)]' : tab.value === 'agenda' ? 'text-[var(--green-text)]' : 'text-[var(--text-faint)]'"
                         >{{ counts[tab.value] }}</span
                     >
                 </button>
@@ -617,7 +617,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                     <div
                         v-for="lead in leads"
                         :key="`lead-${lead.id}`"
-                        class="rounded-2xl border border-[#d97706]/30 bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] min-[700px]:mb-3 min-[700px]:break-inside-avoid"
+                        class="rounded-2xl border border-[var(--pending)]/30 bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] min-[700px]:mb-3 min-[700px]:break-inside-avoid"
                     >
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -721,7 +721,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
         >
             <button
                 type="button"
-                class="rounded-full bg-[#101010] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+                class="rounded-full bg-[var(--nav-bg)] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
                 @click="quickNew"
             >
                 {{ $t('admin.clientNewAppointment') }}

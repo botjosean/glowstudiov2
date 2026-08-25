@@ -74,7 +74,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
             </span>
         </div>
 
-        <div ref="urlEl" class="mt-1.5 break-all text-[17px] font-bold leading-snug text-[var(--text-strong)]">
+        <div ref="urlEl" class="mt-1.5 break-all text-[18px] font-bold leading-snug text-[var(--text-strong)]">
             {{ displayUrl }}
         </div>
 

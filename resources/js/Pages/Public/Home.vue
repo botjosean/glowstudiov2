@@ -12,7 +12,7 @@ defineProps({
 
 <template>
     <PublicLayout>
-        <div class="relative h-[180px] overflow-hidden bg-[#131a2a]">
+        <div class="relative h-[180px] overflow-hidden bg-[var(--banner-bg)]">
             <img
                 src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=800"
                 alt="Barbershop"

@@ -12,8 +12,15 @@ export default defineConfig({
             fonts: [
                 // Manrope: números más finos y elegantes que Figtree —
                 // pedido del dueño el 2026-08-16 tras comparar 5 candidatas.
+                //
+                // Cuatro pesos, no seis. El 300 y el 800 se descargaban en cada
+                // visita y no los usaba NADIE: font-light y font-extrabold
+                // aparecen cero veces en toda la app (contado el 2026-08-25).
+                // Eran dos archivos de fuente por visita a cambio de nada, y en
+                // un celular con datos cada uno es una espera. Quitarlos no
+                // cambia un píxel: si algún día hace falta uno, se agrega aquí.
                 bunny('Manrope', {
-                    weights: [300, 400, 500, 600, 700, 800],
+                    weights: [400, 500, 600, 700],
                 }),
             ],
         }),

@@ -154,7 +154,7 @@ function confirmDelete() {
 
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
                 <div class="text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.salesTodayTotal') }}</div>
-                <div class="mt-0.5 text-[28px] font-bold tabular-nums tracking-tight text-[var(--text-strong)]">
+                <div class="mt-0.5 text-[26px] font-bold tabular-nums tracking-tight text-[var(--text-strong)]">
                     ${{ todayTotal.toFixed(2) }}
                 </div>
             </div>

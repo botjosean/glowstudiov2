@@ -217,7 +217,7 @@ const botState = computed(() => {
                         <div class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">
                             {{ $t('inicio.todayAppointments', summary.todayCount) }}
                             <template v-if="summary.pendingCount > 0">
-                                · <span class="font-bold text-[#d97706]">{{ $t('inicio.todayPending', summary.pendingCount) }}</span>
+                                · <span class="font-bold text-[var(--pending)]">{{ $t('inicio.todayPending', summary.pendingCount) }}</span>
                             </template>
                         </div>
                     </div>

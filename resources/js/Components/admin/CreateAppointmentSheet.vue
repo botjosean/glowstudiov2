@@ -225,7 +225,7 @@ function submit() {
                 >
                     <ArrowLeft :size="19" class="text-[var(--text-strong)]" />
                 </button>
-                <span class="text-[16px] font-bold text-[var(--text-strong)]">{{ $t('admin.selectClient') }}</span>
+                <span class="text-[15px] font-bold text-[var(--text-strong)]">{{ $t('admin.selectClient') }}</span>
             </div>
             <label class="mb-2 flex items-center gap-2.5 rounded-xl bg-[var(--surface-mute)] px-3.5 py-2.5">
                 <Search :size="16" class="shrink-0 text-[var(--text-faint)]" />

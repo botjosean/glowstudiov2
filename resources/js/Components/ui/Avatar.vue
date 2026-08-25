@@ -17,7 +17,7 @@ const initials = props.name
 <template>
     <div
         class="shrink-0 overflow-hidden rounded-full bg-[var(--surface-mute)]"
-        :class="ring && 'border-4 border-[#10b981] box-border'"
+        :class="ring && 'border-4 border-[var(--green-text)] box-border'"
         :style="{ width: `${size}px`, height: `${size}px` }"
     >
         <img v-if="src" :src="src" :alt="name" class="h-full w-full object-cover" />

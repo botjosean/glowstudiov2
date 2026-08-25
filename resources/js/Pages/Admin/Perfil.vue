@@ -124,7 +124,7 @@ function confirmDeletePhoto() {
              had been dropped from the imports in the same change, so it
              rendered as an empty black square on every professional's profile.
              It now does what a pencil on a photo is expected to do. -->
-        <div class="relative h-44 w-full overflow-hidden bg-[#131a2a]">
+        <div class="relative h-44 w-full overflow-hidden bg-[var(--banner-bg)]">
             <img v-if="bannerPhoto" :src="bannerPhoto" alt="" class="h-full w-full object-cover" />
             <input ref="bannerInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onBannerSelected" />
 
@@ -177,7 +177,7 @@ function confirmDeletePhoto() {
                     class="absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--btn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                     @click="avatarInput?.click()"
                 >
-                    <span v-if="avatarForm.processing" class="text-[8px] font-bold text-white">{{ avatarForm.progress?.percentage ?? 0 }}%</span>
+                    <span v-if="avatarForm.processing" class="text-[11px] font-bold text-white">{{ avatarForm.progress?.percentage ?? 0 }}%</span>
                     <Camera v-else :size="14" class="text-white" />
                 </button>
             </div>
@@ -321,7 +321,7 @@ function confirmDeletePhoto() {
         <!-- The same pill that says "Chat de ayuda" one screen further in. -->
         <FloatingAction href="/admin/ajustes" :label="$t('admin.settings')">
             <template #icon>
-                <Settings :size="18" class="text-[#e3c26d]" />
+                <Settings :size="18" class="text-[var(--gold)]" />
             </template>
         </FloatingAction>
     </AdminLayout>

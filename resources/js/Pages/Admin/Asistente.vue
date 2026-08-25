@@ -115,10 +115,10 @@ const previewIntake = computed(() => {
                  page that never says so is a page that wastes her afternoon. -->
             <div
                 v-if="!connection.connected"
-                class="rounded-2xl border border-[#d97706]/40 bg-[#d97706]/5 p-4"
+                class="rounded-2xl border border-[var(--pending)]/40 bg-[var(--pending)]/5 p-4"
             >
                 <div class="flex items-center gap-2">
-                    <MessageCircle :size="16" class="text-[#d97706]" />
+                    <MessageCircle :size="16" class="text-[var(--pending)]" />
                     <span class="text-[13px] font-bold text-[var(--text-strong)]">{{ $t('admin.botNotConnected') }}</span>
                 </div>
                 <p class="mt-1.5 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.botNotConnectedHint') }}</p>
