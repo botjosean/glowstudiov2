@@ -1,13 +1,19 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
+import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
 
 /**
- * La pantalla con la que abre la app: el loto se dibuja solo.
+ * La pantalla con la que abre la app: la corona se dibuja sola.
  *
- * Elegida por el dueño el 2026-08-17 entre ocho variantes. El trazo va de
- * afuera hacia el centro, que es como se abre una flor, y un reflejo recorre
- * el logo entero —flor y letras— mientras se dibuja; al final vuelve en un
- * destello corto, cuando ya está todo en pantalla.
+ * Elegida por el dueño el 2026-08-17 entre ocho variantes. El 2026-08-22 el
+ * loto pasó a ser corona; todo lo demás —el oro, el trazo, los tiempos, el
+ * reflejo, el polvo— quedó igual. El trazo va del aro hacia las puntas, que es
+ * como se levanta una corona, y un reflejo recorre el logo entero —corona y
+ * letras— mientras se dibuja; al final vuelve en un destello corto, cuando ya
+ * está todo en pantalla.
+ *
+ * El dibujo y el oro salen de `crown.js`, el mismo del que tira la marca de la
+ * barra: aquí no hay una segunda corona que pueda quedarse atrás.
  *
  * **El reflejo va sobre una copia del logo, no encima del fondo.** Esa copia
  * lleva las mismas animaciones de trazo, así que la luz sólo puede iluminar lo
@@ -81,35 +87,32 @@ onUnmounted(() => {
     document.documentElement.style.overflow = '';
 });
 
-// Los ocho trazos, de afuera hacia el centro.
-const PETALS = [
-    'M100 116 C 68 116 30 106 8 78 C 40 68 82 88 100 116 Z',
-    'M100 116 C 132 116 170 106 192 78 C 160 68 118 88 100 116 Z',
-    'M100 116 C 76 100 58 76 56 44 C 78 58 96 88 100 116 Z',
-    'M100 116 C 124 100 142 76 144 44 C 122 58 104 88 100 116 Z',
-    'M84 74 C 74 62 68 52 66 42 C 76 50 82 62 84 74',
-    'M116 74 C 126 62 132 52 134 42 C 124 50 118 62 116 74',
-    'M100 116 C 84 92 82 54 100 26 C 118 54 116 92 100 116 Z',
-    'M100 114 C 92 98 91 78 100 64 C 109 78 108 98 100 114 Z',
-];
-
 // El polvo dorado del logo original: denso a la derecha, suelto abajo a la
 // izquierda, y un par sueltos arriba para que no quede todo de un lado.
+//
+// La corona es más angosta y más alta que el loto, así que unos pocos granos
+// quedaron encima del aro o dentro de una perla y hubo que correrlos hacia
+// afuera. El reparto —dónde hay mucho y dónde hay poco— es el mismo.
 const SPARKS = [
-    [152, 30, 0.7], [161, 38, 1.1], [168, 31, 0.6], [157, 47, 1.5], [172, 45, 0.8],
-    [164, 56, 1.9], [178, 55, 0.7], [169, 66, 1.2], [181, 68, 1.6], [159, 70, 0.6],
-    [175, 79, 1], [186, 82, 0.9], [166, 86, 1.4], [179, 94, 1.2], [190, 73, 0.7],
+    [152, 30, 0.7], [161, 38, 1.1], [168, 31, 0.6], [157, 47, 1.5], [184, 45, 0.8],
+    [164, 56, 1.9], [178, 55, 0.7], [169, 66, 1.2], [181, 68, 1.6], [172, 74, 0.6],
+    [175, 79, 1], [186, 82, 0.9], [180, 88, 1.4], [179, 94, 1.2], [190, 73, 0.7],
     [154, 60, 0.8], [184, 60, 0.6], [171, 101, 0.9], [188, 100, 0.7],
-    [46, 104, 1.3], [33, 112, 0.9], [22, 99, 1.6], [54, 116, 0.7], [15, 88, 1],
-    [40, 95, 0.6], [28, 120, 1.1], [60, 108, 0.8], [9, 105, 0.7],
+    [24, 104, 1.3], [27, 116, 0.9], [22, 99, 1.6], [44, 124, 0.7], [15, 88, 1],
+    [26, 92, 0.6], [28, 120, 1.1], [52, 122, 0.8], [9, 105, 0.7],
     [78, 26, 0.7], [120, 22, 0.9], [64, 36, 0.6],
 ];
 
 // Nada de medir longitudes: pathLength="1" le pide al navegador que trate
 // cada trazo como si midiera 1, así el mismo dash de 1 cubre exactamente el
-// camino de los ocho, largos o cortos. Medirlos con getTotalLength() obligaría
+// camino de los nueve, largos o cortos. Medirlos con getTotalLength() obligaría
 // a montar el SVG antes de animarlo, y el primer fotograma se vería con la
-// flor ya dibujada.
+// corona ya dibujada.
+//
+// Va escrito en camelCase y no como `path-length`. SVG distingue mayúsculas, y
+// con el guion el navegador se limita a ignorar el atributo: el dash de 1 pasa
+// a medir una unidad del lienzo de 200, así que la corona no se dibujaba sola
+// sino que salía de golpe y punteada, como una línea de puntos.
 </script>
 
 <template>
@@ -124,9 +127,9 @@ const SPARKS = [
             <svg viewBox="0 0 200 200" class="w-[64%] max-w-[300px] overflow-visible">
                 <defs>
                     <linearGradient id="splash-gold" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#B4744A" />
-                        <stop offset="45%" stop-color="#F5D9BC" />
-                        <stop offset="100%" stop-color="#A9683F" />
+                        <stop offset="0%" :stop-color="CROWN_GOLD[0]" />
+                        <stop offset="45%" :stop-color="CROWN_GOLD[1]" />
+                        <stop offset="100%" :stop-color="CROWN_GOLD[2]" />
                     </linearGradient>
                     <linearGradient id="splash-band" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="0%" stop-color="#fff" stop-opacity="0" />
@@ -154,11 +157,11 @@ const SPARKS = [
                 <!-- El logo, en oro -->
                 <g stroke="url(#splash-gold)">
                     <path
-                        v-for="(d, i) in PETALS"
+                        v-for="(d, i) in CROWN_STROKES"
                         :key="d"
                         :d="d"
-                        class="petal"
-                        path-length="1"
+                        class="line"
+                        pathLength="1"
                         :style="{ animationDelay: `${i * 95}ms` }"
                     />
                 </g>
@@ -181,11 +184,11 @@ const SPARKS = [
                 <g v-for="m in ['splash-sheen', 'splash-flash']" :key="m" :mask="`url(#${m})`">
                     <g stroke="#FFF6EA" stroke-width="3">
                         <path
-                            v-for="(d, i) in PETALS"
+                            v-for="(d, i) in CROWN_STROKES"
                             :key="d"
                             :d="d"
-                            class="petal"
-                            path-length="1"
+                            class="line"
+                            pathLength="1"
                             :style="{ animationDelay: `${i * 95}ms` }"
                         />
                     </g>
@@ -206,7 +209,7 @@ const SPARKS = [
     background: radial-gradient(120% 90% at 50% 44%, #1b2740 0%, #0e1626 62%);
 }
 
-.petal {
+.line {
     fill: none;
     stroke-width: 2.4px;
     stroke-linecap: round;
@@ -260,6 +263,6 @@ const SPARKS = [
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .petal, .spark, .word, .band { animation: none; }
+    .line, .spark, .word, .band { animation: none; }
 }
 </style>

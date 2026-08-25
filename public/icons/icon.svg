@@ -1,0 +1,49 @@
+<!--
+    La corona, suelta, para el ícono de la pestaña.
+
+    Es la única copia del dibujo que no sale de resources/js/crown.js: este
+    archivo lo sirve el servidor tal cual, sin pasar por el bundle, así que si
+    allá se retoca un trazo hay que traerlo aquí a mano.
+
+    Lleva el fondo azul y las esquinas redondeadas de los íconos de la pantalla
+    de inicio, para que sea la misma app en la pestaña y en el teléfono. El
+    trazo es más grueso que el de la marca de la barra a propósito: a 16px, que
+    es como lo enseña el navegador, el trazo fino se convierte en una mancha.
+
+    La corona va corrida 15 hacia abajo porque su lienzo de 200×200 reserva el
+    hueco de abajo para las letras GLOW STUDIOS, que aquí no van; ese
+    desplazamiento la deja centrada en el cuadro. (Con la tiara anterior el
+    corrimiento era 32 — esta corona es más baja, le hace falta menos.)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+    <defs>
+        <radialGradient id="bg" cx="50%" cy="44%" r="70%">
+            <stop offset="0%" stop-color="#1B2740" />
+            <stop offset="62%" stop-color="#0E1626" />
+        </radialGradient>
+        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#B4744A" />
+            <stop offset="45%" stop-color="#F5D9BC" />
+            <stop offset="100%" stop-color="#A9683F" />
+        </linearGradient>
+    </defs>
+
+    <rect width="200" height="200" rx="46" fill="url(#bg)" />
+
+    <g
+        transform="translate(0 15)"
+        fill="none"
+        stroke="url(#gold)"
+        stroke-width="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <!-- Los dos hilos que se trenzan -->
+        <path d="M31 104 C 41 88 51 88 61 104 C 71 120 81 120 91 104 C 101 88 111 88 121 104 C 131 120 141 120 151 104 C 157 96 163 96 169 104" />
+        <path d="M31 104 C 41 120 51 120 61 104 C 71 88 81 88 91 104 C 101 120 111 120 121 104 C 131 88 141 88 151 104 C 157 96 163 96 169 104" />
+        <!-- Las tres piedras encima, del centro hacia los lados -->
+        <path d="M101 50 L115 64 L101 78 L87 64 Z" />
+        <path d="M57 62 L67 74 L57 86 L47 74 Z" />
+        <path d="M145 62 L155 74 L145 86 L135 74 Z" />
+    </g>
+</svg>

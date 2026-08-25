@@ -4,14 +4,25 @@ import { Check, Copy, Download, Share2, X } from '@lucide/vue';
 import QRCode from 'qrcode';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
+import { CROWN_STROKES } from '../../crown';
 
 /**
  * The profile's QR: scan → booking page. Drawn client-side with the highest
  * error-correction level so the brand mark can sit in the middle without
  * eating the code — the same trick Booksy uses with its logo.
  *
- * The center mark is the provisional GlowMark sparkle; when the real logo
- * arrives, this inline SVG is the only thing to swap.
+ * The center mark is the crown, same strokes as everywhere else. It cannot be
+ * the <GlowMark> component: this goes through an <img> into a canvas, so it has
+ * to be standalone SVG markup with no external stylesheet. Only the paths are
+ * shared, and two things are deliberately NOT:
+ *
+ * - **The gold.** The brand gradient peaks at a very pale #F5D9BC that would
+ *   dissolve into the white badge. These three stops are the light-theme gold
+ *   tokens, which is what the sparkle already used and what a QR that gets
+ *   printed needs.
+ * - **The stroke weight.** The crown renders about 110px wide inside the
+ *   downloaded code and a third of that on screen; at that size the 5.5 of the
+ *   toolbar mark comes out as a hairline.
  */
 const props = defineProps({
     url: { type: String, required: true },
@@ -24,7 +35,12 @@ const { t } = useI18n();
 
 const canvasEl = ref(null);
 
-const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+// Three units of slack around CROWN_VIEWBOX: the round caps of the gems sit
+// right on that box, and here there is no `overflow: visible` to escape with —
+// a rasterised SVG clips at its viewBox and the outer stones would come out
+// shaved. The explicit width/height matter too: Safari refuses to rasterise a
+// viewBox-only SVG through an <img>.
+const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="21 39 158 92" width="158" height="92">
     <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#e3c26d"/>
@@ -32,7 +48,9 @@ const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
             <stop offset="1" stop-color="#8a6a25"/>
         </linearGradient>
     </defs>
-    <path fill="url(#g)" d="M32 4C36.5 19.5 44.5 27.5 60 32 44.5 36.5 36.5 44.5 32 60 27.5 44.5 19.5 36.5 4 32 19.5 27.5 27.5 19.5 32 4Z"/>
+    <g fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        ${CROWN_STROKES.map((d) => `<path d="${d}"/>`).join('')}
+    </g>
 </svg>`;
 
 async function draw() {
@@ -57,7 +75,7 @@ async function draw() {
     const badge = size * 0.22;
     const corner = (size - badge) / 2;
 
-    // White rounded badge behind the mark so the sparkle never fights the
+    // White rounded badge behind the mark so the crown never fights the
     // modules it covers.
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();

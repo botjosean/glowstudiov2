@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
-import { Download, X } from '@lucide/vue';
+import { X } from '@lucide/vue';
+import GlowMark from './GlowMark.vue';
 
 /**
  * Our own "install the app" bar, instead of whatever the browser decides.
@@ -95,8 +96,11 @@ onUnmounted(() => {
             v-if="visible"
             class="sticky top-0 z-40 flex items-center gap-3 border-b border-[var(--surface-mute)] bg-[var(--surface)] px-4 py-2.5"
         >
+            <!-- La corona, no una flecha de descarga: esto ofrece ESTA app, y
+                 así se ve de antemano el ícono que va a quedar en el teléfono.
+                 Lo que se instala ya lo dice el botón de al lado. -->
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-mute)]">
-                <Download :size="17" class="text-[var(--text-strong)]" />
+                <GlowMark :size="22" />
             </div>
             <p class="min-w-0 flex-1 text-[13px] font-medium leading-snug text-[var(--text-strong)]">
                 {{ $t('common.installPrompt') }}

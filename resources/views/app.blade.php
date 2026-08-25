@@ -19,6 +19,24 @@
         @endphp
         <link rel="manifest" href="{{ $esPanel ? '/manifest-pro.webmanifest' : '/manifest.webmanifest' }}">
         <meta name="theme-color" content="#0E1626">
+        {{-- La corona en la pestaña. Va en SVG y no en el .ico porque el SVG se
+             dibuja nítido en cualquier tamaño y, sobre todo, porque es un
+             archivo de texto: se cambia el logo editándolo, sin exportar nada.
+
+             Ojo con los dos que siguen mostrando el loto, porque son imágenes
+             ya dibujadas y no se generan desde este SVG:
+
+             - `public/favicon.ico` está VACÍO (0 bytes) desde que se creó. Hoy
+               no se nota, porque cualquier navegador que entienda el SVG de
+               arriba lo prefiere; sólo uno viejo se quedaría sin ícono. No se
+               enlaza a propósito: enlazar un archivo vacío sería peor que
+               dejar que lo pida solo y falle.
+             - El apple-touch-icon y los íconos del manifiesto
+               (`icon-{180,192,512}.png` y los `icon-maskable-*`) siguen con el
+               loto, así que en la pantalla de inicio del teléfono la app
+               todavía se ve con la flor. Hay que volver a exportarlos con la
+               corona; ver `resources/js/crown.js`. --}}
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg?v=20260823">
         <link rel="apple-touch-icon" href="/icons/icon-180.png?v=20260817">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
