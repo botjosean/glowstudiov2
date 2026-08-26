@@ -3,8 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Contact, X } from '@lucide/vue';
 import BottomSheet from '../ui/BottomSheet.vue';
+import ClientPicker from './ClientPicker.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
-import OutlinedSelect from '../ui/OutlinedSelect.vue';
 import Chip from '../ui/Chip.vue';
 import { useI18n } from 'vue-i18n';
 import { useHaptics } from '../../composables/useHaptics';
@@ -34,6 +34,27 @@ const haptics = useHaptics();
  * a card — the ledger snapshots names anyway, so nothing is lost.
  */
 const OTHER_CLIENT = 'other';
+
+// El buscador devuelve la clienta entera; el formulario solo manda su id.
+const chosenClient = ref(null);
+const clientPickerOpen = ref(false);
+
+watch(chosenClient, (client) => {
+    form.clientId = client ? client.id : null;
+    // Elegir una de la libreta cancela el modo "clienta nueva": son dos
+    // caminos para lo mismo y tenerlos a la vez confunde al guardar.
+    if (client) {
+        form.clientName = '';
+        form.clientPhone = '';
+    }
+});
+
+// «+ Añadir clienta nueva», que en el buscador es una fila y no una opción
+// perdida en una lista.
+function startNewClient() {
+    chosenClient.value = null;
+    form.clientId = OTHER_CLIENT;
+}
 
 const form = useForm({
     clientId: null,
@@ -108,16 +129,6 @@ const tipNumber = computed(() => {
 
 const total = computed(() => Math.round((amountNumber.value + tipNumber.value) * 100) / 100);
 
-// Añadir va ARRIBA, antes de la libreta. Estaba de ultima y habia que bajar
-// por todas las clientas para llegar: con una libreta que crece, eso es un
-// boton que desaparece solo. Crear primero y elegir despues es lo que hace
-// cualquier selector que deja crear.
-const clientOptions = computed(() => [
-    { value: null, label: t('admin.saleClientNone') },
-    { value: OTHER_CLIENT, label: t('admin.saleClientOther') },
-    ...props.clients.map((client) => ({ value: client.id, label: client.name })),
-]);
-
 const isOtherClient = computed(() => form.clientId === OTHER_CLIENT);
 
 const methodKey = {
@@ -168,16 +179,24 @@ function submit() {
             </button>
         </div>
 
-        <OutlinedSelect
-            id="sale-client"
-            v-model="form.clientId"
-            class="mb-5"
-            :label="$t('admin.saleClient')"
-            :options="clientOptions"
-            :error="form.errors.clientId"
-        />
+        <!--
+            El mismo buscador que al crear una cita. Antes aqui habia un
+            <select>, que en Android abre un menu marron con radios que no se
+            parece a nada del resto de la app -- ese menu lo dibuja el sistema,
+            no nosotros -- y ademas es una lista plana sin buscar.
+        -->
+        <div class="mb-5">
+            <ClientPicker
+                v-model="chosenClient"
+                v-model:open="clientPickerOpen"
+                :clients="clients"
+                :placeholder="$t('admin.saleClientNone')"
+                :add-label="$t('admin.saleClientOther')"
+                @add-new="startNewClient"
+            />
+        </div>
 
-        <template v-if="isOtherClient">
+        <template v-if="isOtherClient && !clientPickerOpen">
             <div class="mb-5 flex items-end gap-2">
                 <OutlinedInput
                     id="sale-client-name"
@@ -210,6 +229,7 @@ function submit() {
             <p class="-mt-4 mb-5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.saleClientOtherPhoneHint') }}</p>
         </template>
 
+        <template v-if="!clientPickerOpen">
         <OutlinedInput
             id="sale-amount"
             v-model="form.amount"
@@ -279,5 +299,6 @@ function submit() {
                 {{ form.processing ? $t('common.saving') : `$${total.toFixed(2)} · ${$t('admin.registerSale')}` }}
             </button>
         </div>
+        </template>
     </BottomSheet>
 </template>

@@ -51,10 +51,15 @@ class SalesController extends Controller
             ])->values()->all(),
             'acceptedMethods' => $provider->payment_methods ?? [],
             'allMethods' => Sale::PAYMENT_METHODS,
-            // For the sheet's "who was it" select — the book is small.
-            'clients' => $provider->clients()->orderBy('name')->get(['id', 'name'])
-                ->map(fn (Client $client) => ['id' => $client->id, 'name' => $client->name])
-                ->values()->all(),
+            // El buscador de la hoja — la libreta es pequeña. Lleva teléfono
+            // porque el buscador lo pinta debajo del nombre y porque se puede
+            // buscar por él: ella se acuerda de uno o del otro.
+            'clients' => $provider->clients()->orderBy('name')->get(['id', 'name', 'phone'])
+                ->map(fn (Client $client) => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'phone' => $client->phone === null ? null : Format::usPhone($client->phone),
+                ])->values()->all(),
             'prefill' => $this->prefillFrom($request, $provider),
         ]);
     }
