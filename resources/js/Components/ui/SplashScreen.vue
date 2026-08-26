@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
 
 /**
@@ -19,16 +20,33 @@ import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
  * lleva las mismas animaciones de trazo, así que la luz sólo puede iluminar lo
  * que ya está dibujado: nunca se adelanta al lápiz.
  *
- * **Cuándo se ve**, que importa tanto como cómo se ve:
+ * **Cuándo se ve.** Esto ya cambió tres veces, así que conviene dejar
+ * escrito el porqué de cada vuelta antes de tocarlo una cuarta:
  *
- * - **Siempre que se abre la app**, instalada o en el navegador, al recargar,
- *   y **también al cambiar de pestaña dentro de la app** — como en Booksy.
- *   La primera versión sólo lo mostraba una vez por sesión: el dueño lo pidió
- *   cambiado el 2026-08-17 porque el logo desaparecía y no volvía, y de nuevo
- *   el 2026-08-24 porque seguía sin salir al pasar de pestañas. Las capas se
- *   vuelven a montar en cada navegación de Inertia — antes había un freno a
- *   propósito para no repetirlo ahí; ahora no hay freno, es justo lo que se
- *   pidió.
+ * 1. Al principio salía **una vez por sesión**. El dueño lo pidió cambiado el
+ *    2026-08-17: el logo desaparecía y no volvía nunca.
+ * 2. Pasó a salir **en cada navegación de Inertia**, o sea en cada cambio de
+ *    pestaña. Lo volvió a pedir así el 2026-08-24, porque seguía sin salir al
+ *    pasar de pestañas.
+ * 3. Y el 2026-08-26 pidió lo de ahora, con estas palabras: «aparece
+ *    demasiado… debería aparecer solamente cuando la gente recargue la página,
+ *    o cuando se meta, o cuando vuelva a iniciar sesión. Y también cuando
+ *    toque Perfil, y en Configuración. Pero más en ningún lado.»
+ *
+ * O sea que la regla ya no es «siempre» ni «una vez», son dos cosas a la vez:
+ *
+ * - **Una carga de verdad** —abrir la app, recargar, volver de iniciar
+ *   sesión— siempre la enseña. Se detecta con una variable de MÓDULO, no del
+ *   componente: sobrevive a las navegaciones de Inertia, que no recargan nada,
+ *   y muere cuando el navegador carga la página de nuevo. Esa muerte es
+ *   exactamente la señal que hace falta.
+ * - **Y las pantallas que la piden**, que las declara quien usa el componente
+ *   con `also-on`. Hoy son Perfil y Ajustes: son las suyas, las de su marca,
+ *   y ahí la corona acompaña en vez de estorbar.
+ *
+ * En Citas, Clientas y Ventas ya no sale. Son las pantallas de trabajo: entra
+ * a cobrar veinte veces al día y tres segundos de corona cada vez son un
+ * minuto de su día mirando un logo.
  * - **No en la página pública de una profesional** (`disabled`). Ahí llega una
  *   clienta desde un enlace de WhatsApp queriendo ver a Pati, y esa página ya
  *   la saluda con su nombre: dos bienvenidas seguidas son cuatro segundos
@@ -37,22 +55,58 @@ import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
  */
 const props = defineProps({
     disabled: { type: Boolean, default: false },
+    // Rutas donde sale aunque no sea una carga de verdad. Vacío = solo en
+    // cargas de verdad. La política vive en quien usa el componente, no aquí.
+    alsoOn: { type: Array, default: () => [] },
 });
+
+const page = usePage();
 const DURATION = 3200;
+
+/**
+ * Si ya salió desde que el navegador cargó esta página.
+ *
+ * Va en el MÓDULO a propósito, no en el componente ni en sessionStorage: las
+ * navegaciones de Inertia vuelven a montar el componente pero no recargan el
+ * módulo, y una recarga de verdad sí lo tira. Justo la distinción que hace
+ * falta, y sale gratis.
+ */
+let yaSalioEnEstaCarga = false;
 
 const visible = ref(false);
 const leaving = ref(false);
 
 let timers = [];
 
-onMounted(() => {
+function debeSalir() {
+    if (props.disabled) {
+        return false;
+    }
+
     // Quien pidió menos movimiento no quiere tres segundos de animación cada
     // vez que abre.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return;
+        return false;
     }
 
-    if (props.disabled) {
+    // Abrir la app, recargar, o volver de iniciar sesión.
+    if (!yaSalioEnEstaCarga) {
+        return true;
+    }
+
+    const ruta = page.url.split('?')[0];
+
+    return props.alsoOn.some((p) => ruta === p || ruta.startsWith(p + '/'));
+}
+
+onMounted(() => {
+    const sale = debeSalir();
+
+    // Se marca salga o no: lo que la bandera cuenta es si esta carga del
+    // navegador ya montó la pantalla una vez, no si llegó a verse.
+    yaSalioEnEstaCarga = true;
+
+    if (!sale) {
         return;
     }
 

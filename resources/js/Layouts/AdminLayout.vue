@@ -62,7 +62,12 @@ function isActive(href) {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)] min-[700px]:max-w-[820px] lg:max-w-[1024px]">
-        <SplashScreen />
+        <!--
+            Perfil y Ajustes son sus pantallas, las de su marca: ahí la corona
+            acompaña. En Citas, Clientas y Ventas estorba — entra a cobrar
+            veinte veces al día.
+        -->
+        <SplashScreen :also-on="['/admin/perfil', '/admin/ajustes']" />
         <InstallPrompt />
         <FlashMessage />
 
