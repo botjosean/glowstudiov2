@@ -104,24 +104,24 @@ class SplashRuleTest extends TestCase
     }
 
     /**
-     * Perfil y Ajustes sí. Citas, Clientas y Ventas no: son las pantallas de
-     * trabajo, y ella entra a cobrar veinte veces al día.
+     * Sólo Ajustes. Ni Citas, ni Clientas, ni Ventas, ni Perfil: son sitios
+     * por los que se pasa todo el día.
      */
-    public function test_solo_perfil_y_ajustes_la_ensenan_al_cambiar_de_pestana(): void
+    public function test_solo_ajustes_la_ensena_al_cambiar_de_pestana(): void
     {
         $layout = file_get_contents(self::LAYOUT);
 
         $this->assertMatchesRegularExpression(
-            '/:also-on="\[\'\/admin\/perfil\', \'\/admin\/ajustes\'\]"/',
+            '/:also-on="\[\'\/admin\/ajustes\'\]"/',
             $layout,
             'La lista de pantallas que enseñan la corona cambió sin querer.',
         );
 
-        foreach (['/admin/citas', '/admin/ventas', '/admin/clientas'] as $trabajo) {
+        foreach (['/admin/citas', '/admin/ventas', '/admin/clientas', '/admin/perfil'] as $trabajo) {
             $this->assertStringNotContainsString(
                 "'{$trabajo}'\]",
                 $layout,
-                "{$trabajo} es una pantalla de trabajo: la corona ahí estorba.",
+                "{$trabajo} no debe enseñar la corona: se pasa por ahí todo el día.",
             );
         }
     }

@@ -63,12 +63,14 @@ import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
  *   y muere cuando el navegador carga la página de nuevo. Esa muerte es
  *   exactamente la señal que hace falta.
  * - **Y las pantallas que la piden**, que las declara quien usa el componente
- *   con `also-on`. Hoy son Perfil y Ajustes: son las suyas, las de su marca,
- *   y ahí la corona acompaña en vez de estorbar.
+ *   con `also-on`. Hoy sólo Ajustes: es la pantalla a la que se entra a
+ *   propósito, de vez en cuando y por el engranaje.
  *
- * En Citas, Clientas y Ventas ya no sale. Son las pantallas de trabajo: entra
- * a cobrar veinte veces al día y tres segundos de corona cada vez son un
- * minuto de su día mirando un logo.
+ * En Citas, Clientas, Ventas y el propio Perfil ya no sale. Son sitios por los
+ * que se pasa todo el día: entra a cobrar veinte veces y tres segundos de
+ * corona cada vez son un minuto de su jornada mirando un logo. Perfil estuvo
+ * un rato en la lista y el dueño lo quitó el 2026-08-26 — se pasa por ahí más
+ * de lo que parece.
  * - **No en la página pública de una profesional** (`disabled`). Ahí llega una
  *   clienta desde un enlace de WhatsApp queriendo ver a Pati, y esa página ya
  *   la saluda con su nombre: dos bienvenidas seguidas son cuatro segundos

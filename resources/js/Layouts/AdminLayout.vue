@@ -62,12 +62,13 @@ function isActive(href) {
 
 <template>
     <div class="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[var(--bg-canvas)] min-[700px]:max-w-[820px] lg:max-w-[1024px]">
-        <!--
-            Perfil y Ajustes son sus pantallas, las de su marca: ahí la corona
-            acompaña. En Citas, Clientas y Ventas estorba — entra a cobrar
-            veinte veces al día.
+<!--
+            Sólo Ajustes. Es la pantalla a la que se entra a propósito, de vez
+            en cuando y por el engranaje: ahí la corona acompaña. En todo lo
+            demás —Citas, Clientas, Ventas y el propio Perfil— estorba, porque
+            son sitios por los que se pasa todo el día.
         -->
-        <SplashScreen :also-on="['/admin/perfil', '/admin/ajustes']" />
+        <SplashScreen :also-on="['/admin/ajustes']" />
         <InstallPrompt />
         <FlashMessage />
 
