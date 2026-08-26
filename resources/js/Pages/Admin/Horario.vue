@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Clock4, UtensilsCrossed, Timer, Info, CalendarOff, Plus, Trash2, OctagonX } from '@lucide/vue';
+import { Clock4, UtensilsCrossed, Timer, Info, CalendarOff, Plus, Trash2, OctagonX, TriangleAlert, X } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Select from '../../Components/ui/Select.vue';
 import TimeWheel from '../../Components/ui/TimeWheel.vue';
 import Input from '../../Components/ui/Input.vue';
+import { useI18n } from 'vue-i18n';
 import { useFormat } from '../../composables/useFormat';
 import { usePreferences } from '../../composables/usePreferences';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
@@ -19,6 +20,7 @@ const props = defineProps({
 });
 
 const { formatTime, formatDuration } = useFormat();
+const { t } = useI18n();
 const { locale } = usePreferences();
 const { returnToInicio } = useOnboardingReturn();
 
@@ -33,6 +35,142 @@ const form = useForm({
     lunchEnd: props.schedule.lunchEnd,
     bufferMinutes: props.schedule.bufferMinutes,
     days: props.schedule.days.map((day) => ({ ...day })),
+});
+
+/* ====================================================================
+ * Una semana no son siete problemas: es uno con excepciones.
+ *
+ * Nadie piensa «el lunes de 10 a 9, el martes de 10 a 9, el miércoles de 10 a
+ * 9…». Piensa «trabajo de 10 a 9, menos los domingos». La pantalla vieja pedía
+ * llenar catorce ruedas de precisión, una por hora y por día, y con eso
+ * Patricia guardó su primera semana con DOS de siete días mal: el miércoles
+ * hasta las 11:45 de la noche y el domingo empezando a las 8:45. No fue
+ * torpeza suya — fueron catorce oportunidades de que el dedo resbalara.
+ *
+ * Ahora hay una sola rueda para el horario de siempre, siete cuadritos para
+ * los días, y una lista aparte para el día que de verdad sea distinto.
+ *
+ * **Por debajo no cambia nada.** `form.days` sigue siendo los siete días con
+ * sus horas, y se manda igual que antes. El servidor, el bot y las reservas no
+ * se enteran de este cambio: es sólo la manera de llenarlo.
+ * ==================================================================== */
+
+// Días que llevan un horario propio. Se deducen al abrir: si un día abierto no
+// coincide con el horario más repetido, es que alguien se lo puso a mano.
+const excepciones = ref(new Set());
+
+function horarioMasRepetido(days) {
+    const cuenta = new Map();
+
+    for (const d of days) {
+        if (!d.isOpen) continue;
+        const k = d.workStart + '-' + d.workEnd;
+        cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
+    }
+
+    if (cuenta.size === 0) return { start: 10 * 60, end: 21 * 60 };
+
+    const [mejor] = [...cuenta.entries()].sort((a, b) => b[1] - a[1])[0];
+    const [start, end] = mejor.split('-').map(Number);
+
+    return { start, end };
+}
+
+const base = ref(horarioMasRepetido(props.schedule.days));
+
+for (const d of props.schedule.days) {
+    if (d.isOpen && (d.workStart !== base.value.start || d.workEnd !== base.value.end)) {
+        excepciones.value.add(d.weekday);
+    }
+}
+
+function dia(weekday) {
+    return form.days.find((d) => d.weekday === weekday);
+}
+
+// Cambiar el horario de siempre mueve todos los días que lo siguen. Los que
+// tienen horario propio se quedan como están: para eso son excepciones.
+function aplicarBase() {
+    for (const d of form.days) {
+        if (d.isOpen && !excepciones.value.has(d.weekday)) {
+            d.workStart = base.value.start;
+            d.workEnd = base.value.end;
+        }
+    }
+}
+
+watch(() => [base.value.start, base.value.end], aplicarBase);
+
+function alternarDia(weekday) {
+    const d = dia(weekday);
+    d.isOpen = !d.isOpen;
+
+    if (!d.isOpen) {
+        // Un día cerrado no puede tener horario propio: al volver a abrirlo
+        // hereda el de siempre, que es lo que ella espera.
+        excepciones.value.delete(weekday);
+        return;
+    }
+
+    d.workStart = base.value.start;
+    d.workEnd = base.value.end;
+}
+
+function agregarExcepcion(weekday) {
+    excepciones.value.add(weekday);
+    eligiendoExcepcion.value = false;
+}
+
+function quitarExcepcion(weekday) {
+    excepciones.value.delete(weekday);
+    const d = dia(weekday);
+    d.workStart = base.value.start;
+    d.workEnd = base.value.end;
+}
+
+const eligiendoExcepcion = ref(false);
+
+const listaExcepciones = computed(() =>
+    form.days.filter((d) => d.isOpen && excepciones.value.has(d.weekday)));
+
+// La frase en palabras. Es la que delata un horario raro de un vistazo: leer
+// «de 9:00 AM a 11:45 PM» chirría mucho antes que verlo en una rueda.
+const resumen = computed(() => {
+    const abiertos = openDays.value;
+    if (abiertos.length === 0) return t('admin.summaryNone');
+
+    const params = {
+        days: t('admin.summaryDays', abiertos.length),
+        list: abiertos.map((d) => dayName(d.weekday).toLowerCase()).join(', '),
+        from: formatTime(Math.floor(base.value.start / 60), base.value.start % 60),
+        to: formatTime(Math.floor(base.value.end / 60), base.value.end % 60),
+        n: listaExcepciones.value.length,
+    };
+
+    return listaExcepciones.value.length > 0
+        ? t('admin.summaryExtra', params)
+        : t('admin.summaryLine', params);
+});
+
+/**
+ * El freno para el dedo resbalado.
+ *
+ * No bloquea: hay quien de verdad abre doce horas, y una app que le discute a
+ * la dueña cuánto trabaja es una app insoportable. Sólo pregunta — y ese
+ * aviso solo habría atajado los dos errores de Patricia.
+ */
+const aviso = computed(() => {
+    const largo = (base.value.end - base.value.start) / 60;
+    const params = {
+        hours: String(Math.round(largo * 10) / 10).replace('.0', ''),
+        from: formatTime(Math.floor(base.value.start / 60), base.value.start % 60),
+        to: formatTime(Math.floor(base.value.end / 60), base.value.end % 60),
+    };
+
+    if (base.value.end <= base.value.start) return t('admin.backwardsWarn');
+    if (largo > 12) return t('admin.longDayWarn', params);
+
+    return null;
 });
 
 // Lunch is optional: the rest of the stack already treats an empty window
@@ -86,19 +224,6 @@ const bufferOptions = computed(() =>
 const label = (minutes) => formatTime(Math.floor(minutes / 60), minutes % 60);
 
 const openDays = computed(() => form.days.filter((day) => day.isOpen));
-
-/** Editing the same two selects seven times is the slowest part of this page. */
-function applyFirstOpenDayToAll() {
-    const source = openDays.value[0];
-    if (!source) return;
-
-    form.days.forEach((day) => {
-        if (day.isOpen) {
-            day.workStart = source.workStart;
-            day.workEnd = source.workEnd;
-        }
-    });
-}
 
 const scheduleError = computed(() => {
     const keys = Object.keys(form.errors).filter((key) => key.startsWith('days') || key.startsWith('lunch') || key.startsWith('buffer'));
@@ -202,55 +327,102 @@ function timeOffLabel(off) {
                         <Clock4 :size="16" class="text-[var(--chip-fg)]" />
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.workdays') }}</div>
-                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.workdaysHint') }}</div>
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.usualHours') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.usualHoursHint') }}</div>
                     </div>
                 </div>
 
-                <div class="flex flex-col divide-y divide-[var(--surface-mute)]">
-                    <div v-for="day in form.days" :key="day.weekday" class="py-3 first:pt-0 last:pb-0">
-                        <div class="flex items-center justify-between gap-3">
-                            <span
-                                class="text-[15px] capitalize"
-                                :class="day.isOpen ? 'font-semibold text-[var(--text-strong)]' : 'font-medium text-[var(--text-faint)]'"
-                                >{{ dayName(day.weekday) }}</span
-                            >
-                            <button
-                                type="button"
-                                role="switch"
-                                :aria-checked="day.isOpen"
-                                :aria-label="dayName(day.weekday)"
-                                class="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-                                :class="day.isOpen ? 'bg-[var(--btn-green)]' : 'bg-[var(--border-strong)]'"
-                                @click="day.isOpen = !day.isOpen"
-                            >
-                                <span
-                                    class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
-                                    :class="day.isOpen ? 'left-6' : 'left-1'"
-                                />
-                            </button>
-                        </div>
-                        <!-- Wheels rather than two dropdowns of ninety-six
-                             options: the same choice, a completely different
-                             gesture. See TimeWheel. -->
-                        <div v-if="day.isOpen" class="mt-2.5 grid grid-cols-2 gap-3">
-                            <TimeWheel v-model="day.workStart" :label="$t('admin.startTime')" />
-                            <TimeWheel v-model="day.workEnd" :label="$t('admin.endTime')" />
-                        </div>
-                        <div v-else class="mt-1 text-[13px] font-normal text-[var(--text-faint)]">
-                            {{ $t('admin.dayClosed') }}
-                        </div>
+                <!--
+                    Una sola rueda, no catorce. La rueda se queda porque se
+                    siente mejor que dos listas de noventa y seis opciones; el
+                    problema nunca fue la rueda, fue tener catorce.
+                -->
+                <div class="grid grid-cols-2 gap-3">
+                    <TimeWheel v-model="base.start" :label="$t('admin.iStart')" />
+                    <TimeWheel v-model="base.end" :label="$t('admin.iEnd')" />
+                </div>
+
+                <div
+                    v-if="aviso"
+                    class="mt-3 flex items-start gap-2 rounded-xl border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 py-2.5"
+                >
+                    <TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[var(--amber-text)]" />
+                    <span class="text-[13px] font-medium leading-snug text-[var(--amber-text)]">{{ aviso }}</span>
+                </div>
+
+                <!-- Los siete días en una línea: la semana entera de un
+                     vistazo, que es justo lo que no había. -->
+                <div class="mt-5 flex gap-1.5">
+                    <button
+                        v-for="day in form.days"
+                        :key="day.weekday"
+                        type="button"
+                        role="switch"
+                        :aria-checked="day.isOpen"
+                        :aria-label="dayName(day.weekday)"
+                        class="flex aspect-square flex-1 items-center justify-center rounded-xl border text-[14px] font-bold uppercase transition-colors"
+                        :class="day.isOpen
+                            ? 'border-[var(--chip-bg)] bg-[var(--chip-bg)] text-[var(--chip-fg)]'
+                            : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-faint)]'"
+                        @click="alternarDia(day.weekday)"
+                    >{{ dayName(day.weekday).charAt(0) }}</button>
+                </div>
+
+                <!-- Y escrito en palabras. Leer «de 9:00 AM a 11:45 PM»
+                     chirría mucho antes que verlo en una rueda. -->
+                <p class="mt-3 text-[13px] font-normal leading-relaxed text-[var(--text-mute)]">{{ resumen }}</p>
+            </div>
+
+            <!-- ============ DÍAS DISTINTOS ============ -->
+            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
+                <div class="mb-3 flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--gold-soft)]">
+                        <Clock4 :size="17" class="text-[var(--gold-text)]" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">{{ $t('admin.differentDay') }}</div>
+                        <div class="text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.differentDayHint') }}</div>
+                    </div>
+                </div>
+
+                <div v-for="day in listaExcepciones" :key="day.weekday" class="mb-3 rounded-xl border border-[var(--surface-mute)] bg-[var(--surface)] p-3">
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                        <span class="text-[14px] font-semibold capitalize text-[var(--text-strong)]">{{ dayName(day.weekday) }}</span>
+                        <button
+                            type="button"
+                            :aria-label="$t('common.clear')"
+                            class="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface-mute)] hover:bg-[var(--border-strong)]"
+                            @click="quitarExcepcion(day.weekday)"
+                        >
+                            <X :size="13" class="text-[var(--text-mute)]" />
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <TimeWheel v-model="day.workStart" :label="$t('admin.iStart')" />
+                        <TimeWheel v-model="day.workEnd" :label="$t('admin.iEnd')" />
                     </div>
                 </div>
 
                 <button
-                    v-if="openDays.length > 1"
+                    v-if="!eligiendoExcepcion"
                     type="button"
-                    class="mt-3 w-full rounded-xl border border-[var(--border-strong)] py-2.5 text-[13px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
-                    @click="applyFirstOpenDayToAll"
+                    class="w-full rounded-xl border border-dashed border-[var(--border-strong)] py-2.5 text-[13px] font-semibold text-[var(--text-mute)] hover:bg-[var(--surface-mute)]"
+                    @click="eligiendoExcepcion = true"
                 >
-                    {{ $t('admin.applyToAllDays', { hours: `${label(openDays[0].workStart)} – ${label(openDays[0].workEnd)}` }) }}
+                    {{ $t('admin.addDifferentDay') }}
                 </button>
+
+                <div v-else class="flex gap-1.5">
+                    <button
+                        v-for="day in form.days"
+                        :key="day.weekday"
+                        type="button"
+                        :aria-label="dayName(day.weekday)"
+                        :disabled="!day.isOpen || excepciones.has(day.weekday)"
+                        class="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] py-2 text-[13px] font-bold uppercase text-[var(--text-strong)] disabled:opacity-30"
+                        @click="agregarExcepcion(day.weekday)"
+                    >{{ dayName(day.weekday).charAt(0) }}</button>
+                </div>
             </div>
 
             <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface-alt)] p-4">
