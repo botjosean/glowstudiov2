@@ -7,14 +7,21 @@ use PHPUnit\Framework\TestCase;
 /**
  * Cuándo sale la pantalla de carga.
  *
- * Esto ya cambió tres veces —una vez por sesión, luego en cada navegación,
- * y ahora la regla de en medio— y las tres veces lo pidió el dueño. Esta
- * prueba no defiende una opinión: defiende la ÚLTIMA que él pidió, para que
- * la cuarta vuelta sea a sabiendas y no por descuido de alguien que pasaba.
+ * Esto ya cambió tres veces —una vez por sesión, luego en cada navegación, y
+ * ahora la regla de en medio— y las tres las pidió el dueño. Esta prueba no
+ * defiende una opinión: defiende la ÚLTIMA que él pidió, para que la cuarta
+ * vuelta sea a sabiendas.
  *
- * Lee el fuente porque el proyecto no tiene pruebas de JavaScript y montar
- * un corredor entero para esto sería una dependencia nueva por una regla de
- * tres líneas. Lo mismo hace ColorContrastTest con la hoja de estilos.
+ * **Y defiende sobre todo el DÓNDE de una variable**, que es lo que rompió
+ * esto el 2026-08-26. La bandera se escribió dentro de `<script setup>`, donde
+ * parece de módulo pero no lo es: Vue compila todo ese bloque dentro de la
+ * función de montaje, así que se reiniciaba en cada cambio de pestaña y la
+ * corona siguió saliendo en todas partes.
+ *
+ * La primera versión de esta prueba no lo atrapó porque comprobaba que el
+ * texto empezara en una línea, no dónde acababa al compilar. Una prueba que
+ * mide la forma y no el comportamiento da confianza falsa, que es peor que no
+ * tener prueba. Ahora parte el archivo por bloques y mira en cuál cae.
  */
 class SplashRuleTest extends TestCase
 {
@@ -23,24 +30,49 @@ class SplashRuleTest extends TestCase
     private const LAYOUT = __DIR__.'/../../../resources/js/Layouts/AdminLayout.vue';
 
     /**
-     * La bandera tiene que vivir en el MÓDULO. En el componente se reiniciaría
-     * en cada navegación de Inertia —que es justo lo que hay que distinguir— y
-     * la pantalla volvería a salir en todas partes.
+     * @return array{modulo: string, setup: string}
      */
-    public function test_la_bandera_vive_en_el_modulo_y_no_en_el_componente(): void
+    private function bloques(): array
     {
         $fuente = file_get_contents(self::SPLASH);
 
-        $this->assertMatchesRegularExpression(
-            '/^let yaSalioEnEstaCarga = false;$/m',
-            $fuente,
-            'La bandera dejó de estar en el módulo: la pantalla de carga volverá a salir en cada pestaña.',
+        // Anclados a principio de línea: las etiquetas de verdad están solas
+        // en su línea, y las menciones en los comentarios van en medio de una
+        // frase. Sin el ancla, el comentario del bloque de módulo —que habla
+        // justamente de `<script setup>`— se hacía pasar por la etiqueta.
+        preg_match('/^<script>$(.*?)^<\/script>$/ms', $fuente, $m1);
+        preg_match('/^<script setup>$(.*?)^<\/script>$/ms', $fuente, $m2);
+
+        return [
+            'modulo' => $m1[1] ?? '',
+            'setup' => $m2[1] ?? '',
+        ];
+    }
+
+    /**
+     * El fallo que costó un despliegue: dentro de `<script setup>` la bandera
+     * se reinicia en cada montaje, o sea en cada pestaña.
+     */
+    public function test_la_bandera_vive_fuera_de_script_setup(): void
+    {
+        ['modulo' => $modulo, 'setup' => $setup] = $this->bloques();
+
+        $this->assertNotSame(
+            '',
+            $modulo,
+            'Desapareció el bloque <script> normal. Sin él no hay ámbito de módulo y la corona vuelve a salir en cada pestaña.',
+        );
+
+        $this->assertStringContainsString(
+            'let yaSalioEnEstaCarga = false;',
+            $modulo,
+            'La bandera tiene que declararse en el bloque <script> normal, no en <script setup>.',
         );
 
         $this->assertStringNotContainsString(
-            'ref(false); // yaSalio',
-            $fuente,
-            'La bandera no puede ser reactiva del componente.',
+            'let yaSalioEnEstaCarga',
+            $setup,
+            'La bandera volvió a <script setup>: allí Vue la mete dentro de setup() y se reinicia en cada montaje.',
         );
     }
 
@@ -53,8 +85,21 @@ class SplashRuleTest extends TestCase
     {
         $this->assertStringContainsString(
             'if (!yaSalioEnEstaCarga) {',
-            file_get_contents(self::SPLASH),
+            $this->bloques()['setup'],
             'Se perdió el caso de "primera vez desde que cargó la página".',
+        );
+    }
+
+    /**
+     * Y se marca aunque no llegue a verse: lo que cuenta es si esta carga del
+     * navegador ya montó la pantalla, no si se mostró.
+     */
+    public function test_la_bandera_se_marca_en_cada_montaje(): void
+    {
+        $this->assertStringContainsString(
+            'yaSalioEnEstaCarga = true;',
+            $this->bloques()['setup'],
+            'Si no se marca, la bandera no sirve de nada.',
         );
     }
 
@@ -87,8 +132,8 @@ class SplashRuleTest extends TestCase
     public function test_se_respeta_quien_pidio_menos_movimiento(): void
     {
         $this->assertStringContainsString(
-            "prefers-reduced-motion: reduce",
-            file_get_contents(self::SPLASH),
+            'prefers-reduced-motion: reduce',
+            $this->bloques()['setup'],
             'Se perdió el respeto a "reducir movimiento".',
         );
     }

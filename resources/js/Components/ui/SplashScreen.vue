@@ -1,3 +1,25 @@
+<script>
+/**
+ * Si la pantalla de carga ya salió desde que el navegador cargó esta página.
+ *
+ * **Este bloque existe sólo por esta variable, y no se puede fusionar con el
+ * `<script setup>` de abajo.** `<script setup>` compila todo su contenido
+ * DENTRO de la función de montaje, así que un `let` escrito allí parece de
+ * módulo pero se reinicia en cada montaje — o sea, en cada cambio de pestaña,
+ * que es justo lo que hay que distinguir. Un bloque `<script>` normal sí es
+ * ámbito de módulo, y `<script setup>` puede leerlo.
+ *
+ * Ya pasó: el 2026-08-26 se escribió dentro del setup y la corona siguió
+ * saliendo en todas las pestañas. Se vio leyendo el bundle compilado, no el
+ * fuente — en el fuente parecía correcto.
+ *
+ * Módulo y no sessionStorage a propósito: las navegaciones de Inertia vuelven
+ * a montar el componente pero no recargan el módulo, y una recarga de verdad
+ * sí lo tira. Esa muerte es exactamente la señal que hace falta, y sale gratis.
+ */
+let yaSalioEnEstaCarga = false;
+</script>
+
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -62,16 +84,6 @@ const props = defineProps({
 
 const page = usePage();
 const DURATION = 3200;
-
-/**
- * Si ya salió desde que el navegador cargó esta página.
- *
- * Va en el MÓDULO a propósito, no en el componente ni en sessionStorage: las
- * navegaciones de Inertia vuelven a montar el componente pero no recargan el
- * módulo, y una recarga de verdad sí lo tira. Justo la distinción que hace
- * falta, y sale gratis.
- */
-let yaSalioEnEstaCarga = false;
 
 const visible = ref(false);
 const leaving = ref(false);
