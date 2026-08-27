@@ -41,6 +41,11 @@ function clear() {
     model.value = '';
     inputEl.value?.focus();
 }
+
+// <script setup> exposes nothing to a parent's template ref by default —
+// SignUp.vue's step 2 needs this to move focus into the form the moment it
+// appears.
+defineExpose({ focus: () => inputEl.value?.focus() });
 </script>
 
 <template>
