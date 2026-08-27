@@ -301,6 +301,7 @@ class DashboardController extends Controller
                 'phone' => Format::usPhone((string) $request->user()->phone),
                 'email' => $request->user()->email,
                 'businessCategory' => $provider->business_category?->value,
+                'businessSubcategories' => $provider->business_subcategories ?? [],
                 'bio' => $provider->bio,
                 'isMobile' => $provider->is_mobile,
                 'homeService' => $provider->home_service,

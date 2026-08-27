@@ -6,6 +6,7 @@ use App\Enums\BusinessCategory;
 use App\Models\User;
 use App\Support\Format;
 use App\Support\ReservedSlugs;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -58,6 +59,20 @@ class UpdateProfileRequest extends FormRequest
             'publicName' => ['required', 'string', 'min:2', 'max:80'],
             'phone' => ['required', 'digits:10'],
             'businessCategory' => ['nullable', Rule::enum(BusinessCategory::class)],
+            // Each pick must belong to the *submitted* category's own list —
+            // catches both a stale sheet (category changed, old picks left
+            // over) and a tampered request.
+            'businessSubcategories' => ['nullable', 'array'],
+            'businessSubcategories.*' => [
+                'string',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $category = BusinessCategory::tryFrom((string) $this->input('businessCategory'));
+
+                    if ($category === null || ! in_array($value, $category->subcategories(), true)) {
+                        $fail(__('validation.in', ['attribute' => $attribute]));
+                    }
+                },
+            ],
             'bio' => ['nullable', 'string', 'max:1000'],
             'isMobile' => ['required', 'boolean'],
             // "Also serves at the client's place" on top of having a studio.

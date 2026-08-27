@@ -39,4 +39,25 @@ class NegocioPageTest extends TestCase
             ->where('profile.businessCategory', null)
         );
     }
+
+    public function test_business_subcategories_are_exposed(): void
+    {
+        $provider = Provider::factory()->published()->create([
+            'business_category' => 'hair',
+            'business_subcategories' => ['color', 'balayage_highlights'],
+        ]);
+
+        $this->actingAs($provider->user)->get('/admin/negocio')->assertInertia(fn (Assert $page) => $page
+            ->where('profile.businessSubcategories', ['color', 'balayage_highlights'])
+        );
+    }
+
+    public function test_business_subcategories_default_to_an_empty_list(): void
+    {
+        $provider = Provider::factory()->published()->create(['business_category' => null, 'business_subcategories' => null]);
+
+        $this->actingAs($provider->user)->get('/admin/negocio')->assertInertia(fn (Assert $page) => $page
+            ->where('profile.businessSubcategories', [])
+        );
+    }
 }

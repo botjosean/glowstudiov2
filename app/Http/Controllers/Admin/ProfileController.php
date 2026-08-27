@@ -27,6 +27,7 @@ class ProfileController extends Controller
         $providerChanges = [
             'public_name' => $data['publicName'],
             'business_category' => $data['businessCategory'] ?? null,
+            'business_subcategories' => $data['businessSubcategories'] ?? [],
             'bio' => $data['bio'],
             'is_mobile' => $data['isMobile'],
             'service_area' => $data['serviceArea'],

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[RouteKey('slug')]
 #[Fillable([
-    'user_id', 'slug', 'business_category', 'whatsapp_phone_number_id', 'public_name', 'bio',
+    'user_id', 'slug', 'business_category', 'business_subcategories', 'whatsapp_phone_number_id', 'public_name', 'bio',
     'banner_photo_url', 'avatar_photo_url',
     'is_mobile', 'home_service', 'is_available_now', 'published_at', 'service_area', 'address_line',
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
@@ -64,6 +64,7 @@ class Provider extends Model
     {
         return [
             'business_category' => BusinessCategory::class,
+            'business_subcategories' => 'array',
             'is_mobile' => 'bool',
             'home_service' => 'bool',
             'is_available_now' => 'bool',

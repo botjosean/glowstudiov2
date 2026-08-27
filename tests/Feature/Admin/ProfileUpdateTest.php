@@ -80,6 +80,49 @@ class ProfileUpdateTest extends TestCase
             ->assertSessionHasErrors('businessCategory');
     }
 
+    public function test_business_subcategories_are_saved(): void
+    {
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload([
+                'businessCategory' => 'hair',
+                'businessSubcategories' => ['color', 'balayage_highlights'],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['color', 'balayage_highlights'], $user->fresh()->provider->business_subcategories);
+    }
+
+    public function test_business_subcategories_are_optional(): void
+    {
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload(['businessCategory' => 'hair']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([], $user->fresh()->provider->business_subcategories);
+    }
+
+    public function test_a_subcategory_not_belonging_to_the_chosen_category_is_rejected(): void
+    {
+        // "color" is a hair subcategory, not a nails one — a stale sheet
+        // (category switched client-side without refreshing the picker) or
+        // a tampered request must not slip through.
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload([
+                'businessCategory' => 'nails',
+                'businessSubcategories' => ['color'],
+            ]))
+            ->assertSessionHasErrors('businessSubcategories.0');
+    }
+
     public function test_username_is_lowercased_on_save(): void
     {
         $user = User::factory()->create();

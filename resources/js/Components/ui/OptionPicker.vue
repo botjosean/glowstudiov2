@@ -10,6 +10,11 @@
  * El buscador solo sale si hay más de un puñado de opciones — con la
  * categoría (12, en dos grupos) y la duración "Otra" (72, cada 5 min)
  * sirve; con media docena de chips estorbaría más de lo que ayuda.
+ *
+ * multiple: true convierte el modelo en un array y cada tap alterna la
+ * selección en vez de cerrar la hoja — para "elige tus especialidades"
+ * hace falta ver varias marcadas a la vez, así que se cierra con el botón
+ * "Listo" en vez de al primer tap.
  */
 import { computed, ref } from 'vue';
 import { ArrowLeft, Check, Search } from '@lucide/vue';
@@ -19,9 +24,10 @@ const props = defineProps({
     options: { type: Array, required: true }, // [{value,label}] o [{label,options}]
     title: { type: String, required: true },
     searchPlaceholder: { type: String, default: '' },
+    multiple: { type: Boolean, default: false },
 });
 
-const model = defineModel({ type: [String, Number], default: '' });
+const model = defineModel({ type: [String, Number, Array], default: '' });
 const emit = defineEmits(['close']);
 
 const { t } = useI18n();
@@ -49,7 +55,19 @@ const filteredGroups = computed(() => {
 
 const hasResults = computed(() => filteredGroups.value.length > 0);
 
+function isSelected(value) {
+    return props.multiple ? (model.value || []).includes(value) : value === model.value;
+}
+
 function pick(value) {
+    if (props.multiple) {
+        const current = model.value || [];
+        model.value = current.includes(value)
+            ? current.filter((item) => item !== value)
+            : [...current, value];
+        return;
+    }
+
     model.value = value;
     search.value = '';
     emit('close');
@@ -96,7 +114,7 @@ function pick(value) {
                     @click="pick(opt.value)"
                 >
                     <span class="text-[15px] font-medium text-[var(--text-strong)]">{{ opt.label }}</span>
-                    <Check v-if="opt.value === model" :size="17" class="shrink-0 text-[var(--gold)]" />
+                    <Check v-if="isSelected(opt.value)" :size="17" class="shrink-0 text-[var(--gold)]" />
                 </button>
             </template>
 
@@ -104,5 +122,14 @@ function pick(value) {
                 {{ t('common.noResults') }}
             </p>
         </div>
+
+        <button
+            v-if="multiple"
+            type="button"
+            class="mt-3 w-full rounded-xl bg-[var(--btn-bg)] py-3 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+            @click="emit('close')"
+        >
+            {{ t('common.done') }}
+        </button>
     </div>
 </template>

@@ -21,9 +21,9 @@ import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
  */
 const props = defineProps({
     profile: { type: Object, required: true },
-    // { username, publicName, phone, email, businessCategory, bio, isMobile,
-    //   homeService, serviceArea, addressLine, gallery, maxGallery,
-    //   published, activeServicesCount }
+    // { username, publicName, phone, email, businessCategory,
+    //   businessSubcategories, bio, isMobile, homeService, serviceArea,
+    //   addressLine, gallery, maxGallery, published, activeServicesCount }
     publicUrl: { type: String, required: true },
 });
 
@@ -35,6 +35,7 @@ const form = useForm({
     publicName: props.profile.publicName,
     phone: props.profile.phone,
     businessCategory: props.profile.businessCategory,
+    businessSubcategories: props.profile.businessSubcategories || [],
     bio: props.profile.bio,
     isMobile: props.profile.isMobile,
     homeService: props.profile.homeService,
@@ -60,6 +61,39 @@ const businessCategoryLabel = computed(() => (form.businessCategory
     : ''));
 
 const businessCategoryPickerOpen = ref(false);
+
+// Mirrors App\Enums\BusinessCategory::subcategories() — kept in sync by hand,
+// same convention as businessCategoryOptions above.
+const SUBCATEGORIES_BY_CATEGORY = {
+    nails: ['manicure', 'pedicure', 'acrylic', 'gel', 'dip_powder', 'nail_art', 'extensions', 'nail_repair'],
+    hair: ['haircut', 'color', 'balayage_highlights', 'blowout_styling', 'keratin_treatment', 'extensions', 'perm', 'updo'],
+    barbershop: ['haircut', 'haircut_beard', 'beard_design', 'shave', 'skin_fade', 'kids_haircut', 'line_up'],
+    lashes_brows: ['lash_extensions', 'lash_lift', 'brow_shaping', 'microblading', 'brow_lamination', 'tint'],
+    braids: ['box_braids', 'cornrows', 'knotless_braids', 'twists', 'locs', 'weave_extensions'],
+    waxing: ['eyebrow_wax', 'facial_wax', 'leg_wax', 'underarm_wax', 'bikini_wax', 'brazilian_wax', 'full_body_wax'],
+    makeup: ['bridal_makeup', 'event_makeup', 'everyday_makeup', 'editorial_makeup', 'makeup_lessons'],
+    spa_massage: ['relaxation_massage', 'deep_tissue_massage', 'hot_stone_massage', 'lymphatic_drainage', 'prenatal_massage', 'reflexology', 'facial', 'body_scrub'],
+    aesthetics: ['facial_cleansing', 'anti_aging_treatment', 'microdermabrasion', 'chemical_peel', 'microneedling', 'laser_hair_removal', 'body_contouring'],
+    tattoo_piercing: ['tattoo', 'tattoo_touch_up', 'cover_up', 'piercing', 'permanent_makeup'],
+    other: [],
+};
+
+const businessSubcategoryOptions = computed(() => (SUBCATEGORIES_BY_CATEGORY[form.businessCategory] || [])
+    .map((value) => ({ value, label: t(`admin.businessSubcategory_${value}`) })));
+
+const businessSubcategoryLabel = computed(() => form.businessSubcategories
+    .map((value) => t(`admin.businessSubcategory_${value}`))
+    .join(', '));
+
+const businessSubcategoryPickerOpen = ref(false);
+
+// A category switch invalidates picks that belonged to the old one — the
+// backend rejects them anyway, so drop them here instead of surfacing a
+// confusing 422 on save.
+watch(() => form.businessCategory, (category) => {
+    const valid = SUBCATEGORIES_BY_CATEGORY[category] || [];
+    form.businessSubcategories = form.businessSubcategories.filter((value) => valid.includes(value));
+});
 
 function submit() {
     form.put('/admin/perfil', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
@@ -98,6 +132,7 @@ const errorSection = {
     phone: 'info',
     bio: 'info',
     businessCategory: 'categoria',
+    businessSubcategories: 'categoria',
     serviceArea: 'ubicacion',
     addressLine: 'ubicacion',
 };
@@ -231,6 +266,26 @@ const bioSheetOpen = ref(false);
                 <p v-if="form.errors.businessCategory" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                     {{ form.errors.businessCategory }}
                 </p>
+
+                <div v-if="form.businessCategory && form.businessCategory !== 'other'" class="mt-4">
+                    <p class="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+                        {{ $t('admin.sectionBusinessSubcategory') }}
+                    </p>
+                    <button
+                        id="business-subcategory"
+                        type="button"
+                        class="relative flex w-full items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] transition-[border-color,box-shadow] duration-150 focus:border-[var(--text-strong)] focus:shadow-[inset_0_0_0_1px_var(--text-strong)] focus-visible:outline-none"
+                        @click="businessSubcategoryPickerOpen = true"
+                    >
+                        <span class="truncate" :class="!businessSubcategoryLabel && 'text-[var(--text-faint)]'">
+                            {{ businessSubcategoryLabel || $t('admin.sectionBusinessSubcategoryHint') }}
+                        </span>
+                        <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                    </button>
+                    <p v-if="form.errors.businessSubcategories" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
+                        {{ form.errors.businessSubcategories }}
+                    </p>
+                </div>
             </Collapse>
 
             <Collapse
@@ -306,6 +361,16 @@ const bioSheetOpen = ref(false);
                 :options="businessCategoryOptions"
                 :title="$t('admin.businessCategory')"
                 @close="businessCategoryPickerOpen = false"
+            />
+        </BottomSheet>
+
+        <BottomSheet v-model="businessSubcategoryPickerOpen">
+            <OptionPicker
+                v-model="form.businessSubcategories"
+                :options="businessSubcategoryOptions"
+                :title="$t('admin.businessSubcategoryTitle')"
+                multiple
+                @close="businessSubcategoryPickerOpen = false"
             />
         </BottomSheet>
     </AdminLayout>
