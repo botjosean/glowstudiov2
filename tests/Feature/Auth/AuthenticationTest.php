@@ -63,11 +63,25 @@ class AuthenticationTest extends TestCase
 
     public function test_successful_login_redirects_to_the_admin_panel(): void
     {
-        Provider::factory()->for(User::factory()->state(['username' => 'patib']))->published()->create();
+        Provider::factory()->for(User::factory()->state(['username' => 'patib']))->onboarded()->create();
 
         $response = $this->post('/login', ['identifier' => 'patib', 'password' => 'password']);
 
         $response->assertRedirect('/admin/citas');
+    }
+
+    /**
+     * The other side of the coin above: while the checklist has anything
+     * left, login lands on the guided Admin/Inicio.vue instead — every
+     * time, not just the first, same as the banner that keeps reappearing.
+     */
+    public function test_login_with_unfinished_onboarding_redirects_to_inicio(): void
+    {
+        Provider::factory()->for(User::factory()->state(['username' => 'patib']))->create();
+
+        $response = $this->post('/login', ['identifier' => 'patib', 'password' => 'password']);
+
+        $response->assertRedirect('/admin/inicio');
     }
 
     public function test_login_is_rate_limited_after_repeated_failures(): void

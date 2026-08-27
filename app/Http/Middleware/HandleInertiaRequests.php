@@ -94,16 +94,7 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $profileComplete = filled($provider->bio)
-            && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line));
-
-        $pending = collect([
-            $profileComplete,
-            $provider->services()->active()->exists(),
-            $provider->whatsapp_phone_number_id !== null,
-            $provider->published_at !== null,
-            $provider->appointments()->exists(),
-        ])->filter(fn (bool $done) => ! $done)->count();
+        $pending = count(array_filter($provider->onboardingChecklist(), fn (bool $done) => ! $done));
 
         return $pending > 0 ? ['pending' => $pending] : null;
     }

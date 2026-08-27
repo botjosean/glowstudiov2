@@ -239,7 +239,14 @@ class PublicController extends Controller
     public function verifyEmail(Request $request): Response|RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect(config('fortify.home'));
+            $provider = $request->user()->provider;
+
+            // Same rule as LoginResponse/VerifyEmailResponse: a tab left
+            // open on this notice page while she verified elsewhere should
+            // land her exactly where a fresh login would.
+            return redirect($provider !== null && ! $provider->onboardingComplete()
+                ? '/admin/inicio'
+                : config('fortify.home'));
         }
 
         return Inertia::render('Auth/VerifyEmail', [

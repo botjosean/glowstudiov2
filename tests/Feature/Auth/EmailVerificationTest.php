@@ -52,9 +52,21 @@ class EmailVerificationTest extends TestCase
      */
     public function test_a_verified_user_polling_the_notice_page_is_sent_to_the_panel(): void
     {
-        $provider = Provider::factory()->published()->create();
+        $provider = Provider::factory()->onboarded()->create();
 
         $this->actingAs($provider->user)->get('/verificar-correo')->assertRedirect('/admin/citas');
+    }
+
+    /**
+     * Same rule as LoginResponse/VerifyEmailResponse: a tab left open on
+     * this notice page shouldn't skip the guided checklist just because
+     * verification itself already happened in another tab.
+     */
+    public function test_a_verified_user_with_unfinished_onboarding_polling_the_notice_page_is_sent_to_inicio(): void
+    {
+        $provider = Provider::factory()->create();
+
+        $this->actingAs($provider->user)->get('/verificar-correo')->assertRedirect('/admin/inicio');
     }
 
     public function test_the_notice_page_shows_the_users_email(): void
@@ -70,17 +82,35 @@ class EmailVerificationTest extends TestCase
     public function test_clicking_the_signed_link_verifies_the_email_and_grants_access(): void
     {
         $user = User::factory()->unverified()->create();
-        Provider::factory()->for($user, 'user')->published()->create();
+        Provider::factory()->for($user, 'user')->onboarded()->create();
 
         $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
             'id' => $user->id,
             'hash' => sha1($user->getEmailForVerification()),
         ]);
 
-        $this->actingAs($user)->get($url)->assertRedirect('/admin/citas?verified=1');
+        $this->actingAs($user)->get($url)->assertRedirect('/admin/citas');
 
         $this->assertNotNull($user->fresh()->email_verified_at);
         $this->actingAs($user->fresh())->get('/admin/citas')->assertOk();
+    }
+
+    /**
+     * The actual first-run case: a brand-new signup's checklist is empty, so
+     * verifying is what lands her on the guided Admin/Inicio.vue instead of
+     * an empty agenda — see App\Http\Responses\VerifyEmailResponse.
+     */
+    public function test_clicking_the_signed_link_with_unfinished_onboarding_lands_on_inicio(): void
+    {
+        $user = User::factory()->unverified()->create();
+        Provider::factory()->for($user, 'user')->create();
+
+        $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
+            'id' => $user->id,
+            'hash' => sha1($user->getEmailForVerification()),
+        ]);
+
+        $this->actingAs($user)->get($url)->assertRedirect('/admin/inicio');
     }
 
     public function test_tampered_verification_link_is_rejected(): void

@@ -274,6 +274,38 @@ class Provider extends Model
         return $this->schedule_saved_at !== null;
     }
 
+    /**
+     * The same seven signals Admin/Inicio.vue's checklist and its "Novato
+     * X de Y" progress card show — one source of truth, so a signal added
+     * there can't silently drift from what decides where login lands
+     * (see onboardingComplete() and the Fortify responses that use it).
+     *
+     * @return array<string, bool>
+     */
+    public function onboardingChecklist(): array
+    {
+        return [
+            'account' => true,
+            'profile' => filled($this->bio)
+                && ($this->is_mobile ? filled($this->service_area) : filled($this->address_line)),
+            'photos' => $this->photos()->count() >= self::MAX_GALLERY_PHOTOS,
+            'services' => $this->services()->active()->exists(),
+            'whatsapp' => $this->whatsapp_phone_number_id !== null,
+            'published' => $this->published_at !== null,
+            'booked' => $this->appointments()->exists(),
+        ];
+    }
+
+    /**
+     * Whether login/verification should drop her onto the guided Inicio
+     * checklist instead of the agenda — true once every step is done, same
+     * as allDone in Admin/Inicio.vue.
+     */
+    public function onboardingComplete(): bool
+    {
+        return ! in_array(false, $this->onboardingChecklist(), true);
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);

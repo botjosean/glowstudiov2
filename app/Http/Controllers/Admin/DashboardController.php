@@ -272,23 +272,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * Everything the checklist counts, in one place: inicio() renders the
-     * long form, perfil() only needs done/total for the progress card.
+     * inicio() renders the long form, perfil() only needs done/total for the
+     * progress card. The signals themselves live on Provider — the Fortify
+     * responses that decide where login lands read the exact same list.
      *
      * @return array<string, bool>
      */
     private function checklistFor(Provider $provider): array
     {
-        return [
-            'account' => true,
-            'profile' => filled($provider->bio)
-                && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line)),
-            'photos' => $provider->photos()->count() >= Provider::MAX_GALLERY_PHOTOS,
-            'services' => $provider->services()->active()->exists(),
-            'whatsapp' => $provider->whatsapp_phone_number_id !== null,
-            'published' => $provider->published_at !== null,
-            'booked' => $provider->appointments()->exists(),
-        ];
+        return $provider->onboardingChecklist();
     }
 
     /**

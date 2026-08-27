@@ -2,7 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Appointment;
 use App\Models\Provider;
+use App\Models\ProviderPhoto;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -106,6 +109,26 @@ class ProviderFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'schedule_saved_at' => null,
         ]);
+    }
+
+    /**
+     * Every Provider::onboardingChecklist() signal true at once — the
+     * fixture for "a returning provider logs straight into the agenda",
+     * now that login/verification route an incomplete provider to
+     * Admin/Inicio.vue instead (see App\Http\Responses\LoginResponse).
+     */
+    public function onboarded(): static
+    {
+        return $this->published()->state(fn (array $attributes) => [
+            'whatsapp_phone_number_id' => fake()->numerify('##########'),
+            // definition() leaves this null — "profile" in the checklist
+            // needs it (or service_area, for a mobile provider) filled.
+            'address_line' => fake()->streetAddress(),
+        ])->afterCreating(function (Provider $provider) {
+            ProviderPhoto::factory()->for($provider)->count(Provider::MAX_GALLERY_PHOTOS)->create();
+            Service::factory()->for($provider)->create();
+            Appointment::factory()->for($provider)->create();
+        });
     }
 
     /**
