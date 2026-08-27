@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Check, ChevronRight, CalendarDays, MessageCircle } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -11,17 +11,14 @@ const props = defineProps({
     avatarPhoto: { type: String, default: '' },
     publicUrl: { type: String, required: true },
     checklist: { type: Object, required: true },
-    // { profileComplete, hasActiveServices, whatsappConnected, published, hasAppointments }
+    // { hasBusinessCategory, profileComplete, photoCount, photosNeeded,
+    //   hasActiveServices, scheduleSaved, whatsappConnected, published,
+    //   hasAppointments }
     summary: { type: Object, required: true },
     // { todayCount, pendingCount }
 });
 
 const { t } = useI18n();
-
-// "Reviewed the schedule" has no server-side signal (the schedule always
-// exists, with defaults) — a local mark set by the Horario page is the only
-// honest way to know the provider actually looked at it.
-const scheduleReviewed = ref(localStorage.getItem('glow:scheduleReviewed') === '1');
 
 const steps = computed(() => [
     { key: 'account', done: true, titleKey: 'inicio.stepAccount' },
@@ -61,7 +58,7 @@ const steps = computed(() => [
     },
     {
         key: 'schedule',
-        done: scheduleReviewed.value,
+        done: props.checklist.scheduleSaved,
         titleKey: 'inicio.stepSchedule',
         hintKey: 'inicio.stepScheduleHint',
         href: '/admin/horario?desde=inicio',

@@ -48,6 +48,7 @@ class DashboardController extends Controller
                 'photoCount' => $provider->photos()->count(),
                 'photosNeeded' => Provider::MAX_GALLERY_PHOTOS,
                 'hasActiveServices' => $provider->services()->active()->exists(),
+                'scheduleSaved' => $provider->hasSavedSchedule(),
                 'whatsappConnected' => $provider->whatsapp_phone_number_id !== null,
                 'published' => $provider->published_at !== null,
                 'hasAppointments' => $provider->appointments()->exists(),

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { Clock4, UtensilsCrossed, Timer, Info, CalendarOff, Plus, Trash2, OctagonX, TriangleAlert, X } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -23,12 +23,6 @@ const { formatTime, formatDuration } = useFormat();
 const { t } = useI18n();
 const { locale } = usePreferences();
 const { returnToInicio } = useOnboardingReturn();
-
-// The Inicio checklist's "review your schedule" step has no server-side
-// signal (defaults always exist), so opening this page is what completes it.
-onMounted(() => {
-    localStorage.setItem('glow:scheduleReviewed', '1');
-});
 
 const form = useForm({
     lunchStart: props.schedule.lunchStart,

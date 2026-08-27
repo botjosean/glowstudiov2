@@ -260,7 +260,12 @@ function confirmDeletePhoto() {
             <p v-if="addressLabel" class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">{{ addressLabel }}</p>
         </div>
 
-        <div class="flex flex-col gap-3 p-5 pb-8">
+        <!-- min-h so a near-empty account (a fresh signup, before there is any
+             gallery or stats to speak of) still has enough real height that
+             its last cards land above the floating "Configuración" pill
+             below instead of under it — dvh, not vh, so Chrome's collapsing
+             address bar doesn't reintroduce the same gap on a phone. -->
+        <div class="flex min-h-[60dvh] flex-col gap-3 p-5 pb-28">
             <!-- Progress card, Booksy's "Novato — X de Y" -->
             <Link
                 href="/admin/inicio"

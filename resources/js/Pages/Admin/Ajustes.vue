@@ -109,7 +109,11 @@ const searching = computed(() => search.value.trim() !== '');
             </header>
         </template>
 
-        <div class="flex flex-col gap-6 p-5 pb-8">
+        <!-- Same reasoning as Perfil.vue's own min-h/pb: the floating
+             "Chat de ayuda" pill is fixed to the viewport, so a short list of
+             settings needs real height under it to keep the pill from
+             landing on the last row instead of past it. -->
+        <div class="flex min-h-[60dvh] flex-col gap-6 p-5 pb-28">
             <label class="flex items-center gap-2.5 rounded-xl bg-[var(--surface-mute)] px-3.5 py-2.5">
                 <Search :size="17" class="shrink-0 text-[var(--text-faint)]" />
                 <input

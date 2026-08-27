@@ -294,6 +294,7 @@ class Provider extends Model
                 && ($this->is_mobile ? filled($this->service_area) : filled($this->address_line)),
             'photos' => $this->photos()->count() >= self::MAX_GALLERY_PHOTOS,
             'services' => $this->services()->active()->exists(),
+            'schedule' => $this->hasSavedSchedule(),
             'whatsapp' => $this->whatsapp_phone_number_id !== null,
             'published' => $this->published_at !== null,
             'booked' => $this->appointments()->exists(),
