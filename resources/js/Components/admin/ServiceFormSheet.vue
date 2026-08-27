@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { X, Ban, Plus, RotateCcw } from '@lucide/vue';
+import { X, Ban, ChevronDown, Plus, RotateCcw } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
-import OutlinedSelect from '../ui/OutlinedSelect.vue';
+import OptionPicker from '../ui/OptionPicker.vue';
 import Chip from '../ui/Chip.vue';
 import { useFormat } from '../../composables/useFormat';
 
@@ -42,6 +42,7 @@ function syncDraft(service) {
 }
 
 watch(open, (isOpen) => {
+    activePicker.value = null;
     if (isOpen) {
         syncDraft(props.service);
     }
@@ -62,6 +63,10 @@ function pickDuration(minutes) {
     form.value.durationMinutes = minutes;
     showCustomDuration.value = false;
 }
+
+// null | 'category' | 'duration' — which OptionPicker, if any, has taken
+// over the sheet's body. Only one at a time, same as ClientPicker's search.
+const activePicker = ref(null);
 
 // 5-minute steps up to the 6 h the database now allows (services_duration_chk).
 const durationOptions = computed(() =>
@@ -93,6 +98,10 @@ const categoryOptions = computed(() => {
     ];
 });
 
+const categoryLabel = computed(() =>
+    categoryOptions.value.flatMap((group) => group.options).find((opt) => opt.value === form.value.category)?.label ?? '',
+);
+
 function save(keepOpen = false) {
     emit('save', { ...form.value }, keepOpen);
 }
@@ -100,6 +109,21 @@ function save(keepOpen = false) {
 
 <template>
     <BottomSheet v-model="open">
+        <OptionPicker
+            v-if="activePicker === 'category'"
+            v-model="form.category"
+            :options="categoryOptions"
+            :title="$t('admin.category')"
+            @close="activePicker = null"
+        />
+        <OptionPicker
+            v-else-if="activePicker === 'duration'"
+            v-model="form.durationMinutes"
+            :options="durationOptions"
+            :title="$t('admin.duration')"
+            @close="activePicker = null"
+        />
+        <template v-else>
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
@@ -143,12 +167,18 @@ function save(keepOpen = false) {
                 </Chip>
             </div>
             <div v-if="showCustomDuration" class="mt-3">
-                <OutlinedSelect
+                <button
                     id="service-duration"
-                    v-model="form.durationMinutes"
-                    :label="$t('admin.duration')"
-                    :options="durationOptions"
-                />
+                    type="button"
+                    class="relative flex w-full items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] transition-[border-color,box-shadow] duration-150 focus:border-[var(--text-strong)] focus:shadow-[inset_0_0_0_1px_var(--text-strong)] focus-visible:outline-none"
+                    @click="activePicker = 'duration'"
+                >
+                    <span class="truncate">{{ formatDuration(form.durationMinutes) }}</span>
+                    <span class="pointer-events-none absolute left-3 top-0 -translate-y-1/2 bg-[var(--surface)] px-1 text-[12px] font-medium text-[var(--text-mute)]">
+                        {{ $t('admin.duration') }}
+                    </span>
+                    <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                </button>
                 <div class="mt-1.5 text-[12px] font-normal text-[var(--text-faint)]">{{ $t('admin.durationHint') }}</div>
             </div>
             <p v-if="errors.durationMinutes" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.durationMinutes }}</p>
@@ -166,13 +196,26 @@ function save(keepOpen = false) {
                 :label="$t('admin.price')"
                 :error="errors.price"
             />
-            <OutlinedSelect
-                id="service-category"
-                v-model="form.category"
-                :label="$t('admin.category')"
-                :options="categoryOptions"
-                :error="errors.category"
-            />
+            <div>
+                <button
+                    id="service-category"
+                    type="button"
+                    class="relative flex w-full items-center rounded-xl border bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] transition-[border-color,box-shadow] duration-150 focus:border-[var(--text-strong)] focus:shadow-[inset_0_0_0_1px_var(--text-strong)] focus-visible:outline-none"
+                    :class="errors.category ? 'border-[var(--danger)]' : 'border-[var(--border-strong)]'"
+                    :aria-invalid="errors.category ? 'true' : undefined"
+                    @click="activePicker = 'category'"
+                >
+                    <span class="truncate">{{ categoryLabel }}</span>
+                    <span
+                        class="pointer-events-none absolute left-3 top-0 -translate-y-1/2 bg-[var(--surface)] px-1 text-[12px] font-medium text-[var(--text-mute)]"
+                        :class="errors.category && 'text-[var(--danger)]'"
+                    >
+                        {{ $t('admin.category') }}
+                    </span>
+                    <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                </button>
+                <p v-if="errors.category" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ errors.category }}</p>
+            </div>
         </div>
 
         <!-- Her per-service safety switch: unchecked services are never
@@ -232,5 +275,6 @@ function save(keepOpen = false) {
                 {{ $t('admin.activateService') }}
             </button>
         </div>
+        </template>
     </BottomSheet>
 </template>

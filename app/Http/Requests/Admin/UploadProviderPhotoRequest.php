@@ -40,6 +40,24 @@ class UploadProviderPhotoRequest extends FormRequest
                 // from the byte-size limit.
                 Rule::dimensions()->maxWidth(6000)->maxHeight(6000),
             ],
+            // Where she dragged the photo to before saving — see
+            // PhotoRepositionSheet.vue. Optional: the gallery upload posts
+            // neither, and StoreProviderImage falls back to ImageVariant's
+            // fixed anchor when either is missing.
+            'focus_x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'focus_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
+    }
+
+    /**
+     * @return array{x: float, y: float}|null
+     */
+    public function focus(): ?array
+    {
+        if (! $this->filled('focus_x') || ! $this->filled('focus_y')) {
+            return null;
+        }
+
+        return ['x' => (float) $this->input('focus_x'), 'y' => (float) $this->input('focus_y')];
     }
 }

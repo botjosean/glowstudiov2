@@ -28,7 +28,7 @@ class ProfilePhotoController extends Controller
         $provider = $request->user()->provider;
         $previous = $provider->avatar_photo_url;
 
-        $key = $this->store->handle($provider, $request->file('photo'), ImageVariant::Avatar);
+        $key = $this->store->handle($provider, $request->file('photo'), ImageVariant::Avatar, $request->focus());
         $provider->update(['avatar_photo_url' => $key]);
 
         // Only after the new one is safely saved — never delete-then-store.
@@ -42,7 +42,7 @@ class ProfilePhotoController extends Controller
         $provider = $request->user()->provider;
         $previous = $provider->banner_photo_url;
 
-        $key = $this->store->handle($provider, $request->file('photo'), ImageVariant::Banner);
+        $key = $this->store->handle($provider, $request->file('photo'), ImageVariant::Banner, $request->focus());
         $provider->update(['banner_photo_url' => $key]);
 
         $this->delete->handle($previous);

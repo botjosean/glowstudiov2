@@ -7,6 +7,7 @@ import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';
 import FloatingAction from '../../Components/ui/FloatingAction.vue';
 import QrShareSheet from '../../Components/admin/QrShareSheet.vue';
+import PhotoRepositionSheet from '../../Components/admin/PhotoRepositionSheet.vue';
 
 /**
  * The Perfil tab as Booksy has it: a showcase, not a form. What the world
@@ -47,8 +48,8 @@ const avatarInput = ref(null);
 const bannerInput = ref(null);
 const galleryInput = ref(null);
 
-const avatarForm = useForm({ photo: null });
-const bannerForm = useForm({ photo: null });
+const avatarForm = useForm({ photo: null, focus_x: null, focus_y: null });
+const bannerForm = useForm({ photo: null, focus_x: null, focus_y: null });
 const galleryForm = useForm({ photo: null });
 
 const PHOTO_ERROR_TIMEOUT_MS = 6000;
@@ -88,8 +89,66 @@ function uploadPhoto(form, url) {
     };
 }
 
-const onAvatarSelected = uploadPhoto(avatarForm, '/admin/perfil/avatar');
-const onBannerSelected = uploadPhoto(bannerForm, '/admin/perfil/portada');
+// Avatar y portada paran primero en PhotoRepositionSheet — el servidor
+// recorta donde ella arrastró el dedo, no en un ancla fija (ver
+// StoreProviderImage::cropToFocus). La galería sigue subiendo directo:
+// son fotos de trabajo, no un retrato que haya que encuadrar.
+const repositionOpen = ref(false);
+const repositionFile = ref(null);
+const repositionShape = ref('circle');
+let pendingUpload = null;
+
+function pickPhotoForReposition(form, url, shape) {
+    return (event) => {
+        const input = event.target;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file) return;
+
+        clearTimeout(photoErrorTimers.get(form));
+        form.clearErrors();
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+            form.setError('photo', t('admin.photoTooLarge', { max: MAX_UPLOAD_MB }));
+            expirePhotoError(form);
+            return;
+        }
+
+        pendingUpload = { form, url };
+        repositionFile.value = file;
+        repositionShape.value = shape;
+        repositionOpen.value = true;
+    };
+}
+
+function cancelReposition() {
+    repositionOpen.value = false;
+    pendingUpload = null;
+    repositionFile.value = null;
+}
+
+function confirmReposition({ x, y }) {
+    if (!pendingUpload) return;
+    const { form, url } = pendingUpload;
+    const file = repositionFile.value;
+
+    repositionOpen.value = false;
+    pendingUpload = null;
+    repositionFile.value = null;
+
+    form.photo = file;
+    form.focus_x = x;
+    form.focus_y = y;
+    form.post(url, {
+        forceFormData: true,
+        preserveScroll: true,
+        preserveState: true,
+        onError: () => expirePhotoError(form),
+    });
+}
+
+const onAvatarSelected = pickPhotoForReposition(avatarForm, '/admin/perfil/avatar', 'circle');
+const onBannerSelected = pickPhotoForReposition(bannerForm, '/admin/perfil/portada', 'banner');
 const onGallerySelected = uploadPhoto(galleryForm, '/admin/perfil/galeria');
 
 const deleteConfirmOpen = ref(false);
@@ -317,6 +376,14 @@ function confirmDeletePhoto() {
         />
 
         <QrShareSheet v-model="shareOpen" :url="publicUrl" :provider-name="publicName" />
+
+        <PhotoRepositionSheet
+            v-model="repositionOpen"
+            :file="repositionFile"
+            :shape="repositionShape"
+            @confirm="confirmReposition"
+            @cancel="cancelReposition"
+        />
 
         <!-- The same pill that says "Chat de ayuda" one screen further in. -->
         <FloatingAction href="/admin/ajustes" :label="$t('admin.settings')">

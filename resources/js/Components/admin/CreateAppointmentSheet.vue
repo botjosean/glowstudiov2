@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { ArrowLeft, ChevronRight, Plus, Search, UserRound, X } from '@lucide/vue';
+import { ArrowLeft, ChevronDown, ChevronRight, Plus, Search, UserRound, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
-import OutlinedSelect from '../ui/OutlinedSelect.vue';
+import OptionPicker from '../ui/OptionPicker.vue';
 import Chip from '../ui/Chip.vue';
 import Skeleton from '../ui/Skeleton.vue';
 import { useFormat } from '../../composables/useFormat';
@@ -70,6 +70,7 @@ const slotsError = ref('');
 // Booksy's picker: the sheet swaps to the book, a tap fills the form. Manual
 // mode keeps the old free-text fields for the walk-in who is not a card yet.
 const pickerOpen = ref(false);
+const servicePickerOpen = ref(false);
 const manualMode = ref(false);
 const selectedClient = ref(null);
 const clientSearch = ref('');
@@ -143,6 +144,7 @@ watch(open, (isOpen) => {
     form.clientName = props.prefillName;
     form.clientPhone = props.prefillPhone;
     pickerOpen.value = false;
+    servicePickerOpen.value = false;
     clientSearch.value = '';
     // Arriving from a client card counts as having picked her; otherwise the
     // sheet opens on the dashed "Seleccionar clienta" invitation.
@@ -269,15 +271,34 @@ function submit() {
             </div>
         </div>
 
-        <div v-else>
-        <OutlinedSelect
-            id="appointment-service"
+        <OptionPicker
+            v-else-if="servicePickerOpen"
             v-model="form.serviceId"
-            class="mb-5"
-            :label="$t('admin.service')"
             :options="serviceOptions"
-            :error="form.errors.serviceId"
+            :title="$t('admin.service')"
+            @close="servicePickerOpen = false"
         />
+
+        <div v-else>
+        <div class="mb-5">
+            <button
+                id="appointment-service"
+                type="button"
+                class="relative flex w-full items-center rounded-xl border bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] transition-[border-color,box-shadow] duration-150 focus:border-[var(--text-strong)] focus:shadow-[inset_0_0_0_1px_var(--text-strong)] focus-visible:outline-none"
+                :class="form.errors.serviceId ? 'border-[var(--danger)]' : 'border-[var(--border-strong)]'"
+                @click="servicePickerOpen = true"
+            >
+                <span class="truncate">{{ selectedService ? serviceOptions.find((o) => o.value === selectedService.id)?.label : '' }}</span>
+                <span
+                    class="pointer-events-none absolute left-3 top-0 -translate-y-1/2 bg-[var(--surface)] px-1 text-[12px] font-medium text-[var(--text-mute)]"
+                    :class="form.errors.serviceId && 'text-[var(--danger)]'"
+                >
+                    {{ $t('admin.service') }}
+                </span>
+                <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+            </button>
+            <p v-if="form.errors.serviceId" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">{{ form.errors.serviceId }}</p>
+        </div>
 
         <div class="mb-5">
             <span class="mb-2 block text-[13px] font-medium text-[var(--text-mute)]">{{ $t('admin.pickHour') }}</span>

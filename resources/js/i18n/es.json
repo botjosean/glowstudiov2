@@ -218,6 +218,9 @@
         "photoDeleted": "Foto eliminada",
         "galleryFull": "Ya tienes el máximo de fotos en la galería",
         "photoTooLarge": "La imagen no puede pesar más de {max} MB",
+        "repositionAvatarTitle": "Ajustá tu foto",
+        "repositionBannerTitle": "Ajustá tu portada",
+        "repositionHint": "Arrastrá la foto hasta que quede como querés",
         "deletePhoto": "Eliminar foto",
         "confirmDeletePhotoTitle": "¿Eliminar esta foto?",
         "confirmDeletePhotoBody": "Dejará de aparecer en tu perfil público. Esta acción no se puede deshacer.",
@@ -498,7 +501,9 @@
         "showPassword": "Mostrar contraseña",
         "hidePassword": "Ocultar contraseña",
         "install": "Instalar",
-        "installPrompt": "Instalá la app para entrar más rápido, sin buscar el enlace."
+        "installPrompt": "Instalá la app para entrar más rápido, sin buscar el enlace.",
+        "search": "Buscar",
+        "noResults": "Sin resultados"
     },
     "signIn": {
         "title": "Bienvenido de nuevo",

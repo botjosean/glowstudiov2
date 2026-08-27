@@ -99,6 +99,75 @@ class ProfilePhotoTest extends TestCase
         $this->assertNull($provider->fresh()->avatar_photo_url);
     }
 
+    #[DataProvider('singlePhotoEndpoints')]
+    public function test_uploading_with_a_focus_position_stores_the_exact_target_dimensions(string $url, string $column, string $variant): void
+    {
+        Storage::fake('r2');
+        $provider = Provider::factory()->published()->create();
+
+        // Tall source, square-ish target: real slack on the Y axis, so this
+        // exercises cropToFocus's non-trivial branch, not the no-op crop a
+        // same-ratio source would fall into.
+        $this->actingAs($provider->user)->post($url, [
+            'photo' => UploadedFile::fake()->image('portrait.jpg', 600, 1400),
+            'focus_x' => 50,
+            'focus_y' => 0,
+        ])->assertSessionHasNoErrors();
+
+        $key = $provider->fresh()->{$column};
+        $decoded = imagecreatefromstring(Storage::disk('r2')->get($key));
+        $expectedWidth = $variant === 'avatar' ? 512 : 1600;
+        $expectedHeight = $variant === 'avatar' ? 512 : 600;
+        $this->assertSame($expectedWidth, imagesx($decoded));
+        $this->assertSame($expectedHeight, imagesy($decoded));
+    }
+
+    /**
+     * The point of cropToFocus: dragging the photo actually moves which
+     * part of it gets kept, not just accepted-and-ignored. A source with a
+     * solid-red top and solid-blue bottom makes the two extremes visibly
+     * different in the stored result.
+     */
+    public function test_focus_y_changes_which_part_of_the_photo_is_kept(): void
+    {
+        Storage::fake('r2');
+        $provider = Provider::factory()->published()->create();
+
+        $source = imagecreatetruecolor(400, 1200);
+        imagefilledrectangle($source, 0, 0, 399, 599, imagecolorallocate($source, 220, 20, 20));
+        imagefilledrectangle($source, 0, 600, 399, 1199, imagecolorallocate($source, 20, 20, 220));
+        $path = tempnam(sys_get_temp_dir(), 'focus').'.png';
+        imagepng($source, $path);
+        $upload = new UploadedFile($path, 'tall.png', 'image/png', null, true);
+
+        $top = $this->actingAs($provider->user)->post('/admin/perfil/avatar', [
+            'photo' => $upload,
+            'focus_x' => 50,
+            'focus_y' => 0,
+        ]);
+        $top->assertSessionHasNoErrors();
+        $topImage = imagecreatefromstring(Storage::disk('r2')->get($provider->fresh()->avatar_photo_url));
+        $topColor = imagecolorat($topImage, 256, 20);
+
+        $bottom = $this->actingAs($provider->user)->post('/admin/perfil/avatar', [
+            'photo' => new UploadedFile($path, 'tall.png', 'image/png', null, true),
+            'focus_x' => 50,
+            'focus_y' => 100,
+        ]);
+        $bottom->assertSessionHasNoErrors();
+        $bottomImage = imagecreatefromstring(Storage::disk('r2')->get($provider->fresh()->avatar_photo_url));
+        $bottomColor = imagecolorat($bottomImage, 256, 492);
+
+        unlink($path);
+
+        // Rojo arriba, azul abajo — no exactos por el reencodeo a WebP con
+        // pérdida, pero el canal rojo domina en uno y el azul en el otro.
+        $top = imagecolorsforindex($topImage, $topColor);
+        $bottom = imagecolorsforindex($bottomImage, $bottomColor);
+        $this->assertGreaterThan($top['blue'], $top['red']);
+        $this->assertGreaterThan($bottom['red'], $bottom['blue']);
+    }
+
     public function test_uploading_a_gallery_photo_creates_a_row_at_the_next_position(): void
     {
         Storage::fake('r2');
