@@ -21,6 +21,18 @@ enum ServiceCategory: string
     case Hair = 'hair';
     case Other = 'other';
 
+    // Multi-tenant categories: the app is meant to onboard providers well
+    // outside hair/nails/barbershop, so these exist before any provider of
+    // that kind has signed up — the picker should already look complete.
+    case Waxing = 'waxing';
+    case Makeup = 'makeup';
+    case Massage = 'massage';
+    case Braids = 'braids';
+    case Extensions = 'extensions';
+    case Tattoo = 'tattoo';
+    case Piercing = 'piercing';
+    case Aesthetics = 'aesthetics';
+
     /**
      * The catalog ServiceType a service in this category defaults to when
      * created from the admin panel (which has no type picker, only a
@@ -43,7 +55,9 @@ enum ServiceCategory: string
             self::Kids => 'kids-haircut',
             self::Color => 'hair-coloring',
             self::Nails, self::Hands, self::Feet,
-            self::Lashes, self::Facial, self::Hair, self::Other => null,
+            self::Lashes, self::Facial, self::Hair, self::Other,
+            self::Waxing, self::Makeup, self::Massage, self::Braids,
+            self::Extensions, self::Tattoo, self::Piercing, self::Aesthetics => null,
         };
     }
 
@@ -68,7 +82,11 @@ enum ServiceCategory: string
             self::Hands => ServiceIcon::Hand,
             self::Feet => ServiceIcon::Footprints,
             self::Lashes => ServiceIcon::Eye,
-            self::Facial => ServiceIcon::Flower,
+            self::Facial, self::Massage => ServiceIcon::Flower,
+            self::Waxing, self::Aesthetics => ServiceIcon::Sparkles,
+            self::Makeup, self::Tattoo => ServiceIcon::Star,
+            self::Braids, self::Extensions => ServiceIcon::Scissors,
+            self::Piercing => ServiceIcon::Gem,
             self::Other => ServiceIcon::Star,
         };
     }

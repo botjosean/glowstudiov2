@@ -77,10 +77,13 @@ const durationOptions = computed(() =>
 );
 
 /**
- * Grouped so twelve categories stay scannable in a native select, and beauty
- * comes first: the barbershop five are the legacy set, and the providers
- * signing up now are nail techs and stylists. Labels were hardcoded Spanish
- * strings before, which showed Spanish categories to the English UI.
+ * Grouped so twenty categories stay scannable, with the OptionPicker's own
+ * search on top of that — beauty and barbershop come first (they're the
+ * legacy set the app was built on), then the categories a provider outside
+ * hair/nails/barbershop needs. Those exist before any such provider has
+ * actually signed up, on purpose: the app is meant to be multi-tenant, and
+ * the picker should already look complete, not grow one group at a time as
+ * new kinds of businesses join.
  */
 const categoryOptions = computed(() => {
     const option = (value) => ({ value, label: t(`admin.category_${value}`) });
@@ -93,6 +96,22 @@ const categoryOptions = computed(() => {
         {
             label: t('admin.categoryGroupBarber'),
             options: ['fade', 'classic', 'beard', 'kids', 'color'].map(option),
+        },
+        {
+            label: t('admin.categoryGroupWaxMakeup'),
+            options: ['waxing', 'makeup'].map(option),
+        },
+        {
+            label: t('admin.categoryGroupMassage'),
+            options: ['massage', 'aesthetics'].map(option),
+        },
+        {
+            label: t('admin.categoryGroupBraids'),
+            options: ['braids', 'extensions'].map(option),
+        },
+        {
+            label: t('admin.categoryGroupBody'),
+            options: ['tattoo', 'piercing'].map(option),
         },
         { label: '', options: [option('other')] },
     ];
