@@ -525,7 +525,8 @@
         "remember": "Recordarme",
         "forgot": "¿Olvidaste tu contraseña?",
         "noAccount": "¿No tienes cuenta?",
-        "createOne": "Crear una"
+        "createOne": "Crear una",
+        "orContinueWith": "O iniciar sesión con"
     },
     "signUp": {
         "title": "Crea tu cuenta",
@@ -537,7 +538,8 @@
         "emailLabel": "Email",
         "passwordLabel": "Contraseña",
         "confirmPasswordLabel": "Confirmar contraseña",
-        "alreadyRegistered": "¿Ya tienes cuenta?"
+        "alreadyRegistered": "¿Ya tienes cuenta?",
+        "orContinueWith": "O registrarte con"
     },
     "createPassword": {
         "title": "Crea una contraseña",

@@ -1,7 +1,8 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
-import Input from '../../Components/ui/Input.vue';
+import AuthTabs from '../../Components/ui/AuthTabs.vue';
+import OutlinedInput from '../../Components/ui/OutlinedInput.vue';
 import PasswordField from '../../Components/ui/PasswordField.vue';
 import Button from '../../Components/ui/Button.vue';
 
@@ -19,6 +20,8 @@ function submit() {
 <template>
     <PublicLayout>
         <div class="p-6">
+            <AuthTabs active="signin" />
+
             <h1 class="text-[26px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('signIn.title') }}
             </h1>
@@ -28,7 +31,7 @@ function submit() {
                 <p v-if="form.errors.identifier" class="text-[13px] font-normal text-[var(--danger)]">
                     {{ form.errors.identifier }}
                 </p>
-                <Input v-model="form.identifier" :label="$t('signIn.identifierLabel')" type="text" />
+                <OutlinedInput id="signin-identifier" v-model="form.identifier" :label="$t('signIn.identifierLabel')" type="text" />
                 <PasswordField v-model="form.password" :label="$t('signIn.passwordLabel')" />
 
                 <div class="flex items-center justify-between">
@@ -59,7 +62,7 @@ function submit() {
 
             <div class="mt-5 flex items-center gap-2.5">
                 <div class="h-px flex-1 bg-[var(--border-strong)]" />
-                <span class="text-[12px] font-medium text-[var(--text-faint)]">{{ $t('common.or') }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">{{ $t('signIn.orContinueWith') }}</span>
                 <div class="h-px flex-1 bg-[var(--border-strong)]" />
             </div>
 
@@ -87,11 +90,6 @@ function submit() {
                 </svg>
                 {{ $t('common.continueWithGoogle') }}
             </a>
-
-            <div class="mt-4 text-center text-[13px] font-normal text-[var(--text-mute)]">
-                {{ $t('signIn.noAccount') }}
-                <Link href="/crear-cuenta" class="font-bold text-[var(--green-text)]">{{ $t('signIn.createOne') }}</Link>
-            </div>
         </div>
     </PublicLayout>
 </template>

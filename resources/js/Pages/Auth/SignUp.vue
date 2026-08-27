@@ -2,7 +2,8 @@
 import { computed } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
-import Input from '../../Components/ui/Input.vue';
+import AuthTabs from '../../Components/ui/AuthTabs.vue';
+import OutlinedInput from '../../Components/ui/OutlinedInput.vue';
 import PasswordField from '../../Components/ui/PasswordField.vue';
 import Button from '../../Components/ui/Button.vue';
 
@@ -41,6 +42,8 @@ function submit() {
 <template>
     <PublicLayout>
         <div class="p-6">
+            <AuthTabs active="signup" />
+
             <h1 class="text-[26px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
                 {{ $t('signUp.title') }}
             </h1>
@@ -48,14 +51,14 @@ function submit() {
 
             <form class="mt-5 flex flex-col gap-3.5" @submit.prevent="submit">
                 <p v-if="firstError" class="text-[13px] font-normal text-[var(--danger)]">{{ firstError }}</p>
-                <Input v-model="form.username" :label="$t('signUp.usernameLabel')" type="text" />
-                <Input v-model="form.fullName" :label="$t('signUp.fullNameLabel')" type="text" />
+                <OutlinedInput id="signup-username" v-model="form.username" :label="$t('signUp.usernameLabel')" type="text" />
+                <OutlinedInput id="signup-fullname" v-model="form.fullName" :label="$t('signUp.fullNameLabel')" type="text" />
                 <label class="flex flex-col gap-2">
                     <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                         $t('signUp.phoneLabel')
                     }}</span>
                     <div
-                        class="flex items-center gap-2.5 rounded-xl border-[1.5px] border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-3.5 focus-within:border-[var(--green-border)]"
+                        class="flex items-center gap-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-[15px] focus-within:border-[var(--text-strong)]"
                     >
                         <span
                             class="flex shrink-0 items-center gap-1.5 border-r border-[var(--border-strong)] pr-2.5 text-sm font-semibold text-[var(--text-strong)]"
@@ -74,7 +77,7 @@ function submit() {
                         />
                     </div>
                 </label>
-                <Input v-model="form.email" :label="$t('signUp.emailLabel')" type="email" />
+                <OutlinedInput id="signup-email" v-model="form.email" :label="$t('signUp.emailLabel')" type="email" />
 
                 <PasswordField v-model="form.password" :label="$t('signUp.passwordLabel')" />
 
@@ -87,7 +90,7 @@ function submit() {
 
             <div class="mt-5 flex items-center gap-2.5">
                 <div class="h-px flex-1 bg-[var(--border-strong)]" />
-                <span class="text-[12px] font-medium text-[var(--text-faint)]">{{ $t('common.or') }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">{{ $t('signUp.orContinueWith') }}</span>
                 <div class="h-px flex-1 bg-[var(--border-strong)]" />
             </div>
 
@@ -125,11 +128,6 @@ function submit() {
                 <Button variant="primary" :disabled="form.processing" class="flex-1" @click="submit">{{
                     $t('menu.createAccount')
                 }}</Button>
-            </div>
-
-            <div class="mt-4 text-center text-[13px] font-normal text-[var(--text-mute)]">
-                {{ $t('signUp.alreadyRegistered') }}
-                <Link href="/iniciar-sesion" class="font-bold text-[var(--green-text)]">{{ $t('menu.signIn') }}</Link>
             </div>
         </div>
     </PublicLayout>

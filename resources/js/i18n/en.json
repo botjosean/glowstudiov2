@@ -525,7 +525,8 @@
         "remember": "Remember me",
         "forgot": "Forgot password?",
         "noAccount": "No account?",
-        "createOne": "Create one"
+        "createOne": "Create one",
+        "orContinueWith": "Or sign in with"
     },
     "signUp": {
         "title": "Create your account",
@@ -537,7 +538,8 @@
         "emailLabel": "Email",
         "passwordLabel": "Password",
         "confirmPasswordLabel": "Confirm password",
-        "alreadyRegistered": "Already registered?"
+        "alreadyRegistered": "Already registered?",
+        "orContinueWith": "Or sign up with"
     },
     "createPassword": {
         "title": "Create a password",
