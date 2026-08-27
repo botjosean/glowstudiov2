@@ -14,15 +14,22 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\FreezesBusinessHours;
 use Tests\TestCase;
 
 class CoordinatorTest extends TestCase
 {
+    use FreezesBusinessHours;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // None of these tests are about bot hours — without this they were
+        // only reliable when the suite happened to run before 10pm US
+        // Eastern (see FreezesBusinessHours).
+        $this->freezeToBusinessHours();
 
         config([
             'services.kapso.api_key' => 'test-api-key',
@@ -32,6 +39,13 @@ class CoordinatorTest extends TestCase
             'services.assistant.model' => 'openai/gpt-oss-120b',
             'services.assistant.max_iterations' => 3,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->unfreezeClock();
+
+        parent::tearDown();
     }
 
     public function test_it_returns_the_models_answer_when_no_tool_is_needed(): void

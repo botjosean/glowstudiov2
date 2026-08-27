@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Tests\Concerns\FreezesBusinessHours;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ use Tests\TestCase;
  */
 class FollowUpTest extends TestCase
 {
+    use FreezesBusinessHours;
     use RefreshDatabase;
 
     private const NUMBER = '868324373028256';
@@ -30,12 +32,24 @@ class FollowUpTest extends TestCase
     {
         parent::setUp();
 
+        // A follow-up is still the bot speaking, so it is gated by the same
+        // bot hours the receptionist is — none of these tests mean to be
+        // about that (see FreezesBusinessHours).
+        $this->freezeToBusinessHours();
+
         config([
             'services.kapso.api_key' => 'test-api-key',
             'services.kapso.base_url' => 'https://api.kapso.ai',
             'services.kapso.graph_version' => 'v24.0',
             'services.assistant.receptionist_follow_up_minutes' => 10,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->unfreezeClock();
+
+        parent::tearDown();
     }
 
     public function test_it_follows_up_after_ten_minutes_of_silence(): void

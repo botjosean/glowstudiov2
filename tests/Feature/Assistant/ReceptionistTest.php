@@ -14,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\FreezesBusinessHours;
 use Tests\TestCase;
 
 /**
@@ -27,11 +28,17 @@ use Tests\TestCase;
  */
 class ReceptionistTest extends TestCase
 {
+    use FreezesBusinessHours;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A safe default so the tests below that never mention the clock
+        // aren't secretly asserting on it — the ones that actually test bot
+        // hours (search "Horario del asistente") set their own time anyway.
+        $this->freezeToBusinessHours();
 
         config([
             'services.kapso.api_key' => 'test-api-key',
@@ -47,6 +54,13 @@ class ReceptionistTest extends TestCase
             'api.kapso.ai/*' => Http::response(['data' => []]),
             'openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'Respuesta del modelo']]]]),
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->unfreezeClock();
+
+        parent::tearDown();
     }
 
     public function test_the_first_message_welcomes_and_promises_a_person(): void

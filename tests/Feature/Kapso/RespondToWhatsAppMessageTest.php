@@ -11,10 +11,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\FreezesBusinessHours;
 use Tests\TestCase;
 
 class RespondToWhatsAppMessageTest extends TestCase
 {
+    use FreezesBusinessHours;
     use RefreshDatabase;
 
     private const PHONE_NUMBER_ID = '868324373028256';
@@ -24,6 +26,10 @@ class RespondToWhatsAppMessageTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Not about bot hours — without this it only passed reliably before
+        // ~10pm US Eastern (see FreezesBusinessHours).
+        $this->freezeToBusinessHours();
 
         config([
             'services.kapso.api_key' => 'test-api-key',
@@ -37,6 +43,13 @@ class RespondToWhatsAppMessageTest extends TestCase
             'services.assistant.model' => 'openai/gpt-oss-120b',
             'services.assistant.max_iterations' => 3,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->unfreezeClock();
+
+        parent::tearDown();
     }
 
     public function test_it_sends_what_the_assistant_answered_through_the_number_it_arrived_on(): void
