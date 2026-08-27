@@ -455,6 +455,7 @@
         "providersLabel": "proveedores",
         "offerTitle": "Yo ofrezco servicios",
         "offerSubtitle": "Publica tus servicios, define tu horario y recibe reservas.",
+        "offerCta": "Comenzar",
         "browseCta": "¿Buscas reservar?",
         "browseCtaStrong": "Explora proveedores — sin necesidad de cuenta"
     },

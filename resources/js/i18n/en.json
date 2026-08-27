@@ -455,6 +455,7 @@
         "providersLabel": "providers",
         "offerTitle": "I offer services",
         "offerSubtitle": "Publish your services, set your schedule and get booked.",
+        "offerCta": "Get started",
         "browseCta": "Looking to book?",
         "browseCtaStrong": "Browse providers — no account needed"
     },

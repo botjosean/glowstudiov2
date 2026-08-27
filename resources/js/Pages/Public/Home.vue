@@ -96,18 +96,16 @@ defineProps({
                     </svg>
                     {{ $t('common.continueWithGoogle') }}
                 </a>
-                <div class="flex gap-2.5">
-                    <Link
-                        href="/crear-cuenta"
-                        class="flex-1 rounded-xl border-[1.5px] border-[var(--green-border)] bg-[var(--surface)] py-3 text-center text-[14px] font-semibold text-[var(--green-text-strong)] hover:bg-[var(--green-soft)]"
-                        >{{ $t('menu.createAccount') }}</Link
-                    >
-                    <Link
-                        href="/iniciar-sesion"
-                        class="flex-1 rounded-xl bg-[var(--btn-green)] py-3 text-center text-[14px] font-semibold text-white hover:bg-[var(--btn-green-hover)]"
-                        >{{ $t('menu.signIn') }}</Link
-                    >
-                </div>
+                <!-- Un solo botón, no dos: /crear-cuenta ya trae arriba la
+                     pestaña "Iniciar sesión / Crear cuenta" — ofrecer la
+                     misma elección aquí también hacía que se sintiera
+                     preguntada dos veces seguidas. -->
+                <Link
+                    href="/crear-cuenta"
+                    class="rounded-xl bg-[var(--btn-green)] py-3 text-center text-[14px] font-semibold text-white hover:bg-[var(--btn-green-hover)]"
+                >
+                    {{ $t('home.offerCta') }}
+                </Link>
             </div>
         </div>
 
