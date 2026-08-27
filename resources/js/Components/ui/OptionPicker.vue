@@ -35,7 +35,7 @@ const flatCount = computed(() => groups.value.reduce((sum, group) => sum + group
 const searchable = computed(() => flatCount.value > 6);
 
 function normalize(text) {
-    return String(text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 const filteredGroups = computed(() => {
