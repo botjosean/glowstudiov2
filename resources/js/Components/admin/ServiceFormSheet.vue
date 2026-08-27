@@ -4,6 +4,7 @@ import { X, Ban, ChevronDown, Plus, RotateCcw } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
+import SuggestInput from '../ui/SuggestInput.vue';
 import OptionPicker from '../ui/OptionPicker.vue';
 import Chip from '../ui/Chip.vue';
 import { useFormat } from '../../composables/useFormat';
@@ -13,6 +14,9 @@ const props = defineProps({
     service: { type: Object, default: () => ({ name: '', durationMinutes: 45, price: 35, category: 'other', homeAvailable: false }) },
     errors: { type: Object, default: () => ({}) },
     processing: { type: Boolean, default: false },
+    // Nombres de sus propios servicios (activos e inactivos) para sugerir
+    // en "Nombre del servicio" — nunca un catalogo generico inventado.
+    existingNames: { type: Array, default: () => [] },
 });
 
 const open = defineModel({ type: Boolean, default: false });
@@ -22,6 +26,9 @@ const { t } = useI18n();
 const { formatDuration } = useFormat();
 
 const form = ref({ ...props.service });
+
+// Editar "Balayage" no debe sugerir "Balayage" contra si misma.
+const nameSuggestions = computed(() => props.existingNames.filter((name) => name !== props.service.name));
 
 /**
  * The durations that cover almost every booking. Anything else stays reachable
@@ -160,13 +167,14 @@ function save(keepOpen = false) {
             </button>
         </div>
 
-        <OutlinedInput
+        <SuggestInput
             id="service-name"
             v-model="form.name"
             class="mb-5"
             :label="$t('admin.serviceName')"
             :placeholder="$t('admin.serviceNamePlaceholder')"
             :error="errors.name"
+            :suggestions="nameSuggestions"
             clearable
         />
 

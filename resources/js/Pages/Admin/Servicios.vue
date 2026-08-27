@@ -19,6 +19,10 @@ const props = defineProps({
 
 const { t } = useI18n();
 const { formatDuration } = useFormat();
+
+// Sus propios nombres de antes (activos e inactivos), para que "Nombre del
+// servicio" sugiera lo que ya escribio en vez de un catalogo inventado.
+const serviceNames = computed(() => [...new Set(props.services.map((service) => service.name))]);
 const { returnToInicio } = useOnboardingReturn();
 
 const sheetOpen = ref(false);
@@ -240,6 +244,7 @@ function activateFromSheet() {
             :service="editingService"
             :errors="form.errors"
             :processing="form.processing"
+            :existing-names="serviceNames"
             @save="handleSave"
             @delete="requestDeactivateFromSheet"
             @activate="activateFromSheet"
