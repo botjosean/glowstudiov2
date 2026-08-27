@@ -32,7 +32,7 @@ class GoogleAuthenticationTest extends TestCase
     public function test_an_existing_verified_account_with_a_password_logs_in_directly(): void
     {
         $user = User::factory()->create(['email' => 'pati@example.com']);
-        Provider::factory()->for($user, 'user')->onboarded()->create();
+        Provider::factory()->for($user, 'user')->published()->create();
 
         $this->fakeGoogleUser('pati@example.com', 'Patricia');
 
