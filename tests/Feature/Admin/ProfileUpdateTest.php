@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\BusinessCategory;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Models\User;
@@ -43,6 +44,40 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('New Public Name', $provider->public_name);
         $this->assertSame('Updated bio.', $provider->bio);
         $this->assertSame('admin.profileUpdated', session('success'));
+    }
+
+    public function test_business_category_is_saved(): void
+    {
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload(['businessCategory' => 'barbershop']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(BusinessCategory::Barbershop, $user->fresh()->provider->business_category);
+    }
+
+    public function test_business_category_is_optional(): void
+    {
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload())
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($user->fresh()->provider->business_category);
+    }
+
+    public function test_an_unknown_business_category_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        Provider::factory()->for($user)->published()->create();
+
+        $this->actingAs($user)
+            ->put('/admin/perfil', $this->validPayload(['businessCategory' => 'astrology']))
+            ->assertSessionHasErrors('businessCategory');
     }
 
     public function test_username_is_lowercased_on_save(): void

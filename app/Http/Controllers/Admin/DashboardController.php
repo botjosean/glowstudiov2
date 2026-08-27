@@ -38,6 +38,7 @@ class DashboardController extends Controller
             'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
             'publicUrl' => route('providers.show', $provider),
             'checklist' => [
+                'hasBusinessCategory' => $provider->business_category !== null,
                 'profileComplete' => filled($provider->bio)
                     && ($provider->is_mobile ? filled($provider->service_area) : filled($provider->address_line)),
                 // The grid on the public profile is three across, so six is
@@ -298,6 +299,7 @@ class DashboardController extends Controller
                 'publicName' => $provider->public_name,
                 'phone' => Format::usPhone((string) $request->user()->phone),
                 'email' => $request->user()->email,
+                'businessCategory' => $provider->business_category?->value,
                 'bio' => $provider->bio,
                 'isMobile' => $provider->is_mobile,
                 'homeService' => $provider->home_service,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\BusinessCategory;
 use App\Models\User;
 use App\Support\Format;
 use App\Support\ReservedSlugs;
@@ -56,6 +57,7 @@ class UpdateProfileRequest extends FormRequest
             ],
             'publicName' => ['required', 'string', 'min:2', 'max:80'],
             'phone' => ['required', 'digits:10'],
+            'businessCategory' => ['nullable', Rule::enum(BusinessCategory::class)],
             'bio' => ['nullable', 'string', 'max:1000'],
             'isMobile' => ['required', 'boolean'],
             // "Also serves at the client's place" on top of having a studio.

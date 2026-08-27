@@ -1,26 +1,29 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useForm, router, usePage, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Sparkles } from '@lucide/vue';
+import { ArrowLeft, ChevronDown, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Input from '../../Components/ui/Input.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
 import ToggleGroup from '../../Components/ui/ToggleGroup.vue';
 import Collapse from '../../Components/ui/Collapse.vue';
+import BottomSheet from '../../Components/ui/BottomSheet.vue';
+import OptionPicker from '../../Components/ui/OptionPicker.vue';
 import BioSuggesterSheet from '../../Components/admin/BioSuggesterSheet.vue';
 import { useOnboardingReturn } from '../../composables/useOnboardingReturn';
 
 /**
  * Configuración → Información del negocio: the editing form that used to BE
  * the Perfil tab. The Perfil tab is now the Booksy-style showcase; this page
- * owns the words and switches — name, bio, location, publication — and posts
- * to the same endpoints as always.
+ * owns the words and switches — name, bio, category, location, publication
+ * — and posts to the same endpoints as always.
  */
 const props = defineProps({
     profile: { type: Object, required: true },
-    // { username, publicName, phone, email, bio, isMobile, homeService,
-    //   serviceArea, addressLine, gallery, maxGallery, published, activeServicesCount }
+    // { username, publicName, phone, email, businessCategory, bio, isMobile,
+    //   homeService, serviceArea, addressLine, gallery, maxGallery,
+    //   published, activeServicesCount }
     publicUrl: { type: String, required: true },
 });
 
@@ -31,12 +34,32 @@ const form = useForm({
     username: props.profile.username,
     publicName: props.profile.publicName,
     phone: props.profile.phone,
+    businessCategory: props.profile.businessCategory,
     bio: props.profile.bio,
     isMobile: props.profile.isMobile,
     homeService: props.profile.homeService,
     serviceArea: props.profile.serviceArea,
     addressLine: props.profile.addressLine,
 });
+
+const businessCategoryOptions = computed(() => {
+    const option = (value) => ({ value, label: t(`admin.businessCategory_${value}`) });
+
+    return [
+        { label: t('admin.businessCategoryGroupBeauty'), options: ['nails', 'hair', 'lashes_brows', 'braids'].map(option) },
+        { label: t('admin.businessCategoryGroupBarber'), options: ['barbershop'].map(option) },
+        { label: t('admin.businessCategoryGroupWaxMakeup'), options: ['waxing', 'makeup'].map(option) },
+        { label: t('admin.businessCategoryGroupSpa'), options: ['spa_massage', 'aesthetics'].map(option) },
+        { label: t('admin.businessCategoryGroupBody'), options: ['tattoo_piercing'].map(option) },
+        { label: '', options: [option('other')] },
+    ];
+});
+
+const businessCategoryLabel = computed(() => (form.businessCategory
+    ? t(`admin.businessCategory_${form.businessCategory}`)
+    : ''));
+
+const businessCategoryPickerOpen = ref(false);
 
 function submit() {
     form.put('/admin/perfil', { preserveScroll: true, preserveState: true, onSuccess: returnToInicio });
@@ -46,6 +69,7 @@ function submit() {
 // checklist's publish step (?abrir=publicacion) overrides that.
 const sectionDone = computed(() => ({
     info: Boolean(props.profile.publicName) && Boolean(props.profile.bio),
+    categoria: Boolean(props.profile.businessCategory),
     ubicacion: Boolean(props.profile.isMobile
         ? props.profile.serviceArea
         : (props.profile.homeService
@@ -57,13 +81,13 @@ const sectionDone = computed(() => ({
 const page = usePage();
 
 function initialOpenSection() {
-    const order = ['info', 'ubicacion', 'publicacion'];
+    const order = ['info', 'categoria', 'ubicacion', 'publicacion'];
     const asked = order.find((key) => page.url.includes(`abrir=${key}`));
 
     return asked ?? order.find((key) => !sectionDone.value[key]) ?? null;
 }
 
-const openSections = reactive({ info: false, ubicacion: false, publicacion: false });
+const openSections = reactive({ info: false, categoria: false, ubicacion: false, publicacion: false });
 const first = initialOpenSection();
 if (first) openSections[first] = true;
 
@@ -73,6 +97,7 @@ const errorSection = {
     publicName: 'info',
     phone: 'info',
     bio: 'info',
+    businessCategory: 'categoria',
     serviceArea: 'ubicacion',
     addressLine: 'ubicacion',
 };
@@ -187,6 +212,28 @@ const bioSheetOpen = ref(false);
             </Collapse>
 
             <Collapse
+                v-model="openSections.categoria"
+                :title="$t('admin.sectionBusinessCategory')"
+                :hint="businessCategoryLabel || $t('admin.sectionBusinessCategoryHint')"
+                :done="sectionDone.categoria"
+            >
+                <button
+                    id="business-category"
+                    type="button"
+                    class="relative flex w-full items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] transition-[border-color,box-shadow] duration-150 focus:border-[var(--text-strong)] focus:shadow-[inset_0_0_0_1px_var(--text-strong)] focus-visible:outline-none"
+                    @click="businessCategoryPickerOpen = true"
+                >
+                    <span class="truncate" :class="!businessCategoryLabel && 'text-[var(--text-faint)]'">
+                        {{ businessCategoryLabel || $t('admin.sectionBusinessCategoryHint') }}
+                    </span>
+                    <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                </button>
+                <p v-if="form.errors.businessCategory" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
+                    {{ form.errors.businessCategory }}
+                </p>
+            </Collapse>
+
+            <Collapse
                 v-model="openSections.ubicacion"
                 :title="$t('admin.sectionLocation')"
                 :hint="(profile.isMobile ? profile.serviceArea : profile.addressLine) || $t('admin.sectionLocationHint')"
@@ -252,5 +299,14 @@ const bioSheetOpen = ref(false);
         </div>
 
         <BioSuggesterSheet v-model="bioSheetOpen" @use="(text) => { form.bio = text; }" />
+
+        <BottomSheet v-model="businessCategoryPickerOpen">
+            <OptionPicker
+                v-model="form.businessCategory"
+                :options="businessCategoryOptions"
+                :title="$t('admin.businessCategory')"
+                @close="businessCategoryPickerOpen = false"
+            />
+        </BottomSheet>
     </AdminLayout>
 </template>

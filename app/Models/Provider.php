@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BusinessCategory;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProviderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[RouteKey('slug')]
 #[Fillable([
-    'user_id', 'slug', 'whatsapp_phone_number_id', 'public_name', 'bio', 'banner_photo_url', 'avatar_photo_url',
+    'user_id', 'slug', 'business_category', 'whatsapp_phone_number_id', 'public_name', 'bio',
+    'banner_photo_url', 'avatar_photo_url',
     'is_mobile', 'home_service', 'is_available_now', 'published_at', 'service_area', 'address_line',
     'whatsapp_url', 'instagram_url', 'tiktok_url', 'facebook_url', 'timezone',
     'work_start_minute', 'work_end_minute', 'lunch_start_minute', 'lunch_end_minute', 'buffer_minutes',
@@ -61,6 +63,7 @@ class Provider extends Model
     protected function casts(): array
     {
         return [
+            'business_category' => BusinessCategory::class,
             'is_mobile' => 'bool',
             'home_service' => 'bool',
             'is_available_now' => 'bool',
@@ -286,6 +289,7 @@ class Provider extends Model
     {
         return [
             'account' => true,
+            'businessCategory' => $this->business_category !== null,
             'profile' => filled($this->bio)
                 && ($this->is_mobile ? filled($this->service_area) : filled($this->address_line)),
             'photos' => $this->photos()->count() >= self::MAX_GALLERY_PHOTOS,

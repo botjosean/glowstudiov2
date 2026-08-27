@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BusinessCategory;
 use App\Models\Appointment;
 use App\Models\Provider;
 use App\Models\ProviderPhoto;
@@ -121,6 +122,7 @@ class ProviderFactory extends Factory
     {
         return $this->published()->state(fn (array $attributes) => [
             'whatsapp_phone_number_id' => fake()->numerify('##########'),
+            'business_category' => BusinessCategory::Hair->value,
             // definition() leaves this null — "profile" in the checklist
             // needs it (or service_area, for a mobile provider) filled.
             'address_line' => fake()->streetAddress(),

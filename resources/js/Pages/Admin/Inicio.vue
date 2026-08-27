@@ -33,6 +33,13 @@ const steps = computed(() => [
         href: '/admin/negocio?desde=inicio',
     },
     {
+        key: 'businessCategory',
+        done: props.checklist.hasBusinessCategory,
+        titleKey: 'inicio.stepBusinessCategory',
+        hintKey: 'inicio.stepBusinessCategoryHint',
+        href: '/admin/negocio?desde=inicio&abrir=categoria',
+    },
+    {
         // Its own step, not folded into "complete your profile": a half-filled
         // photo grid is the difference between a page that looks like a
         // business and one that looks abandoned, and it needs to be asked for
