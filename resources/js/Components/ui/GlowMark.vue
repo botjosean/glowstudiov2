@@ -4,8 +4,12 @@
  *
  * Antes fue un loto, y antes de eso un destello, unas tijeras y un 💈. La
  * corona la pidió el dueño el 2026-08-22 y conserva todo lo demás del loto:
- * el mismo oro, el mismo trazo fino sin relleno, el mismo aire, y la misma
- * capacidad de dibujarse sola en la pantalla de carga (ver SplashScreen).
+ * el mismo oro, el mismo aire, y la misma capacidad de dibujarse sola en la
+ * pantalla de carga (ver SplashScreen). Lo que ya NO conserva desde el
+ * 2026-08-26 es el "trazo fino sin relleno" del loto y de las dos coronas
+ * anteriores: esta corona tiene perlas sólidas de verdad, así que la marca
+ * lleva dos grupos —uno de trazo para los arcos y las colas, uno de relleno
+ * para las perlas y las hojas— en vez de uno solo.
  *
  * Sigue sin ser la herramienta de ningún oficio, que era la razón de ser del
  * destello: vale igual para una manicurista que para un barbero.
@@ -16,7 +20,7 @@
  * la corona, sin el hueco que la pantalla de carga reserva para las letras— y
  * el grosor del trazo.
  */
-import { CROWN_GOLD, CROWN_STROKES, CROWN_VIEWBOX } from '../../crown';
+import { CROWN_FILLS, CROWN_GOLD, CROWN_STROKES, CROWN_VIEWBOX } from '../../crown';
 
 defineProps({
     size: { type: Number, default: 28 },
@@ -55,6 +59,11 @@ const uid = `crown-${Math.random().toString(36).slice(2, 9)}`;
             fill="none"
         >
             <path v-for="d in CROWN_STROKES" :key="d" :d="d" />
+        </g>
+
+        <!-- Las perlas y las hojas: sólidas, no trazo. -->
+        <g :fill="flat || `url(#${uid})`">
+            <path v-for="d in CROWN_FILLS" :key="d" :d="d" />
         </g>
     </svg>
 </template>

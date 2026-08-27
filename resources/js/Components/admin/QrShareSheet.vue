@@ -4,7 +4,7 @@ import { Check, Copy, Download, Share2, X } from '@lucide/vue';
 import QRCode from 'qrcode';
 import { useI18n } from 'vue-i18n';
 import BottomSheet from '../ui/BottomSheet.vue';
-import { CROWN_STROKES } from '../../crown';
+import { CROWN_FILLS, CROWN_STROKES } from '../../crown';
 
 /**
  * The profile's QR: scan → booking page. Drawn client-side with the highest
@@ -35,12 +35,16 @@ const { t } = useI18n();
 
 const canvasEl = ref(null);
 
-// Three units of slack around CROWN_VIEWBOX: the round caps of the gems sit
-// right on that box, and here there is no `overflow: visible` to escape with —
-// a rasterised SVG clips at its viewBox and the outer stones would come out
-// shaved. The explicit width/height matter too: Safari refuses to rasterise a
+// Three units of slack around CROWN_VIEWBOX (which is '2 -3 196 97' as of
+// the 2026-08-26 crown): the round caps of the pearls sit right on that box,
+// and here there is no `overflow: visible` to escape with — a rasterised SVG
+// clips at its viewBox and the outer pearls would come out shaved. Also new
+// as of that crown: a second, filled group for the pearls and the two leaves,
+// which this crown has and the previous two braided/gemmed ones did not — see
+// crown.js for why CROWN_STROKES and CROWN_FILLS are separate now. The
+// explicit width/height matter too: Safari refuses to rasterise a
 // viewBox-only SVG through an <img>.
-const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="21 39 158 92" width="158" height="92">
+const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -6 202 103" width="202" height="103">
     <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#e3c26d"/>
@@ -50,6 +54,9 @@ const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="21 39 158 92"
     </defs>
     <g fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
         ${CROWN_STROKES.map((d) => `<path d="${d}"/>`).join('')}
+    </g>
+    <g fill="url(#g)">
+        ${CROWN_FILLS.map((d) => `<path d="${d}"/>`).join('')}
     </g>
 </svg>`;
 

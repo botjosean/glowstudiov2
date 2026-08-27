@@ -19,28 +19,37 @@
  */
 let yaSalioEnEstaCarga = false;
 </script>
-
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { CROWN_GOLD, CROWN_STROKES } from '../../crown';
+import { CROWN_FILLS, CROWN_GOLD, CROWN_SPARK_PATH, CROWN_STROKES } from '../../crown';
 
 /**
- * La pantalla con la que abre la app: la corona se dibuja sola.
+ * La pantalla con la que abre la app: un punto de luz recorre la corona y la
+ * va dejando dibujada detrás.
  *
- * Elegida por el dueño el 2026-08-17 entre ocho variantes. El 2026-08-22 el
- * loto pasó a ser corona; todo lo demás —el oro, el trazo, los tiempos, el
- * reflejo, el polvo— quedó igual. El trazo va del aro hacia las puntas, que es
- * como se levanta una corona, y un reflejo recorre el logo entero —corona y
- * letras— mientras se dibuja; al final vuelve en un destello corto, cuando ya
- * está todo en pantalla.
+ * Elegida por el dueño el 2026-08-17 entre ocho variantes, con el loto. El
+ * 2026-08-22 el loto pasó a ser corona. El 2026-08-26, tras ver dieciséis
+ * coronas y una docena larga de animaciones —entre ellas una serie completa
+ * llamada "Chispa"—, el dueño pidió exactamente esta: «un punto de luz
+ * recorre la corona entera dejando el oro detrás. Las perlas se encienden al
+ * pasar», y confirmó que la prefería sobre las variantes más rápidas que
+ * también vio. Esos tiempos —no los acelerados— son los de aquí abajo.
+ *
+ * **Qué cambió y qué no respecto a las dos coronas anteriores.** El oro y el
+ * reflejo que recorre el logo mientras se dibuja —el mismo desde el loto—
+ * siguen igual. Lo nuevo es el punto de luz explícito (`.trail`, un círculo
+ * que viaja por `CROWN_SPARK_PATH` con `offset-path`) y que las perlas y las
+ * hojas ya no aparecen todas a la vez: se encienden una por una, en el orden
+ * en que la luz las alcanza — ver el orden de CROWN_FILLS en `crown.js`.
+ *
+ * **El reflejo sigue sin poder adelantarse al lápiz.** Las dos copias
+ * blancas —band-slow y band-fast, recortadas por una máscara que se
+ * desliza— llevan los mismos trazos, rellenos y demoras que la copia de
+ * oro. La luz sólo puede iluminar lo que ya está dibujado.
  *
  * El dibujo y el oro salen de `crown.js`, el mismo del que tira la marca de la
  * barra: aquí no hay una segunda corona que pueda quedarse atrás.
- *
- * **El reflejo va sobre una copia del logo, no encima del fondo.** Esa copia
- * lleva las mismas animaciones de trazo, así que la luz sólo puede iluminar lo
- * que ya está dibujado: nunca se adelanta al lápiz.
  *
  * **Cuándo se ve.** Esto ya cambió tres veces, así que conviene dejar
  * escrito el porqué de cada vuelta antes de tocarlo una cuarta:
@@ -85,7 +94,12 @@ const props = defineProps({
 });
 
 const page = usePage();
-const DURATION = 3200;
+
+// Un poco más larga que las dos coronas anteriores (antes 3200): la luz
+// recorre la corona entera antes de que empiecen a encenderse las perlas, así
+// que el dibujo completo —arcos, colas, perlas, hojas, letras y el destello
+// final— tarda más en terminar de contar su historia.
+const DURATION = 3300;
 
 const visible = ref(false);
 const leaving = ref(false);
@@ -140,12 +154,48 @@ onUnmounted(() => {
     document.documentElement.style.overflow = '';
 });
 
+/**
+ * Cuándo se dibuja cada arco y cada cola, en milisegundos.
+ *
+ * El mismo orden que CROWN_STROKES: los cuatro arcos primero, de la punta
+ * izquierda a la derecha —el camino que sigue `.trail`—, y las dos colas al
+ * final, juntas. La demora de cada arco se solapa un poco con la del
+ * siguiente a propósito: un arco que termina justo cuando empieza el próximo
+ * se ve como una pausa; uno que se solapa se ve como que la luz sigue de
+ * largo sin frenar.
+ */
+const STROKE_TIMING = [
+    { delay: 0, duration: 380 },
+    { delay: 350, duration: 380 },
+    { delay: 700, duration: 380 },
+    { delay: 1050, duration: 380 },
+    { delay: 1400, duration: 320 },
+    { delay: 1400, duration: 320 },
+];
+
+/**
+ * Cuándo se enciende cada perla y cada hoja, en el mismo orden que
+ * CROWN_FILLS: de la punta izquierda a la derecha, siguiendo a la luz. La del
+ * centro dura un poco más —380ms contra 320— porque es la que remata la
+ * corona; el resto es igual de rápido a los dos lados.
+ */
+const FILL_TIMING = [
+    { delay: 20, duration: 320 },
+    { delay: 330, duration: 320 },
+    { delay: 470, duration: 260 },
+    { delay: 700, duration: 380 },
+    { delay: 950, duration: 260 },
+    { delay: 1050, duration: 320 },
+    { delay: 1400, duration: 320 },
+];
+
 // El polvo dorado del logo original: denso a la derecha, suelto abajo a la
 // izquierda, y un par sueltos arriba para que no quede todo de un lado.
 //
-// La corona es más angosta y más alta que el loto, así que unos pocos granos
-// quedaron encima del aro o dentro de una perla y hubo que correrlos hacia
-// afuera. El reparto —dónde hay mucho y dónde hay poco— es el mismo.
+// Sigue valiendo con esta corona sin tocar un número: su silueta en el
+// lienzo de 200×200 —una vez colocada con su transform— cae casi exactamente
+// donde caía la corona anterior, así que el polvo que ya rodeaba a esa sigue
+// rodeando a esta.
 const SPARKS = [
     [152, 30, 0.7], [161, 38, 1.1], [168, 31, 0.6], [157, 47, 1.5], [184, 45, 0.8],
     [164, 56, 1.9], [178, 55, 0.7], [169, 66, 1.2], [181, 68, 1.6], [172, 74, 0.6],
@@ -207,16 +257,41 @@ const SPARKS = [
                     </mask>
                 </defs>
 
-                <!-- El logo, en oro -->
-                <g stroke="url(#splash-gold)">
-                    <path
-                        v-for="(d, i) in CROWN_STROKES"
-                        :key="d"
-                        :d="d"
-                        class="line"
-                        pathLength="1"
-                        :style="{ animationDelay: `${i * 95}ms` }"
-                    />
+                <!--
+                    La corona y las letras, colocadas en el lienzo de 200×200.
+                    Esta corona es proporcionalmente más ancha que la trenza
+                    anterior —192 de 200 unidades de CROWN_STROKES, casi de
+                    borde a borde—, así que este `translate`+`scale` la
+                    reposiciona en vez de que el dibujo cambie. Verificado
+                    antes de escribirlo: renderizado y mirado, no solo
+                    calculado, para que ni tape las letras ni roce el borde.
+                -->
+                <g transform="translate(22 39) scale(0.78)">
+                    <!-- El logo, en oro -->
+                    <g stroke="url(#splash-gold)" fill="none">
+                        <path
+                            v-for="(d, i) in CROWN_STROKES"
+                            :key="d"
+                            :d="d"
+                            class="line"
+                            pathLength="1"
+                            :style="{ animationDelay: `${STROKE_TIMING[i].delay}ms`, animationDuration: `${STROKE_TIMING[i].duration}ms` }"
+                        />
+                    </g>
+                    <g fill="url(#splash-gold)">
+                        <path
+                            v-for="(d, i) in CROWN_FILLS"
+                            :key="d"
+                            :d="d"
+                            class="fillshape"
+                            :style="{ animationDelay: `${FILL_TIMING[i].delay}ms`, animationDuration: `${FILL_TIMING[i].duration}ms` }"
+                        />
+                    </g>
+
+                    <!-- El punto de luz que recorre la corona. Va SIN mask ni
+                         copia: es la fuente, no un reflejo, así que siempre
+                         se ve entera mientras viaja. -->
+                    <circle class="trail" r="2.6" fill="#FFF6EA" />
                 </g>
 
                 <circle
@@ -225,7 +300,7 @@ const SPARKS = [
                     :cx="x" :cy="y" :r="r"
                     fill="#F5D9BC"
                     class="spark"
-                    :style="{ animationDelay: `${620 + i * 38}ms` }"
+                    :style="{ animationDelay: `${1750 + i * 38}ms` }"
                 />
 
                 <g class="word">
@@ -233,17 +308,31 @@ const SPARKS = [
                     <text class="s" x="100" y="180" fill="url(#splash-gold)">STUDIOS</text>
                 </g>
 
-                <!-- Las dos copias encendidas, cada una recortada por su reflejo -->
+                <!-- Las dos copias encendidas, cada una recortada por su
+                     reflejo. Llevan los mismos trazos, rellenos y demoras que
+                     la copia de oro de arriba —nunca pueden mostrar más de lo
+                     que ya está dibujado. -->
                 <g v-for="m in ['splash-sheen', 'splash-flash']" :key="m" :mask="`url(#${m})`">
-                    <g stroke="#FFF6EA" stroke-width="3">
-                        <path
-                            v-for="(d, i) in CROWN_STROKES"
-                            :key="d"
-                            :d="d"
-                            class="line"
-                            pathLength="1"
-                            :style="{ animationDelay: `${i * 95}ms` }"
-                        />
+                    <g transform="translate(22 39) scale(0.78)">
+                        <g stroke="#FFF6EA" stroke-width="3" fill="none">
+                            <path
+                                v-for="(d, i) in CROWN_STROKES"
+                                :key="d"
+                                :d="d"
+                                class="line"
+                                pathLength="1"
+                                :style="{ animationDelay: `${STROKE_TIMING[i].delay}ms`, animationDuration: `${STROKE_TIMING[i].duration}ms` }"
+                            />
+                        </g>
+                        <g fill="#FFF6EA">
+                            <path
+                                v-for="(d, i) in CROWN_FILLS"
+                                :key="d"
+                                :d="d"
+                                class="fillshape"
+                                :style="{ animationDelay: `${FILL_TIMING[i].delay}ms`, animationDuration: `${FILL_TIMING[i].duration}ms` }"
+                            />
+                        </g>
                     </g>
                     <g class="word">
                         <text class="g" x="100" y="160" fill="#FFF6EA">GLOW</text>
@@ -269,10 +358,47 @@ const SPARKS = [
     stroke-linejoin: round;
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    animation: draw 1350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-name: draw;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: forwards;
 }
 @keyframes draw {
     to { stroke-dashoffset: 0; }
+}
+
+/* Las perlas y las hojas: sólidas, no trazo. Se encienden con un rebotecito
+   —la misma curva con overshoot que ya usaban las chispas de polvo, aquí al
+   servicio de "esto acaba de encenderse" en vez de "esto titila". */
+.fillshape {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: bloom;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation-fill-mode: forwards;
+}
+@keyframes bloom {
+    0% { opacity: 0; transform: scale(0.15); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* El punto de luz. Sigue el mismo camino que ya trazan los cuatro primeros
+   `.line` —CROWN_SPARK_PATH es esos mismos cuatro arcos, uno detrás de
+   otro—, así que nunca se adelanta ni se atrasa respecto al trazo que va
+   dejando. El offset-path va en el propio elemento y no en una clase
+   compartida: solo lo usa este círculo. */
+.trail {
+    offset-path: path('M 12 39 C 20 88 42 88 50 27 C 62 94 88 94 100 9 C 112 94 138 94 150 27 C 158 88 180 88 188 39');
+    offset-rotate: 0deg;
+    filter: drop-shadow(0 0 3px rgba(255, 246, 234, 0.95)) drop-shadow(0 0 7px rgba(243, 216, 193, 0.7));
+    opacity: 0;
+    animation: ride 1450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes ride {
+    0% { opacity: 0; offset-distance: 0%; }
+    6% { opacity: 1; }
+    92% { opacity: 1; }
+    100% { opacity: 0; offset-distance: 100%; }
 }
 
 .spark {
@@ -287,7 +413,7 @@ const SPARKS = [
     100% { opacity: 0.3; transform: scale(0.75) translateY(-4px); }
 }
 
-.word { opacity: 0; animation: fade 800ms 1710ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.word { opacity: 0; animation: fade 700ms 1750ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes fade { to { opacity: 1; } }
 
 .g {
@@ -306,8 +432,8 @@ const SPARKS = [
     transform-box: view-box;
     transform-origin: 100px 100px;
 }
-.band-slow { animation: sweep 1700ms 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.band-fast { animation: sweep 620ms 2490ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.band-slow { animation: sweep 2100ms 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.band-fast { animation: sweep 650ms 2500ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes sweep {
     0% { opacity: 0; transform: rotate(18deg) translateX(-150px); }
     12% { opacity: 1; }
@@ -316,6 +442,6 @@ const SPARKS = [
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .line, .spark, .word, .band { animation: none; }
+    .line, .fillshape, .trail, .spark, .word, .band { animation: none; }
 }
 </style>
