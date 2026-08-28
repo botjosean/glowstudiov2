@@ -24,6 +24,14 @@ createInertiaApp({
     title: (title) => (title ? `${title} · ${appName}` : appName),
     resolve: (name) =>
         resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
+    // Inertia's default top-loading bar is left on (a slow connection still
+    // needs the "something is happening" signal the fade transition alone
+    // doesn't give), just recolored — the stock blue (#29d) belongs to no
+    // page in this app. `var(--btn-bg)` follows the same token buttons use,
+    // dark theme included, instead of a color frozen at boot. No spinner:
+    // this app already has its own loading treatments, and NProgress's own
+    // spinner reads as an unstyled leftover next to them.
+    progress: { color: 'var(--btn-bg)', showSpinner: false },
     setup({ el, App, props, plugin }) {
         createApp({ render: () => h(App, props) })
             .use(plugin)
