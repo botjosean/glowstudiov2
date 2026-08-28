@@ -157,6 +157,34 @@ body {
 }
 
 /*
+ * Tap feedback: todo botón se atenúa un poco al tocarlo. Sin esto un tap no
+ * da ninguna señal hasta que cambia la pantalla, y con dedo sobre vidrio esa
+ * falta de respuesta se siente como que no funcionó. Opacidad y no `scale`
+ * a propósito: varios botones (ej. el de borrar dentro de un campo de texto)
+ * ya usan `transform: translate` para centrarse, y un `scale()` en `:active`
+ * les habría reemplazado esa posición en vez de sumarse a ella.
+ */
+button:not(:disabled) {
+    transition: opacity 100ms ease-out;
+}
+
+button:not(:disabled):active {
+    opacity: 0.7;
+}
+
+/*
+ * Transición nativa de página (View Transitions API), activada por visita
+ * en app.js. Sólo se fija acá la duración/curva; el navegador arma el
+ * fundido solo. Ver el bloque de prefers-reduced-motion más abajo: `*` no
+ * alcanza estos pseudo-elementos, así que necesitan su propia excepción.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 160ms;
+    animation-timing-function: ease-out;
+}
+
+/*
  * "Reducir movimiento" del sistema, respetado en toda la app.
  *
  * Hasta ahora sólo lo miraban la pantalla de carga y la rueda de horas; el
@@ -177,5 +205,15 @@ body {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+
+    /* `*` no llega a los pseudo-elementos de View Transitions: viven en un
+       árbol aparte que genera el navegador, no en el DOM normal. app.js ya
+       evita pedir la transición cuando el sistema pide menos movimiento;
+       esto es el respaldo en CSS por si algún navegador la dispara igual. */
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation-duration: 0.01ms !important;
     }
 }

@@ -8,6 +8,18 @@ import './composables/useTheme';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Glowstudio VIP';
 
+// Cross-fade every Inertia navigation with the browser's native View
+// Transitions API instead of an instant swap. `viewTransition` is a per-visit
+// Inertia option with no global switch, so it's set here on the one event
+// every visit fires through. Skipped under prefers-reduced-motion — the CSS
+// fallback in app.css can't reach these pseudo-elements with `*`, so the
+// safest guard is not to request the transition at all.
+document.addEventListener('inertia:before', (event) => {
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        event.detail.visit.viewTransition = true;
+    }
+});
+
 createInertiaApp({
     title: (title) => (title ? `${title} · ${appName}` : appName),
     resolve: (name) =>
