@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { X, ChevronLeft, ChevronRight, Calendar, Check, Info } from '@lucide/vue';
 import { useFormat } from '../../composables/useFormat';
+import { useHaptics } from '../../composables/useHaptics';
 import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
@@ -18,6 +19,7 @@ const props = defineProps({
 
 const { t, locale } = useI18n();
 const { formatTime } = useFormat();
+const haptics = useHaptics();
 
 const step = ref('datetime'); // datetime | details | confirmation
 
@@ -188,6 +190,7 @@ function submitBooking() {
     bookingForm.post(`/reservar/${props.provider.slug}/${props.service.id}`, {
         preserveScroll: true,
         onSuccess: () => {
+            haptics.success();
             step.value = 'confirmation';
             recordarLoDeSiempre();
         },

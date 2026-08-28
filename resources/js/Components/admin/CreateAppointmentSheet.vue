@@ -9,6 +9,7 @@ import OptionPicker from '../ui/OptionPicker.vue';
 import Chip from '../ui/Chip.vue';
 import Skeleton from '../ui/Skeleton.vue';
 import { useFormat } from '../../composables/useFormat';
+import { useHaptics } from '../../composables/useHaptics';
 
 /**
  * The panel's own booking flow: walk-ins and phone bookings the professional
@@ -43,6 +44,7 @@ const emit = defineEmits(['created']);
 
 const { t } = useI18n();
 const { formatDuration, formatDayLabel } = useFormat();
+const haptics = useHaptics();
 
 const form = useForm({
     serviceId: null,
@@ -190,6 +192,7 @@ function submit() {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
+            haptics.success();
             open.value = false;
             emit('created', created);
         },
