@@ -635,7 +635,12 @@
         "chooseLayout": "Pick a model",
         "layoutHint_hero": "One photo with a headline",
         "layoutHint_collage": "Several in one image",
-        "layoutHint_carousel": "Cover, collages and closing"
+        "layoutHint_carousel": "Cover, collages and closing",
+        "pasteLink": "Paste a link",
+        "pasteLinkTitle": "Save from a link",
+        "pasteLinkHint": "Open the image on its own, copy its address and paste it here. No need to download it.",
+        "linkLabel": "Image address",
+        "fetching": "Fetching the image…"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

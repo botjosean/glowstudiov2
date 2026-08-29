@@ -12,6 +12,11 @@ return [
     'contentVideoTooBig' => 'That video is too heavy. Trim it or lower the quality — 50 MB is the limit.',
     'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 25 MB per photo.',
     'contentBatchTooBig' => 'Together they are too heavy. Upload fewer photos at a time and repeat with the rest.',
+    'contentLinkInvalid' => 'That link is not valid. Paste an image address starting with https.',
+    'contentLinkBlocked' => 'That link points to an internal address and cannot be fetched.',
+    'contentLinkUnreachable' => 'That link could not be opened. Check that it works in your browser.',
+    'contentLinkNotImage' => 'That link does not lead to an image. Open the photo on its own and copy that address.',
+    'contentLinkTooBig' => 'That image is too heavy.',
     'contentUploadFailed' => 'The upload was cut off before it finished. Try again, and if it is a video, keep it under 50 MB.',
     // Stored as the block's reason, so the provider sees it in their list.
     'timeOffPauseReason' => 'Agenda closed',

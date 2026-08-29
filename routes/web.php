@@ -177,6 +177,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     Route::get('/contenido', [ContentController::class, 'index'])->name('contenido');
     Route::post('/contenido/subir', [ContentController::class, 'store'])->name('contenido.subir');
     Route::post('/contenido/generar', [ContentController::class, 'generate'])->name('contenido.generar');
+    // Traer una referencia desde un enlace. Limitado porque cada llamada hace
+    // que el servidor salga a internet — ver FetchReferenceImage.
+    Route::post('/contenido/enlace', [ContentController::class, 'storeLink'])
+        ->middleware('throttle:20,1')->name('contenido.enlace');
     // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');
