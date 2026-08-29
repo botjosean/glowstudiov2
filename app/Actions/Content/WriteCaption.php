@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Log;
 class WriteCaption
 {
     /**
-     * @return array{caption: string, hashtags: list<string>}
+     * @return array{caption: string, hashtags: list<string>, headline: list<string>}
      */
     public function handle(Provider $provider): array
     {
@@ -39,7 +39,11 @@ class WriteCaption
                 ->post(rtrim((string) $config['base_url'], '/').'/chat/completions', [
                     'model' => $config['model'],
                     'temperature' => 0.8,
-                    'max_completion_tokens' => 400,
+                    // Holgado a propósito: el modelo configurado razona antes
+                    // de contestar, y ese razonamiento se come el mismo
+                    // presupuesto. Con 400 la respuesta salía cortada a media
+                    // frase y sin hashtags — visto en producción el 29-ago.
+                    'max_completion_tokens' => 1500,
                     'messages' => [
                         ['role' => 'system', 'content' => $this->instructions()],
                         ['role' => 'user', 'content' => $this->brief($provider)],
@@ -69,18 +73,23 @@ class WriteCaption
     private function instructions(): string
     {
         return <<<'TXT'
-        Escribes descripciones de Instagram para profesionales de belleza en Estados Unidos.
+        Escribes posts de Instagram para profesionales de belleza en Estados Unidos.
 
-        Reglas:
-        - Español natural y cercano, como habla una manicurista o peluquera con sus clientas.
-        - Entre 1 y 3 frases. Nada de párrafos largos.
-        - Nunca inventes precios, promociones, ni cuánto dura un servicio.
-        - Nunca digas que el trabajo lo hizo una IA.
-        - Cierra invitando a agendar, sin sonar a anuncio de televisión.
+        Devuelves tres cosas:
 
-        Responde EXACTAMENTE en este formato, sin nada más:
+        1. TITULAR: hasta 3 palabras, UNA POR LÍNEA, que van impresas GRANDES sobre la
+           foto. Es lo que hace que alguien pare de deslizar. Cortas y con gancho, como
+           "TRENDING / NAILS / VERANO" o "CITAS / ABIERTAS / YA". Sin signos ni emojis.
+        2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
+           manicurista o peluquera con sus clientas.
+        3. HASHTAGS: entre 5 y 8, cada uno empezando por #.
+
+        Nunca inventes precios ni cuánto dura un servicio. Nunca digas que lo hizo una IA.
+
+        Responde EXACTAMENTE en este formato y nada más:
+        TITULAR: palabra1 | palabra2 | palabra3
         DESCRIPCION: <el texto>
-        HASHTAGS: <5 a 8 hashtags separados por espacios, cada uno empezando por #>
+        HASHTAGS: #uno #dos #tres
         TXT;
     }
 
@@ -138,12 +147,21 @@ class WriteCaption
     }
 
     /**
-     * @return array{caption: string, hashtags: list<string>}
+     * @return array{caption: string, hashtags: list<string>, headline: list<string>}
      */
     private function parse(string $answer, Provider $provider): array
     {
+        $headline = [];
         $caption = '';
         $hashtags = [];
+
+        if (preg_match('/TITULAR:\s*(.+)/u', $answer, $match) === 1) {
+            $headline = array_values(array_filter(array_map(
+                static fn (string $word): string => trim($word),
+                preg_split('/[|\n\/]+/u', $match[1]) ?: [],
+            )));
+            $headline = array_slice($headline, 0, 3);
+        }
 
         if (preg_match('/DESCRIPCION:\s*(.+?)(?=\n\s*HASHTAGS:|$)/su', $answer, $match) === 1) {
             $caption = trim($match[1]);
@@ -154,22 +172,42 @@ class WriteCaption
             $hashtags = array_values(array_unique($found[0]));
         }
 
-        // Un formato inesperado no puede dejarla sin texto.
         if ($caption === '') {
-            return $this->fallback($provider);
+            // Sin el marcador esperado, pero con texto: vale más su prosa que
+            // el texto de relleno. Antes esto caía al respaldo en silencio y
+            // parecía que el modelo no se estaba llamando siquiera.
+            $loose = trim(preg_replace('/^(TITULAR|HASHTAGS):.*$/mu', '', $answer) ?? '');
+
+            if ($loose !== '') {
+                $caption = $loose;
+            } else {
+                Log::warning('El modelo contestó en un formato que no se pudo leer; se usa el texto de respaldo.', [
+                    'provider' => $provider->slug,
+                    'muestra' => mb_substr($answer, 0, 200),
+                ]);
+
+                return $this->fallback($provider);
+            }
         }
 
-        return ['caption' => $caption, 'hashtags' => array_slice($hashtags, 0, 8)];
+        return [
+            'caption' => $caption,
+            'hashtags' => array_slice($hashtags, 0, 8),
+            'headline' => $headline,
+        ];
     }
 
     /**
-     * @return array{caption: string, hashtags: list<string>}
+     * @return array{caption: string, hashtags: list<string>, headline: list<string>}
      */
     private function fallback(Provider $provider): array
     {
         return [
             'caption' => trim(($provider->public_name ?? '').' — nuevo trabajo. Escribí acá tu descripción y agendá por el enlace de mi perfil.'),
             'hashtags' => [],
+            // Sin titular inventado: un bloque de texto grande con una frase
+            // de relleno encima de su trabajo es peor que ninguno.
+            'headline' => [],
         ];
     }
 }

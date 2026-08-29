@@ -5,6 +5,7 @@ namespace App\Actions\Content;
 use App\Models\Provider;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Typography\FontFactory;
 
@@ -17,6 +18,21 @@ use Intervention\Image\Typography\FontFactory;
  * se recorta y se encuadra; ningún filtro, ninguna corrección de color,
  * ninguna IA sobre el contenido de la foto.
  *
+ * **El diseño sale de sus propias referencias, no de mi gusto.** La primera
+ * versión era tímida: cuatro fotos flotando en un marco crema ancho con su
+ * nombre chiquito abajo. Al mirar lo que ella misma guardó como referencia
+ * —collages de uñas con "Trending / Nails / Verano" en bloques de color
+ * encima— quedó claro qué faltaba, y ella lo dijo con estas palabras: «le
+ * falta impacto, más texto, que se lea que se está haciendo una oferta».
+ * De ahí salen las tres decisiones de acá:
+ *
+ *  1. Fotos a sangre, pegadas al borde, con una junta blanca fina. El marco
+ *     ancho le quitaba tamaño justo a lo que se quiere mostrar.
+ *  2. Un titular corto EN BLOQUES sobre el centro, cada línea con su propio
+ *     fondo. Es lo que hace que el post se lea de un scroll.
+ *  3. Anton para el titular: la Manrope que ya se incluye es variable y
+ *     FreeType la dibuja siempre en su peso fino — imposible para esto.
+ *
  * Todo pasa en el servidor con Imagick, que ya estaba instalado para las
  * fotos de perfil. No hace falta ningún servicio externo ni clave nueva.
  */
@@ -25,37 +41,25 @@ class BuildCollage
     /** Cuadrado de 1080: lo que Instagram sirve sin recomprimir de más. */
     private const CANVAS = 1080;
 
-    /**
-     * Margen igual por los cuatro lados, y la firma vive dentro del margen
-     * de abajo.
-     *
-     * Un margen inferior más grande que el resto (estilo Polaroid) queda
-     * descartado por geometría, no por gusto: con una rejilla cuadrada
-     * centrada en un lienzo cuadrado, el margen de abajo siempre termina
-     * igual al de arriba. Forzarlo dejaba el borde superior en 15 px contra
-     * 53 px a los lados, y eso se lee como un descuido en vez de un marco.
-     */
-    private const PAD = 64;
+    /** La junta blanca entre fotos. Fina: separa sin robar imagen. */
+    private const SEAM = 8;
 
-    private const GAP = 14;
-
-    /** Lado de cada foto, deducido para que la rejilla llene el marco. */
-    private const CELL = (self::CANVAS - (2 * self::PAD) - self::GAP) / 2;
+    /** Alternan para que el titular no sea un bloque plano de un solo color. */
+    private const BLOCK_COLORS = ['#111827', '#e11d63', '#111827'];
 
     /**
      * @param  list<string>  $paths  claves de R2 de las 4 fotos, en orden
+     * @param  list<string>  $headline  hasta 3 palabras/líneas para el titular
      * @return string la clave de R2 del collage generado
      */
-    public function handle(Provider $provider, array $paths): string
+    public function handle(Provider $provider, array $paths, array $headline = []): string
     {
         $manager = ImageManager::imagick();
 
-        // Crema muy suave en vez de blanco puro: sobre blanco, una foto con
-        // fondo claro se derrama fuera de su celda y el collage deja de
-        // leerse como cuatro piezas.
-        $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill('#faf3e3');
+        $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill('#ffffff');
 
-        $cell = (int) self::CELL;
+        // Cada foto ocupa un cuarto exacto, menos media junta por dentro.
+        $cell = (int) ((self::CANVAS - self::SEAM) / 2);
 
         foreach (array_values($paths) as $index => $path) {
             $photo = $manager->read(Storage::disk('r2')->get($path))->cover($cell, $cell);
@@ -63,16 +67,17 @@ class BuildCollage
             $canvas->place(
                 $photo,
                 'top-left',
-                self::PAD + (($index % 2) * ($cell + self::GAP)),
-                self::PAD + (intdiv($index, 2) * ($cell + self::GAP)),
+                ($index % 2) * ($cell + self::SEAM),
+                intdiv($index, 2) * ($cell + self::SEAM),
             );
         }
 
-        $this->signature($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
+        $this->headline($canvas, $headline);
+        $this->badge($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
 
-        Storage::disk('r2')->put($key, (string) $canvas->toJpeg(quality: 88), [
+        Storage::disk('r2')->put($key, (string) $canvas->toJpeg(quality: 90), [
             'ContentType' => 'image/jpeg',
             'CacheControl' => 'public, max-age=31536000, immutable',
         ]);
@@ -81,34 +86,117 @@ class BuildCollage
     }
 
     /**
-     * El nombre abajo, centrado y espaciado.
+     * El titular, en bloques apilados sobre el centro.
      *
-     * Sale en peso fino porque el Manrope que se incluye es una fuente
-     * variable y FreeType renderiza su instancia por defecto — el peso que
-     * se le pida se ignora. Se deja así a propósito: un nombre fino y
-     * espaciado sobre crema lee como firma de marca de belleza, no como
-     * texto por descuido. Cuando existan sus plantillas reales, esto se
-     * reemplaza por el logo de cada una.
+     * El ancho de cada bloque se mide con el texto ya renderizado en vez de
+     * estimarlo con un factor por carácter: en Anton una "i" y una "M" no se
+     * parecen en nada, y calcularlo a ojo dejaba el fondo corto en unas
+     * líneas y larguísimo en otras.
+     *
+     * @param  list<string>  $lines
      */
-    private function signature(\Intervention\Image\Interfaces\ImageInterface $canvas, string $name): void
+    private function headline(ImageInterface $canvas, array $lines): void
     {
-        $canvas->text(
-            Str::upper($this->spaced($name)),
-            (int) round(self::CANVAS / 2),
-            self::CANVAS - (int) round(self::PAD / 2),
-            function (FontFactory $font) {
-                $font->filename(resource_path('fonts/Manrope.ttf'));
-                $font->size(23);
-                $font->color('#8a6a25');
+        $lines = array_values(array_filter(array_map(
+            static fn (string $line): string => Str::upper(trim($line)),
+            array_slice($lines, 0, 3),
+        )));
+
+        if ($lines === []) {
+            return;
+        }
+
+        $size = 96;
+        $lineHeight = 118;
+        $padX = 26;
+        $padY = 12;
+
+        $blockHeight = count($lines) * $lineHeight;
+        $top = (int) round((self::CANVAS - $blockHeight) / 2);
+
+        foreach ($lines as $i => $line) {
+            $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
+            $width = $this->textWidth($line, $size);
+
+            // El fondo primero, el texto encima.
+            $canvas->drawRectangle(
+                (int) round((self::CANVAS - $width) / 2) - $padX,
+                $centerY - (int) round($size / 2) - $padY,
+                function ($rect) use ($width, $size, $padX, $padY, $i): void {
+                    $rect->size($width + ($padX * 2), $size + ($padY * 2));
+                    $rect->background(self::BLOCK_COLORS[$i % count(self::BLOCK_COLORS)]);
+                },
+            );
+
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $font) use ($size): void {
+                $font->filename(resource_path('fonts/Anton.ttf'));
+                $font->size($size);
+                $font->color('#ffffff');
                 $font->align('center');
                 $font->valign('middle');
-            },
-        );
+            });
+        }
+    }
+
+    /**
+     * Cuánto mide de ancho ese texto, medido de verdad: se dibuja en un
+     * lienzo aparte y se pregunta por su caja.
+     */
+    private function textWidth(string $text, int $size): int
+    {
+        $draw = new \ImagickDraw;
+        $draw->setFont(resource_path('fonts/Anton.ttf'));
+        $draw->setFontSize($size);
+
+        $metrics = (new \Imagick)->queryFontMetrics($draw, $text);
+
+        return (int) round($metrics['textWidth']);
+    }
+
+    /**
+     * El sello redondo abajo, como el de sus referencias: un círculo blanco
+     * con su nombre adentro. Reemplaza al nombre suelto de la primera
+     * versión, que se perdía contra las fotos.
+     */
+    private function badge(ImageInterface $canvas, string $name): void
+    {
+        $radius = 78;
+        $centerX = (int) round(self::CANVAS / 2);
+        $centerY = self::CANVAS - $radius - 38;
+
+        $canvas->drawCircle($centerX, $centerY, function ($circle) use ($radius): void {
+            $circle->radius($radius);
+            $circle->background('#ffffff');
+        });
+
+        // Dos líneas si el nombre tiene apellido: en un círculo, una sola
+        // línea larga se sale por los lados.
+        $parts = preg_split('/\s+/u', trim($name)) ?: [$name];
+        $first = Str::upper($parts[0]);
+        $rest = count($parts) > 1 ? Str::upper(implode(' ', array_slice($parts, 1))) : '';
+
+        $canvas->text($first, $centerX, $centerY - ($rest === '' ? 0 : 14), function (FontFactory $font): void {
+            $font->filename(resource_path('fonts/Manrope.ttf'));
+            $font->size(26);
+            $font->color('#8a6a25');
+            $font->align('center');
+            $font->valign('middle');
+        });
+
+        if ($rest !== '') {
+            $canvas->text($this->spaced($rest), $centerX, $centerY + 19, function (FontFactory $font): void {
+                $font->filename(resource_path('fonts/Manrope.ttf'));
+                $font->size(13);
+                $font->color('#b3852f');
+                $font->align('center');
+                $font->valign('middle');
+            });
+        }
     }
 
     /**
      * Espaciado a mano con espacios finos: Intervention no expone
-     * letter-spacing, y sin él un nombre corto en mayúsculas se ve apretado.
+     * letter-spacing, y sin él una palabra corta en mayúsculas se ve apretada.
      */
     private function spaced(string $text): string
     {

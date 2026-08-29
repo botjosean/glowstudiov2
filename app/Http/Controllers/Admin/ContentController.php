@@ -153,8 +153,10 @@ class ContentController extends Controller
 
         $paths = $uploads->pluck('path')->all();
 
-        $key = $this->collage->handle($provider, $paths);
+        // El texto primero: el titular que escribe el modelo va impreso
+        // dentro del collage, así que no se puede armar la imagen sin él.
         $written = $this->caption->handle($provider);
+        $key = $this->collage->handle($provider, $paths, $written['headline']);
 
         DB::transaction(function () use ($provider, $layout, $key, $written, $paths, $uploads): void {
             ContentPost::create([
