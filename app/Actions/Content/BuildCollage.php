@@ -2,6 +2,7 @@
 
 namespace App\Actions\Content;
 
+use App\Enums\PostLayout;
 use App\Models\Provider;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -48,27 +49,33 @@ class BuildCollage
     private const BLOCK_COLORS = ['#111827', '#e11d63', '#111827'];
 
     /**
-     * @param  list<string>  $paths  claves de R2 de las 4 fotos, en orden
+     * @param  list<string>  $paths  claves de R2 de las fotos, en orden
      * @param  list<string>  $headline  hasta 3 palabras/líneas para el titular
      * @return string la clave de R2 del collage generado
      */
     public function handle(Provider $provider, array $paths, array $headline = []): string
     {
         $manager = ImageManager::imagick();
+        $paths = array_values($paths);
 
         $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill('#ffffff');
 
-        // Cada foto ocupa un cuarto exacto, menos media junta por dentro.
-        $cell = (int) ((self::CANVAS - self::SEAM) / 2);
+        // La rejilla se deduce de cuántas fotos hay: dos en fila, cuatro en
+        // cuadro, nueve en tres por tres. Las celdas no siempre son cuadradas
+        // —dos fotos son dos rectángulos altos— y cover() se encarga de eso.
+        [$cols, $rows] = PostLayout::grid(count($paths));
 
-        foreach (array_values($paths) as $index => $path) {
-            $photo = $manager->read(Storage::disk('r2')->get($path))->cover($cell, $cell);
+        $cellW = (int) ((self::CANVAS - (self::SEAM * ($cols - 1))) / $cols);
+        $cellH = (int) ((self::CANVAS - (self::SEAM * ($rows - 1))) / $rows);
+
+        foreach ($paths as $index => $path) {
+            $photo = $manager->read(Storage::disk('r2')->get($path))->cover($cellW, $cellH);
 
             $canvas->place(
                 $photo,
                 'top-left',
-                ($index % 2) * ($cell + self::SEAM),
-                intdiv($index, 2) * ($cell + self::SEAM),
+                ($index % $cols) * ($cellW + self::SEAM),
+                intdiv($index, $cols) * ($cellH + self::SEAM),
             );
         }
 

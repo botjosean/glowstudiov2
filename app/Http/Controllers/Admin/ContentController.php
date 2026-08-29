@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Content\BuildCollage;
+use App\Actions\Content\BuildHero;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\WriteCaption;
 use App\Actions\Media\DeleteProviderImage;
@@ -38,12 +39,18 @@ class ContentController extends Controller
         private readonly StoreReferenceVideo $video,
         private readonly DeleteProviderImage $deleteImage,
         private readonly BuildCollage $collage,
+        private readonly BuildHero $hero,
         private readonly WriteCaption $caption,
     ) {}
 
     public function index(Request $request): Response
     {
         $provider = $request->user()->provider;
+
+        $waitingCount = ContentUpload::query()
+            ->where('provider_id', $provider->id)
+            ->waiting()
+            ->count();
 
         return Inertia::render('Admin/Contenido', [
             'providerName' => $provider->public_name,
@@ -83,7 +90,15 @@ class ContentController extends Controller
                     'hashtags' => $post->hashtags ?? [],
                     'rating' => $post->rating,
                 ])->values()->all(),
-            'collagePhotos' => PostLayout::Collage4->photoCount(),
+            // Qué modelos puede armar ahora mismo, según cuántas fotos tiene
+            // esperando. Ofrecer uno que no cuadra solo produce un error.
+            'layouts' => collect(PostLayout::cases())
+                ->map(fn (PostLayout $l): array => [
+                    'value' => $l->value,
+                    'counts' => $l->photoCounts(),
+                    'uses' => $l->photosToUse($waitingCount),
+                    'fits' => $l->fits($waitingCount),
+                ])->values()->all(),
         ]);
     }
 
@@ -137,26 +152,34 @@ class ContentController extends Controller
 
         // Reconsultado con el provider_id puesto por el servidor: unos ids
         // inventados no alcanzan las fotos de otra profesional.
-        $uploads = ContentUpload::query()
+        $chosen = ContentUpload::query()
             ->where('provider_id', $provider->id)
             ->waiting()
             ->whereIn('id', $validated['uploadIds'])
             ->oldest()
-            ->limit($layout->photoCount())
             ->get();
 
-        if ($uploads->count() < $layout->photoCount()) {
+        // Cuántas caben de verdad en este modelo: con 5 esperando, un collage
+        // usa 4 y deja una, porque 5 en rejilla dejan un hueco vacío.
+        $uses = $layout->photosToUse($chosen->count());
+
+        if ($uses === 0) {
             throw ValidationException::withMessages([
-                'uploadIds' => __('admin.contentNeedsPhotos', ['count' => $layout->photoCount()]),
+                'uploadIds' => __('admin.contentNeedsPhotos', ['count' => min($layout->photoCounts())]),
             ]);
         }
 
+        $uploads = $chosen->take($uses);
         $paths = $uploads->pluck('path')->all();
 
         // El texto primero: el titular que escribe el modelo va impreso
-        // dentro del collage, así que no se puede armar la imagen sin él.
+        // dentro de la imagen, así que no se puede armar sin él.
         $written = $this->caption->handle($provider);
-        $key = $this->collage->handle($provider, $paths, $written['headline']);
+
+        $key = match ($layout) {
+            PostLayout::Hero => $this->hero->handle($provider, $paths, $written['headline']),
+            PostLayout::Collage => $this->collage->handle($provider, $paths, $written['headline']),
+        };
 
         DB::transaction(function () use ($provider, $layout, $key, $written, $paths, $uploads): void {
             ContentPost::create([

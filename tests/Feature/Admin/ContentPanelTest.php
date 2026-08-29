@@ -28,7 +28,7 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Contenido')
-            ->where('collagePhotos', 4)
+            ->has('layouts', 2)
             ->has('waiting', 0)
             ->has('references', 0)
             ->has('posts', 0)
@@ -151,7 +151,7 @@ class ContentPanelTest extends TestCase
         $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
 
         $this->actingAs($provider->user)
-            ->post('/admin/contenido/generar', ['layout' => 'collage_4', 'uploadIds' => $ids])
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
             ->assertSessionHasNoErrors();
 
         $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
@@ -164,19 +164,61 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
-    public function test_building_a_collage_with_too_few_photos_is_rejected(): void
+    public function test_a_collage_uses_only_the_photos_that_fit_its_grid(): void
     {
+        // Con cinco esperando, la rejilla usa cuatro y deja una: cinco fotos
+        // en rejilla dejarían un hueco vacío.
         $provider = Provider::factory()->published()->create();
 
         $this->actingAs($provider->user)->post('/admin/contenido/subir', [
             'purpose' => 'edit',
-            'photos' => [UploadedFile::fake()->image('uno.jpg'), UploadedFile::fake()->image('dos.jpg')],
+            'photos' => collect(range(1, 5))->map(fn () => UploadedFile::fake()->image('x.jpg'))->all(),
         ]);
 
         $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
 
         $this->actingAs($provider->user)
-            ->post('/admin/contenido/generar', ['layout' => 'collage_4', 'uploadIds' => $ids])
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $this->assertCount(4, ContentPost::query()->sole()->source_paths);
+        $this->assertSame(1, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
+    }
+
+    public function test_a_hero_post_is_built_from_a_single_photo(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => [UploadedFile::fake()->image('sola.jpg', 1200, 900)],
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'hero', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertCount(1, $post->source_paths);
+        Storage::disk('r2')->assertExists($post->path);
+    }
+
+    public function test_a_collage_with_only_one_photo_is_rejected(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => [UploadedFile::fake()->image('uno.jpg')],
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
             ->assertSessionHasErrors('uploadIds');
 
         $this->assertSame(0, ContentPost::query()->count());
@@ -196,7 +238,7 @@ class ContentPanelTest extends TestCase
         $theirIds = ContentUpload::query()->where('provider_id', $hers->id)->pluck('id')->all();
 
         $this->actingAs($mine->user)
-            ->post('/admin/contenido/generar', ['layout' => 'collage_4', 'uploadIds' => $theirIds])
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $theirIds])
             ->assertSessionHasErrors('uploadIds');
 
         $this->assertSame(0, ContentPost::query()->where('provider_id', $mine->id)->count());
@@ -300,7 +342,7 @@ class ContentPanelTest extends TestCase
         $provider = Provider::factory()->published()->create();
         $post = ContentPost::create([
             'provider_id' => $provider->id,
-            'layout' => 'collage_4',
+            'layout' => 'collage',
             'path' => 'providers/1/content/x.jpg',
             'caption' => 'texto',
         ]);
@@ -321,7 +363,7 @@ class ContentPanelTest extends TestCase
 
         $post = ContentPost::create([
             'provider_id' => $hers->id,
-            'layout' => 'collage_4',
+            'layout' => 'collage',
             'path' => 'providers/2/content/x.jpg',
             'caption' => 'texto',
         ]);

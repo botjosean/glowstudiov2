@@ -23,7 +23,7 @@ const props = defineProps({
     waiting: { type: Array, required: true }, // [{ id, url }] subidas sin usar
     references: { type: Array, required: true }, // [{ id, url, kind, note }]
     posts: { type: Array, required: true }, // [{ id, url, caption, hashtags, rating }]
-    collagePhotos: { type: Number, required: true },
+    layouts: { type: Array, required: true }, // [{ value, counts, uses, fits }]
 });
 
 const { t } = useI18n();
@@ -101,13 +101,15 @@ function chooseReference() {
     noteOpen.value = true;
 }
 
-const enoughForCollage = computed(() => props.waiting.length >= props.collagePhotos);
+// Solo los modelos que cuadran con las fotos que tiene ahora. Ofrecer uno
+// que no cuadra solo produce un error después de haber esperado.
+const usableLayouts = computed(() => props.layouts.filter((l) => l.fits));
 
-function buildCollage() {
-    if (!enoughForCollage.value || generateForm.processing) return;
+function build(layout) {
+    if (generateForm.processing) return;
 
-    generateForm.layout = 'collage_4';
-    generateForm.uploadIds = props.waiting.slice(0, props.collagePhotos).map((item) => item.id);
+    generateForm.layout = layout.value;
+    generateForm.uploadIds = props.waiting.slice(0, layout.uses).map((item) => item.id);
 
     generateForm.post('/admin/contenido/generar', {
         preserveScroll: true,
@@ -241,16 +243,23 @@ const busyLabel = computed(() => (generateForm.processing
                     />
                 </div>
 
-                <button
-                    type="button"
-                    :disabled="!enoughForCollage || generateForm.processing"
-                    class="mt-3.5 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                    @click="buildCollage"
-                >
-                    {{ generateForm.processing ? $t('content.building') : $t('content.buildCollage') }}
-                </button>
-                <p v-if="!enoughForCollage" class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
-                    {{ $t('content.needMore', { count: collagePhotos - waiting.length }) }}
+                <div v-if="usableLayouts.length > 0" class="mt-3.5 flex flex-col gap-2">
+                    <button
+                        v-for="layout in usableLayouts"
+                        :key="layout.value"
+                        type="button"
+                        :disabled="generateForm.processing"
+                        class="flex w-full items-center justify-between gap-3 rounded-xl bg-[var(--btn-bg)] px-4 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                        @click="build(layout)"
+                    >
+                        <span>{{ $t(`content.layout_${layout.value}`) }}</span>
+                        <span class="text-[12px] font-medium opacity-70">
+                            {{ $t('content.usesPhotos', layout.uses) }}
+                        </span>
+                    </button>
+                </div>
+                <p v-else class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
+                    {{ $t('content.needOneMore') }}
                 </p>
                 <p class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
                     {{ $t('content.noAiOnWork') }}
