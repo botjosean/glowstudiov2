@@ -591,6 +591,7 @@
         "uploadCta": "Subir fotos",
         "uploadHint": "Fotos, o un video de referencia",
         "uploading": "Subiendo tus archivos…",
+        "uploadingBatch": "Subiendo tanda {done} de {total}…",
         "busyHint": "No cierres la app.",
         "videoOnlyReference": "Un video solo se guarda como referencia — para que aprenda de lo que enseña. Los posts se arman con fotos.",
         "purposeTitle": "Subiste 1 foto | Subiste 1 foto | Subiste {count} fotos",

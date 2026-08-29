@@ -591,6 +591,7 @@
         "uploadCta": "Upload photos",
         "uploadHint": "Photos, or one reference video",
         "uploading": "Uploading your files…",
+        "uploadingBatch": "Uploading batch {done} of {total}…",
         "busyHint": "Don't close the app.",
         "videoOnlyReference": "A video is only saved as a reference — so I learn from what it teaches. Posts are built from photos.",
         "purposeTitle": "You uploaded 1 photo | You uploaded 1 photo | You uploaded {count} photos",

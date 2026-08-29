@@ -164,10 +164,10 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
-    public function test_a_collage_uses_only_the_photos_that_fit_its_grid(): void
+    public function test_a_collage_uses_every_photo_even_when_they_dont_form_a_rectangle(): void
     {
-        // Con cinco esperando, la rejilla usa cuatro y deja una: cinco fotos
-        // en rejilla dejarían un hueco vacío.
+        // Cinco no forman un rectángulo, y aun así entran las cinco: la
+        // rejilla arma filas de 3 y 2. Antes se descartaba una en silencio.
         $provider = Provider::factory()->published()->create();
 
         $this->actingAs($provider->user)->post('/admin/contenido/subir', [
@@ -181,8 +181,8 @@ class ContentPanelTest extends TestCase
             ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
             ->assertSessionHasNoErrors();
 
-        $this->assertCount(4, ContentPost::query()->sole()->source_paths);
-        $this->assertSame(1, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
+        $this->assertCount(5, ContentPost::query()->sole()->source_paths);
+        $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
     public function test_a_hero_post_is_built_from_a_single_photo(): void

@@ -22,50 +22,71 @@ enum PostLayout: string
     /** Varias fotos en rejilla, con el titular en bloques al centro. */
     case Collage = 'collage';
 
-    /**
-     * Las cantidades de fotos con las que este modelo se ve bien.
-     *
-     * Cerrado y no un rango: 5 fotos en rejilla dejan un hueco vacío, y 7 u 8
-     * quedan igual de torcidas. Mejor ofrecer las que cuadran.
-     *
-     * @return list<int>
-     */
-    public function photoCounts(): array
+    /** Cuántas fotos necesita como mínimo. */
+    public function minPhotos(): int
     {
         return match ($this) {
-            self::Hero => [1],
-            self::Collage => [2, 3, 4, 6, 9],
+            self::Hero => 1,
+            self::Collage => 2,
         };
     }
 
-    /** Cuántas fotos usa, dado lo que ella tiene esperando. */
-    public function photosToUse(int $available): int
+    /**
+     * Tope por post. No es una limitación técnica: pasadas doce, cada foto
+     * queda tan chica en un cuadrado de Instagram que no se distingue el
+     * trabajo — que es justamente lo que se quiere mostrar.
+     */
+    public function maxPhotos(): int
     {
-        $usable = array_filter($this->photoCounts(), static fn (int $n): bool => $n <= $available);
-
-        return $usable === [] ? 0 : max($usable);
+        return match ($this) {
+            self::Hero => 1,
+            self::Collage => 12,
+        };
     }
 
-    /** Si se puede armar con esa cantidad de fotos. */
+    /** Cuántas usa, dado lo que ella tiene esperando: todas las que quepan. */
+    public function photosToUse(int $available): int
+    {
+        return $available < $this->minPhotos() ? 0 : min($available, $this->maxPhotos());
+    }
+
     public function fits(int $available): bool
     {
         return $this->photosToUse($available) > 0;
     }
 
     /**
-     * Columnas y filas de la rejilla para esa cantidad.
+     * Cuántas fotos van en cada fila.
      *
-     * @return array{int, int}
+     * Antes solo se aceptaban las cantidades que cuadraban en un rectángulo
+     * exacto (2, 3, 4, 6, 9) y con cinco fotos se descartaba una. Ella lo dijo
+     * claro: «se deben poder subir muchas y que arme algo con todas».
+     *
+     * Con filas de distinto largo se usan TODAS sin dejar huecos: cada fila se
+     * reparte el ancho completo entre las suyas, así que cinco salen 3 + 2 y
+     * siete salen 3 + 2 + 2. Las fotos de una fila más corta quedan un poco
+     * más anchas, que es mucho mejor que un hueco blanco o una foto perdida.
+     *
+     * @return list<int>
      */
-    public static function grid(int $count): array
+    public static function rowSizes(int $count): array
     {
-        return match ($count) {
-            2 => [2, 1],
-            3 => [3, 1],
-            4 => [2, 2],
-            6 => [3, 2],
-            9 => [3, 3],
-            default => [1, 1],
-        };
+        if ($count <= 1) {
+            return [max($count, 0)];
+        }
+
+        $rows = max(1, (int) round(sqrt($count)));
+        $base = intdiv($count, $rows);
+        $extra = $count % $rows;
+
+        $sizes = [];
+
+        for ($i = 0; $i < $rows; $i++) {
+            // Las filas de arriba se llevan la foto de más, para que la más
+            // llena quede primero.
+            $sizes[] = $base + ($i < $extra ? 1 : 0);
+        }
+
+        return $sizes;
     }
 }

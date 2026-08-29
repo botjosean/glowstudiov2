@@ -60,23 +60,23 @@ class BuildCollage
 
         $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill('#ffffff');
 
-        // La rejilla se deduce de cuántas fotos hay: dos en fila, cuatro en
-        // cuadro, nueve en tres por tres. Las celdas no siempre son cuadradas
-        // —dos fotos son dos rectángulos altos— y cover() se encarga de eso.
-        [$cols, $rows] = PostLayout::grid(count($paths));
-
-        $cellW = (int) ((self::CANVAS - (self::SEAM * ($cols - 1))) / $cols);
+        // Filas de distinto largo para no dejar huecos ni perder fotos: cada
+        // fila se reparte el ancho entero entre las suyas. Ver rowSizes().
+        $rowSizes = PostLayout::rowSizes(count($paths));
+        $rows = count($rowSizes);
         $cellH = (int) ((self::CANVAS - (self::SEAM * ($rows - 1))) / $rows);
 
-        foreach ($paths as $index => $path) {
-            $photo = $manager->read(Storage::disk('r2')->get($path))->cover($cellW, $cellH);
+        $index = 0;
 
-            $canvas->place(
-                $photo,
-                'top-left',
-                ($index % $cols) * ($cellW + self::SEAM),
-                intdiv($index, $cols) * ($cellH + self::SEAM),
-            );
+        foreach ($rowSizes as $row => $inRow) {
+            $cellW = (int) ((self::CANVAS - (self::SEAM * ($inRow - 1))) / $inRow);
+            $y = $row * ($cellH + self::SEAM);
+
+            for ($col = 0; $col < $inRow; $col++) {
+                $photo = $manager->read(Storage::disk('r2')->get($paths[$index]))->cover($cellW, $cellH);
+                $canvas->place($photo, 'top-left', $col * ($cellW + self::SEAM), $y);
+                $index++;
+            }
         }
 
         $this->headline($canvas, $headline);

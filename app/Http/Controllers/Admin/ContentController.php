@@ -95,7 +95,7 @@ class ContentController extends Controller
             'layouts' => collect(PostLayout::cases())
                 ->map(fn (PostLayout $l): array => [
                     'value' => $l->value,
-                    'counts' => $l->photoCounts(),
+                    'min' => $l->minPhotos(),
                     'uses' => $l->photosToUse($waitingCount),
                     'fits' => $l->fits($waitingCount),
                 ])->values()->all(),
@@ -159,13 +159,14 @@ class ContentController extends Controller
             ->oldest()
             ->get();
 
-        // Cuántas caben de verdad en este modelo: con 5 esperando, un collage
-        // usa 4 y deja una, porque 5 en rejilla dejan un hueco vacío.
+        // Todas las que quepan: el collage arma filas de distinto largo, así
+        // que cinco fotos entran las cinco. El tope solo evita que cada foto
+        // quede tan chica que no se distinga el trabajo.
         $uses = $layout->photosToUse($chosen->count());
 
         if ($uses === 0) {
             throw ValidationException::withMessages([
-                'uploadIds' => __('admin.contentNeedsPhotos', ['count' => min($layout->photoCounts())]),
+                'uploadIds' => __('admin.contentNeedsPhotos', ['count' => $layout->minPhotos()]),
             ]);
         }
 

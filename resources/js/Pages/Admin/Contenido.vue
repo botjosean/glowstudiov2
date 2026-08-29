@@ -59,8 +59,11 @@ function pickFiles(event) {
     let files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
 
+    // Las fotos ya no se recortan a diez: se suben en tandas (ver
+    // makeBatches). Antes se descartaban en silencio las que sobraban, que
+    // desde el teléfono se ve como que la app perdió fotos.
     const video = files.find((file) => file.type.startsWith('video/'));
-    files = video ? [video] : files.slice(0, 10);
+    files = video ? [video] : files;
 
     releasePreviews();
     chosen.value = files;
@@ -72,23 +75,92 @@ function pickFiles(event) {
     event.target.value = '';
 }
 
+/**
+ * Cuánto puede pesar UNA petición.
+ *
+ * El techo real no es del servidor: el sitio va detrás de Cloudflare, que
+ * corta cualquier envío de más de 100 MB y lo hace ANTES de que la petición
+ * llegue — no aparece ni en los registros, así que desde el teléfono parece
+ * que la app se quedó pensando. Visto de verdad el 29-ago con fotos de
+ * iPhone. 40 MB deja margen de sobra en una red móvil.
+ */
+const BATCH_BYTES = 40 * 1024 * 1024;
+const BATCH_FILES = 10;
+
+const batchTotal = ref(0);
+const batchDone = ref(0);
+
+/**
+ * Parte la selección en tandas que sí pasan.
+ *
+ * Se parte por peso Y por cantidad: veinte fotos chicas pasan el límite de
+ * archivos aunque no el de peso. Un archivo que por sí solo no cabe se manda
+ * igual en su propia tanda — el servidor le dará un mensaje claro, que es
+ * mejor que descartarlo en silencio acá.
+ */
+function makeBatches(files) {
+    const batches = [];
+    let current = [];
+    let size = 0;
+
+    for (const file of files) {
+        const wouldOverflow = size + file.size > BATCH_BYTES || current.length >= BATCH_FILES;
+
+        if (current.length > 0 && wouldOverflow) {
+            batches.push(current);
+            current = [];
+            size = 0;
+        }
+
+        current.push(file);
+        size += file.size;
+    }
+
+    if (current.length > 0) batches.push(current);
+
+    return batches;
+}
+
 function send(purpose, note = '') {
+    const batches = makeBatches(chosen.value);
+
+    batchTotal.value = batches.length;
+    batchDone.value = 0;
+
+    sendBatch(batches, 0, purpose, note);
+}
+
+function sendBatch(batches, index, purpose, note) {
+    if (index >= batches.length) {
+        haptics.success();
+        releasePreviews();
+        chosen.value = [];
+        purposeOpen.value = false;
+        noteOpen.value = false;
+        uploadForm.reset();
+        batchTotal.value = 0;
+
+        return;
+    }
+
     uploadForm.purpose = purpose;
-    uploadForm.note = note;
-    uploadForm.photos = chosen.value;
+    // La nota describe la selección entera, así que va solo en la primera
+    // tanda — repetirla en cada una es lo que ya ahogaba las referencias.
+    uploadForm.note = index === 0 ? note : '';
+    uploadForm.photos = batches[index];
 
     uploadForm.post('/admin/contenido/subir', {
         forceFormData: true,
         preserveScroll: true,
+        preserveState: true,
         onSuccess: () => {
-            haptics.success();
-            releasePreviews();
-            chosen.value = [];
-            purposeOpen.value = false;
-            noteOpen.value = false;
-            uploadForm.reset();
+            batchDone.value = index + 1;
+            sendBatch(batches, index + 1, purpose, note);
         },
-        onError: () => haptics.error(),
+        onError: () => {
+            haptics.error();
+            batchTotal.value = 0;
+        },
     });
 }
 
@@ -178,9 +250,15 @@ const busy = computed(() => uploadForm.processing || generateForm.processing);
 
 const busyPercent = computed(() => uploadForm.progress?.percentage ?? null);
 
-const busyLabel = computed(() => (generateForm.processing
-    ? t('content.building')
-    : t('content.uploading')));
+const busyLabel = computed(() => {
+    if (generateForm.processing) return t('content.building');
+
+    // Con varias tandas, decir "subiendo" a secas parece que se trabó al
+    // volver a empezar en 0% en cada una.
+    return batchTotal.value > 1
+        ? t('content.uploadingBatch', { done: batchDone.value + 1, total: batchTotal.value })
+        : t('content.uploading');
+});
 </script>
 
 <template>
