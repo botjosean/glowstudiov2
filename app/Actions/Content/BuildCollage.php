@@ -2,7 +2,7 @@
 
 namespace App\Actions\Content;
 
-use App\Enums\PostLayout;
+use App\Enums\BusinessCategory;
 use App\Models\Provider;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -45,9 +45,6 @@ class BuildCollage
     /** La junta blanca entre fotos. Fina: separa sin robar imagen. */
     private const SEAM = 8;
 
-    /** Alternan para que el titular no sea un bloque plano de un solo color. */
-    private const BLOCK_COLORS = ['#111827', '#e11d63', '#111827'];
-
     /**
      * @param  list<string>  $paths  claves de R2 de las fotos, en orden
      * @param  list<string>  $headline  hasta 3 palabras/líneas para el titular
@@ -83,7 +80,7 @@ class BuildCollage
             $canvas->place($photo, 'top-left', $x, $y);
         }
 
-        $this->headline($canvas, $headline);
+        $this->headline($canvas, $headline, $provider->business_category);
         $this->badge($canvas, $provider);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
@@ -106,7 +103,7 @@ class BuildCollage
      *
      * @param  list<string>  $lines
      */
-    private function headline(ImageInterface $canvas, array $lines): void
+    private function headline(ImageInterface $canvas, array $lines, ?BusinessCategory $category): void
     {
         $lines = self::cleanLines($lines);
 
@@ -114,10 +111,14 @@ class BuildCollage
             return;
         }
 
-        // También se sortea el estilo del titular: sin esto, aunque cambie la
-        // rejilla, todos los posts se seguían pareciendo entre sí.
-        $styles = ['blocks', 'band', 'clean'];
+        // El estilo se sortea, pero solo entre los que le pegan al rubro: una
+        // barbería con bloques rosa de revista es justo el post que no se
+        // publica. Ver BrandStyle.
+        $styles = BrandStyle::headlineStyles($category);
         $style = $styles[array_rand($styles)];
+
+        $colors = BrandStyle::blockColors($category);
+        $font = BrandStyle::headlineFont($category);
 
         // Y dónde cae: al centro, abajo o arriba.
         $spots = ['center', 'bottom', 'top'];
@@ -147,35 +148,35 @@ class BuildCollage
 
         foreach ($lines as $i => $line) {
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
-            $width = $this->textWidth($line, $size);
+            $width = $this->textWidth($line, $size, $font);
 
             if ($style === 'blocks') {
                 $canvas->drawRectangle(
                     (int) round((self::CANVAS - $width) / 2) - $padX,
                     $centerY - (int) round($size / 2) - $padY,
-                    function ($rect) use ($width, $size, $padX, $padY, $i): void {
+                    function ($rect) use ($width, $size, $padX, $padY, $i, $colors): void {
                         $rect->size($width + ($padX * 2), $size + ($padY * 2));
-                        $rect->background(self::BLOCK_COLORS[$i % count(self::BLOCK_COLORS)]);
+                        $rect->background($colors[$i % count($colors)]);
                     },
                 );
             } elseif ($style !== 'band') {
                 // 'clean': sin fondo. Una sombra suave detrás para que sobreviva
                 // sobre una foto clara, que en belleza son la mitad.
-                $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $font) use ($size): void {
-                    $font->filename(resource_path('fonts/Anton.ttf'));
-                    $font->size($size);
-                    $font->color('rgba(0, 0, 0, 0.45)');
-                    $font->align('center');
-                    $font->valign('middle');
+                $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $f) use ($size, $font): void {
+                    $f->filename($font);
+                    $f->size($size);
+                    $f->color('rgba(0, 0, 0, 0.45)');
+                    $f->align('center');
+                    $f->valign('middle');
                 });
             }
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $font) use ($size): void {
-                $font->filename(resource_path('fonts/Anton.ttf'));
-                $font->size($size);
-                $font->color('#ffffff');
-                $font->align('center');
-                $font->valign('middle');
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font): void {
+                $f->filename($font);
+                $f->size($size);
+                $f->color('#ffffff');
+                $f->align('center');
+                $f->valign('middle');
             });
         }
     }
@@ -218,10 +219,10 @@ class BuildCollage
      * Cuánto mide de ancho ese texto, medido de verdad: se dibuja en un
      * lienzo aparte y se pregunta por su caja.
      */
-    private function textWidth(string $text, int $size): int
+    private function textWidth(string $text, int $size, string $font): int
     {
         $draw = new \ImagickDraw;
-        $draw->setFont(resource_path('fonts/Anton.ttf'));
+        $draw->setFont($font);
         $draw->setFontSize($size);
 
         $metrics = (new \Imagick)->queryFontMetrics($draw, $text);

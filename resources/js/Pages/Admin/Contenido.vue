@@ -335,19 +335,52 @@ const busyLabel = computed(() => {
                     />
                 </div>
 
-                <div v-if="usableLayouts.length > 0" class="mt-3.5 flex flex-col gap-2">
+                <div v-if="usableLayouts.length > 0" class="mt-4 flex flex-col gap-2">
+                    <div class="text-[12px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+                        {{ $t('content.chooseLayout') }}
+                    </div>
+
                     <button
                         v-for="layout in usableLayouts"
                         :key="layout.value"
                         type="button"
                         :disabled="generateForm.processing"
-                        class="flex w-full items-center justify-between gap-3 rounded-xl bg-[var(--btn-bg)] px-4 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="flex w-full items-center gap-3.5 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-3.5 text-left hover:border-[var(--gold-border)] hover:bg-[var(--gold-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                         @click="build(layout)"
                     >
-                        <span>{{ $t(`content.layout_${layout.value}`) }}</span>
-                        <span class="text-[12px] font-medium opacity-70">
-                            {{ $t('content.usesPhotos', layout.uses) }}
+                        <!-- Una miniatura del armado dibujada con cajitas: se
+                             entiende de un vistazo qué va a salir, que es lo
+                             que un nombre solo no dice. -->
+                        <span class="grid h-11 w-11 shrink-0 gap-[2px] rounded-lg bg-[var(--surface-mute)] p-1.5"
+                            :class="{
+                                'grid-cols-1': layout.value === 'hero',
+                                'grid-cols-2': layout.value === 'collage',
+                                'grid-cols-3 items-center': layout.value === 'carousel',
+                            }"
+                        >
+                            <template v-if="layout.value === 'hero'">
+                                <span class="rounded-[3px] bg-[var(--gold)]" />
+                            </template>
+                            <template v-else-if="layout.value === 'collage'">
+                                <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)]" />
+                            </template>
+                            <template v-else>
+                                <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
+                                <span class="h-8 rounded-[2px] bg-[var(--gold)]" />
+                                <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
+                            </template>
                         </span>
+
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[15px] font-bold text-[var(--text-strong)]">
+                                {{ $t(`content.layout_${layout.value}`) }}
+                            </span>
+                            <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">
+                                {{ $t(`content.layoutHint_${layout.value}`) }} · {{ $t('content.usesPhotos', layout.uses) }}
+                            </span>
+                        </span>
+
+                        <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
                     </button>
                 </div>
                 <p v-else class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">

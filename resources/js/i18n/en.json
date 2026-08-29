@@ -606,9 +606,9 @@
         "saveReference": "Save reference",
         "waitingTitle": "1 photo waiting | 1 photo waiting | {count} photos waiting",
         "building": "Building…",
-        "layout_hero": "One big photo with a headline",
-        "layout_collage": "Several photos in a grid",
-        "layout_carousel": "Full carousel (cover + collages + closing)",
+        "layout_hero": "Big photo",
+        "layout_collage": "Collage",
+        "layout_carousel": "Carousel",
         "usesPhotos": "uses 1 photo | uses 1 photo | uses {count} photos",
         "needOneMore": "Upload at least one photo to build something.",
         "noAiOnWork": "Your work isn't retouched. Only cropped and framed.",
@@ -631,7 +631,11 @@
         "ratedUp": "You liked it",
         "ratedDown": "Noted, I'll keep it in mind",
         "latestTitle": "Just built",
-        "olderTitle": "None before | 1 earlier | {count} earlier"
+        "olderTitle": "None before | 1 earlier | {count} earlier",
+        "chooseLayout": "Pick a model",
+        "layoutHint_hero": "One photo with a headline",
+        "layoutHint_collage": "Several in one image",
+        "layoutHint_carousel": "Cover, collages and closing"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

@@ -606,9 +606,9 @@
         "saveReference": "Guardar referencia",
         "waitingTitle": "1 foto esperando | 1 foto esperando | {count} fotos esperando",
         "building": "Armando…",
-        "layout_hero": "Una foto grande con titular",
-        "layout_collage": "Varias fotos en rejilla",
-        "layout_carousel": "Carrusel completo (portada + collages + cierre)",
+        "layout_hero": "Foto grande",
+        "layout_collage": "Collage",
+        "layout_carousel": "Carrusel",
         "usesPhotos": "usa 1 foto | usa 1 foto | usa {count} fotos",
         "needOneMore": "Subí al menos una foto para armar algo.",
         "noAiOnWork": "Tu trabajo no se retoca. Solo se recorta y se encuadra.",
@@ -631,7 +631,11 @@
         "ratedUp": "Te gustó",
         "ratedDown": "Anotado, lo tengo en cuenta",
         "latestTitle": "Recién armado",
-        "olderTitle": "Nada antes | 1 anterior | {count} anteriores"
+        "olderTitle": "Nada antes | 1 anterior | {count} anteriores",
+        "chooseLayout": "Elegí el modelo",
+        "layoutHint_hero": "Una sola, con titular encima",
+        "layoutHint_collage": "Varias en una imagen",
+        "layoutHint_carousel": "Portada, collages y cierre"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",
