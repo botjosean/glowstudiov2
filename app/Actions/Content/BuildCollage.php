@@ -84,7 +84,7 @@ class BuildCollage
         }
 
         $this->headline($canvas, $headline);
-        $this->badge($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
+        $this->badge($canvas, $provider);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
 
@@ -230,11 +230,84 @@ class BuildCollage
     }
 
     /**
-     * El sello redondo abajo, como el de sus referencias: un círculo blanco
-     * con su nombre adentro. Reemplaza al nombre suelto de la primera
-     * versión, que se perdía contra las fotos.
+     * El sello redondo de la esquina.
+     *
+     * Lleva SU LOGO —la foto de perfil del negocio— y no su nombre escrito.
+     * Ella lo señaló mirando un post: «están usando un logo ahí de un nombre,
+     * se tiene que usar el logo de Glow Studio». Tiene razón: un nombre en
+     * texto es un pie de foto, un logo es una marca.
+     *
+     * Si todavía no cargó foto de perfil, cae al nombre — un sello vacío
+     * sería peor que uno con letras.
      */
-    private function badge(ImageInterface $canvas, string $name): void
+    private function badge(ImageInterface $canvas, Provider $provider): void
+    {
+        $logo = $provider->avatar_photo_url;
+
+        if ($logo !== null && $logo !== '') {
+            $this->logoBadge($canvas, $logo);
+
+            return;
+        }
+
+        $this->nameBadge($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
+    }
+
+    /**
+     * Su foto de perfil recortada en círculo, con un aro blanco que la
+     * despega de la foto de abajo.
+     */
+    private function logoBadge(ImageInterface $canvas, string $key): void
+    {
+        $radius = 70;
+        $centerX = self::CANVAS - $radius - 32;
+        $centerY = self::CANVAS - $radius - 32;
+
+        // El aro blanco primero, un poco más grande que el logo.
+        $canvas->drawCircle($centerX, $centerY, function ($circle) use ($radius): void {
+            $circle->radius($radius);
+            $circle->background('#ffffff');
+        });
+
+        $size = ($radius - 6) * 2;
+
+        $logo = ImageManager::imagick()->read(self::circularLogo(Storage::disk('r2')->get($key), $size));
+
+        $canvas->place($logo, 'top-left', $centerX - (int) round($size / 2), $centerY - (int) round($size / 2));
+    }
+
+    /**
+     * Recorta una imagen en círculo y la devuelve como PNG con transparencia.
+     *
+     * Con Imagick a pelo y no con Intervention: la versión 3 no expone
+     * máscaras (`applyMask` no existe, comprobado al reventar), y un logo
+     * cuadrado metido dentro de un aro redondo se ve como un error.
+     *
+     * @return string el PNG en binario
+     */
+    public static function circularLogo(string $binary, int $size): string
+    {
+        $logo = new \Imagick;
+        $logo->readImageBlob($binary);
+        $logo->setImageFormat('png');
+        $logo->cropThumbnailImage($size, $size);
+
+        // Blanco donde se ve, negro donde se recorta.
+        $mask = new \Imagick;
+        $mask->newImage($size, $size, new \ImagickPixel('black'), 'png');
+
+        $draw = new \ImagickDraw;
+        $draw->setFillColor(new \ImagickPixel('white'));
+        $draw->circle($size / 2, $size / 2, $size / 2, 0);
+        $mask->drawImage($draw);
+
+        $logo->setImageAlphaChannel(\Imagick::ALPHACHANNEL_SET);
+        $logo->compositeImage($mask, \Imagick::COMPOSITE_COPYOPACITY, 0, 0);
+
+        return $logo->getImageBlob();
+    }
+
+    private function nameBadge(ImageInterface $canvas, string $name): void
     {
         // Abajo a la derecha y no al centro: centrado caía justo sobre la
         // unión entre dos fotos y quedaba partido por la junta blanca. En una

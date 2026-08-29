@@ -618,7 +618,6 @@
         "yourWords": "Lo que escribiste",
         "noNote": "Esta la subiste sin contar qué te gusta. Las que llevan nota enseñan mucho más.",
         "removeReference": "Quitar esta referencia",
-        "postsTitle": "Tus posts",
         "download": "Descargar",
         "copyText": "Copiar texto",
         "rateAsk": "¿Te gustó cómo quedó?",
@@ -630,7 +629,9 @@
         "rateWhyHint": "Contame qué cambiarías. Sin esto no puedo mejorarlo.",
         "rateSend": "Enviar",
         "ratedUp": "Te gustó",
-        "ratedDown": "Anotado, lo tengo en cuenta"
+        "ratedDown": "Anotado, lo tengo en cuenta",
+        "latestTitle": "Recién armado",
+        "olderTitle": "Nada antes | 1 anterior | {count} anteriores"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

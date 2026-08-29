@@ -221,6 +221,20 @@ function copyCaption(post) {
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
 }
 
+// Lo recién armado va entero y arriba; lo anterior, en miniaturas. Con todos
+// a tamaño completo había que desplazarse muchísimo para ver lo que acababa
+// de salir, que es justo lo que viene a mirar.
+const latestPost = computed(() => props.posts[0] ?? null);
+const olderPosts = computed(() => props.posts.slice(1));
+
+const openedPost = ref(null);
+const postOpen = ref(false);
+
+function openPost(post) {
+    openedPost.value = post;
+    postOpen.value = true;
+}
+
 // Ver una referencia entera, con lo que ella escribió, y poder quitarla.
 const openedReference = ref(null);
 const referenceOpen = ref(false);
@@ -390,16 +404,18 @@ const busyLabel = computed(() => {
                 </div>
             </div>
 
-            <!-- Posts armados -->
-            <div v-if="posts.length > 0" class="flex flex-col gap-3">
-                <div class="pt-1 text-[13px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-                    {{ $t('content.postsTitle') }}
+            <!-- Lo último armado, entero. Lo de antes queda abajo en
+                 miniaturas: ocupando cada uno la pantalla completa había que
+                 desplazarse muchísimo para llegar a lo que acababa de salir. -->
+            <div v-if="latestPost" class="flex flex-col gap-3">
+                <div class="pt-1 text-[13px] font-semibold uppercase tracking-wide text-[var(--gold-text)]">
+                    {{ $t('content.latestTitle') }}
                 </div>
 
                 <div
-                    v-for="post in posts"
+                    v-for="post in [latestPost]"
                     :key="post.id"
-                    class="overflow-hidden rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                    class="overflow-hidden rounded-2xl border border-[var(--gold-border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                 >
                     <!-- Un carrusel se desliza como en Instagram; un post de
                          una sola lámina se ve entero, sin barra que no lleva
@@ -465,6 +481,28 @@ const busyLabel = computed(() => {
                             {{ post.rating === 'up' ? $t('content.ratedUp') : $t('content.ratedDown') }}
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Los anteriores, en miniatura. Un toque los abre entero. -->
+            <div v-if="olderPosts.length > 0" class="flex flex-col gap-2.5">
+                <div class="pt-1 text-[13px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+                    {{ $t('content.olderTitle', olderPosts.length) }}
+                </div>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button
+                        v-for="post in olderPosts"
+                        :key="post.id"
+                        type="button"
+                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
+                        @click="openPost(post)"
+                    >
+                        <img :src="post.url" alt="" class="h-full w-full object-cover" />
+                        <span
+                            v-if="post.slides.length > 1"
+                            class="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-[10px] font-semibold text-white"
+                        >{{ post.slides.length }}</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -591,6 +629,51 @@ const busyLabel = computed(() => {
                     {{ rateForm.processing ? $t('common.saving') : $t('content.rateSend') }}
                 </button>
             </div>
+        </BottomSheet>
+
+        <!-- Un post anterior, abierto entero -->
+        <BottomSheet v-model="postOpen">
+            <template v-if="openedPost">
+                <div v-if="openedPost.slides.length > 1" class="mb-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto">
+                    <img
+                        v-for="(slide, i) in openedPost.slides"
+                        :key="i"
+                        :src="slide"
+                        alt=""
+                        class="aspect-square w-full shrink-0 snap-center rounded-xl object-cover"
+                    />
+                </div>
+                <img v-else :src="openedPost.url" alt="" class="mb-4 aspect-square w-full rounded-xl object-cover" />
+
+                <p class="mb-3 text-[14px] font-normal leading-relaxed text-[var(--text-body)]">{{ openedPost.caption }}</p>
+
+                <div v-if="openedPost.hashtags.length > 0" class="mb-4 flex flex-wrap gap-1.5">
+                    <span
+                        v-for="tag in openedPost.hashtags"
+                        :key="tag"
+                        class="rounded-md bg-[var(--surface-mute)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-mute)]"
+                    >{{ tag }}</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <a
+                        :href="openedPost.url"
+                        target="_blank"
+                        rel="noopener"
+                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--btn-bg)] py-3 text-[14px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+                    >
+                        <Download :size="15" />
+                        {{ $t('content.download') }}
+                    </a>
+                    <button
+                        type="button"
+                        class="rounded-xl border border-[var(--border-strong)] px-3.5 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
+                        @click="copyCaption(openedPost)"
+                    >
+                        {{ $t('content.copyText') }}
+                    </button>
+                </div>
+            </template>
         </BottomSheet>
 
         <!-- Una referencia abierta: se ve entera y se puede quitar -->

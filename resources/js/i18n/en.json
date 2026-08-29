@@ -618,7 +618,6 @@
         "yourWords": "What you wrote",
         "noNote": "You saved this one without saying what you like about it. The ones with a note teach far more.",
         "removeReference": "Remove this reference",
-        "postsTitle": "Your posts",
         "download": "Download",
         "copyText": "Copy text",
         "rateAsk": "How did it turn out?",
@@ -630,7 +629,9 @@
         "rateWhyHint": "Tell me what you'd change. Without this I can't improve it.",
         "rateSend": "Send",
         "ratedUp": "You liked it",
-        "ratedDown": "Noted, I'll keep it in mind"
+        "ratedDown": "Noted, I'll keep it in mind",
+        "latestTitle": "Just built",
+        "olderTitle": "None before | 1 earlier | {count} earlier"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

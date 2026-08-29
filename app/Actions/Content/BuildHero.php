@@ -41,7 +41,7 @@ class BuildHero
             ->cover(self::CANVAS, self::CANVAS);
 
         $this->shade($canvas);
-        $this->wordmark($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
+        $this->mark($canvas, $provider);
         $this->headline($canvas, $headline);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
@@ -79,9 +79,29 @@ class BuildHero
         }
     }
 
-    /** La marca arriba al centro, chica y espaciada. */
-    private function wordmark(ImageInterface $canvas, string $name): void
+    /**
+     * La marca arriba al centro: su logo si lo tiene, su nombre si no.
+     *
+     * Mismo criterio que el sello del collage — ver BuildCollage::badge().
+     */
+    private function mark(ImageInterface $canvas, Provider $provider): void
     {
+        $key = $provider->avatar_photo_url;
+
+        if ($key !== null && $key !== '') {
+            $size = 96;
+
+            // El recorte circular vive en BuildCollage: una sola manera de
+            // hacerlo para los dos formatos.
+            $logo = ImageManager::imagick()->read(BuildCollage::circularLogo(Storage::disk('r2')->get($key), $size));
+
+            $canvas->place($logo, 'top-left', (int) round((self::CANVAS - $size) / 2), 44);
+
+            return;
+        }
+
+        $name = $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME;
+
         $canvas->text($this->spaced(Str::upper($name)), (int) round(self::CANVAS / 2), 62, function (FontFactory $font): void {
             $font->filename(resource_path('fonts/Manrope.ttf'));
             $font->size(19);
