@@ -177,9 +177,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     Route::get('/contenido', [ContentController::class, 'index'])->name('contenido');
     Route::post('/contenido/subir', [ContentController::class, 'store'])->name('contenido.subir');
     Route::post('/contenido/generar', [ContentController::class, 'generate'])->name('contenido.generar');
-    // La única con {id}, y por eso la única con política. Ver ContentPostPolicy.
+    // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');
+    Route::delete('/contenido/referencias/{upload}', [ContentController::class, 'destroyReference'])
+        ->can('delete', 'upload')->whereNumber('upload')->name('contenido.referencias.destroy');
 
     Route::get('/perfil', [DashboardController::class, 'perfil'])->name('perfil');
     // La vitrina y su formulario viven separados, como en Booksy: /perfil

@@ -28,11 +28,66 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Contenido')
-            ->where('referenceCount', 0)
             ->where('collagePhotos', 4)
             ->has('waiting', 0)
+            ->has('references', 0)
             ->has('posts', 0)
         );
+    }
+
+    public function test_references_are_listed_so_she_can_see_what_she_saved(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'note' => 'Luz natural.',
+            'photos' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
+        ]);
+
+        $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
+            ->has('references', 2)
+            ->has('references.0.url')
+            ->where('references.0.kind', 'image')
+        );
+    }
+
+    public function test_a_reference_can_be_removed(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $upload = ContentUpload::query()->where('provider_id', $provider->id)->sole();
+
+        $this->actingAs($provider->user)
+            ->delete("/admin/contenido/referencias/{$upload->id}")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(0, ContentUpload::query()->count());
+        Storage::disk('r2')->assertMissing($upload->path);
+    }
+
+    public function test_a_provider_cannot_remove_another_providers_reference(): void
+    {
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $this->actingAs($hers->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $upload = ContentUpload::query()->where('provider_id', $hers->id)->sole();
+
+        $this->actingAs($mine->user)
+            ->delete("/admin/contenido/referencias/{$upload->id}")
+            ->assertForbidden();
+
+        $this->assertSame(1, ContentUpload::query()->count());
     }
 
     public function test_photos_uploaded_for_editing_wait_for_a_model(): void

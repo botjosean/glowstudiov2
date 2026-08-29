@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\WriteCaption;
+use App\Actions\Media\DeleteProviderImage;
 use App\Actions\Media\StoreProviderImage;
 use App\Enums\ContentPurpose;
 use App\Enums\ImageVariant;
@@ -35,6 +36,7 @@ class ContentController extends Controller
     public function __construct(
         private readonly StoreProviderImage $store,
         private readonly StoreReferenceVideo $video,
+        private readonly DeleteProviderImage $deleteImage,
         private readonly BuildCollage $collage,
         private readonly WriteCaption $caption,
     ) {}
@@ -56,10 +58,19 @@ class ContentController extends Controller
                     'id' => $upload->id,
                     'url' => MediaUrl::resolve($upload->path),
                 ])->values()->all(),
-            'referenceCount' => ContentUpload::query()
+            // La lista entera, no solo el conteo: sin verlas no hay forma de
+            // saber si lo que subió llegó bien, ni de quitar una equivocada.
+            'references' => ContentUpload::query()
                 ->where('provider_id', $provider->id)
                 ->references()
-                ->count(),
+                ->latest()
+                ->get()
+                ->map(fn (ContentUpload $upload): array => [
+                    'id' => $upload->id,
+                    'url' => MediaUrl::resolve($upload->path),
+                    'kind' => $upload->kind->value,
+                    'note' => $upload->note,
+                ])->values()->all(),
             'posts' => ContentPost::query()
                 ->where('provider_id', $provider->id)
                 ->latest()
@@ -159,6 +170,20 @@ class ContentController extends Controller
         });
 
         return to_route('admin.contenido')->with('success', 'admin.contentPostReady');
+    }
+
+    /**
+     * Quitar una referencia que se subió por error.
+     *
+     * El archivo se borra de R2 también: una referencia que ya no enseña nada
+     * no tiene por qué seguir ocupando espacio ni apareciendo en la lista.
+     */
+    public function destroyReference(ContentUpload $upload): RedirectResponse
+    {
+        $this->deleteImage->handle($upload->path);
+        $upload->delete();
+
+        return to_route('admin.contenido')->with('success', 'admin.contentReferenceRemoved');
     }
 
     /**

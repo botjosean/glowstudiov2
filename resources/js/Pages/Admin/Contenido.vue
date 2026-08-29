@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard } from '@lucide/vue';
+import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
@@ -21,7 +21,7 @@ const props = defineProps({
     providerName: { type: String, required: true },
     avatarPhoto: { type: String, default: '' },
     waiting: { type: Array, required: true }, // [{ id, url }] subidas sin usar
-    referenceCount: { type: Number, required: true },
+    references: { type: Array, required: true }, // [{ id, url, kind, note }]
     posts: { type: Array, required: true }, // [{ id, url, caption, hashtags, rating }]
     collagePhotos: { type: Number, required: true },
 });
@@ -147,6 +147,29 @@ function copyCaption(post) {
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
 }
 
+// Ver una referencia entera, con lo que ella escribió, y poder quitarla.
+const openedReference = ref(null);
+const referenceOpen = ref(false);
+const removeForm = useForm({});
+
+function openReference(reference) {
+    openedReference.value = reference;
+    referenceOpen.value = true;
+}
+
+function removeReference() {
+    if (!openedReference.value || removeForm.processing) return;
+
+    removeForm.delete(`/admin/contenido/referencias/${openedReference.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            haptics.warn();
+            referenceOpen.value = false;
+            openedReference.value = null;
+        },
+    });
+}
+
 // La pantalla de carga cubre las dos esperas largas: subir archivos y armar
 // el collage. Sin ella la hoja se quedaba quieta y parecía trabada.
 const busy = computed(() => uploadForm.processing || generateForm.processing);
@@ -234,18 +257,49 @@ const busyLabel = computed(() => (generateForm.processing
                 </p>
             </div>
 
-            <!-- Referencias acumuladas -->
-            <div class="flex items-center gap-3 rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-soft)]">
-                    <Pin :size="17" class="text-[var(--gold-text)]" />
-                </span>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[15px] font-semibold text-[var(--text-strong)]">
-                        {{ $t('content.referencesTitle', referenceCount) }}
+            <!-- Referencias: se ven, se abren y se pueden quitar -->
+            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-soft)]">
+                        <Pin :size="17" class="text-[var(--gold-text)]" />
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">
+                            {{ $t('content.referencesTitle', references.length) }}
+                        </div>
+                        <div class="mt-0.5 text-[12px] font-normal text-[var(--text-mute)]">
+                            {{ $t('content.referencesHint') }}
+                        </div>
                     </div>
-                    <div class="mt-0.5 text-[12px] font-normal text-[var(--text-mute)]">
-                        {{ $t('content.referencesHint') }}
-                    </div>
+                </div>
+
+                <div v-if="references.length > 0" class="mt-3.5 grid grid-cols-4 gap-1.5">
+                    <button
+                        v-for="ref in references"
+                        :key="ref.id"
+                        type="button"
+                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
+                        :aria-label="$t('content.openReference')"
+                        @click="openReference(ref)"
+                    >
+                        <video v-if="ref.kind === 'video'" :src="ref.url" muted playsinline preload="metadata" class="h-full w-full object-cover" />
+                        <img v-else :src="ref.url" alt="" class="h-full w-full object-cover" />
+
+                        <span
+                            v-if="ref.kind === 'video'"
+                            class="absolute inset-0 flex items-center justify-center bg-black/30"
+                        >
+                            <Clapperboard :size="15" class="text-white" />
+                        </span>
+                        <!-- La chincheta marca cuáles llevan una nota escrita:
+                             son las que de verdad enseñan algo. -->
+                        <span
+                            v-else-if="ref.note"
+                            class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold)]"
+                        >
+                            <Pin :size="9" class="text-white" />
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -432,6 +486,42 @@ const busyLabel = computed(() => (generateForm.processing
                     {{ rateForm.processing ? $t('common.saving') : $t('content.rateSend') }}
                 </button>
             </div>
+        </BottomSheet>
+
+        <!-- Una referencia abierta: se ve entera y se puede quitar -->
+        <BottomSheet v-model="referenceOpen">
+            <template v-if="openedReference">
+                <video
+                    v-if="openedReference.kind === 'video'"
+                    :src="openedReference.url"
+                    controls
+                    playsinline
+                    class="mb-4 max-h-[300px] w-full rounded-xl bg-black object-contain"
+                />
+                <img v-else :src="openedReference.url" alt="" class="mb-4 max-h-[300px] w-full rounded-xl object-contain" />
+
+                <div v-if="openedReference.note" class="mb-4 rounded-xl bg-[var(--surface-alt)] p-3.5">
+                    <div class="text-[12px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+                        {{ $t('content.yourWords') }}
+                    </div>
+                    <p class="mt-1.5 text-[14px] font-normal leading-relaxed text-[var(--text-body)]">
+                        {{ openedReference.note }}
+                    </p>
+                </div>
+                <p v-else class="mb-4 text-[13px] font-normal text-[var(--text-mute)]">
+                    {{ $t('content.noNote') }}
+                </p>
+
+                <button
+                    type="button"
+                    :disabled="removeForm.processing"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] py-3 text-[14px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-hover)] disabled:opacity-60"
+                    @click="removeReference"
+                >
+                    <Trash2 :size="15" />
+                    {{ removeForm.processing ? $t('common.saving') : $t('content.removeReference') }}
+                </button>
+            </template>
         </BottomSheet>
 
         <UploadOverlay
