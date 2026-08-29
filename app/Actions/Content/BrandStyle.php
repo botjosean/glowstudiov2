@@ -63,6 +63,43 @@ class BrandStyle
     }
 
     /**
+     * El color de acento del rubro: el que lleva la última línea del titular
+     * cuando toca destacarla.
+     *
+     * Es el segundo de la paleta, que es justamente el que rompe con el
+     * oscuro de las otras dos.
+     */
+    public static function accent(?BusinessCategory $category): string
+    {
+        return self::blockColors($category)[1];
+    }
+
+    /**
+     * El antetítulo: la línea chica en mayúsculas que va encima del titular.
+     *
+     * Sale de una referencia suya —«TRANSFORMACIÓN REAL · SIN FILTROS» sobre
+     * un balayage— y funciona porque promete algo antes de que la clienta lea
+     * el titular. Se elige según el rubro para que no diga una cosa de
+     * cabello sobre unas uñas.
+     *
+     * @return list<string>
+     */
+    public static function eyebrows(?BusinessCategory $category): array
+    {
+        return match ($category) {
+            BusinessCategory::Nails => ['TRABAJO REAL · SIN FILTROS', 'HECHO A MANO', 'DISEÑO A MEDIDA'],
+            BusinessCategory::Barbershop => ['CORTE A NAVAJA', 'SIN CITA PERDIDA', 'ESTILO PROPIO'],
+            BusinessCategory::Hair => ['TRANSFORMACIÓN REAL', 'COLOR A MEDIDA', 'SIN FILTROS'],
+            BusinessCategory::LashesBrows => ['MIRADA A MEDIDA', 'TRABAJO REAL'],
+            BusinessCategory::Braids => ['HECHO A MANO', 'HORAS DE TRABAJO'],
+            BusinessCategory::Makeup => ['PARA TU DÍA', 'SIN FILTROS'],
+            BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['TU MOMENTO', 'RESULTADOS REALES'],
+            BusinessCategory::TattooPiercing => ['TINTA PROPIA', 'DISEÑO ÚNICO'],
+            default => ['TRABAJO REAL · SIN FILTROS', 'HECHO A MANO'],
+        };
+    }
+
+    /**
      * Los estilos de titular que le pegan a este rubro.
      *
      * La barbería y los tatuajes no usan bloques de color de revista: van con

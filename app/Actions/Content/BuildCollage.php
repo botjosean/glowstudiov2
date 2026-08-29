@@ -60,7 +60,8 @@ class BuildCollage
         // El armado se sortea entre los que sirven para esta cantidad, en vez
         // de ser siempre la misma rejilla pareja. Ver CollageArrangement.
         $options = CollageArrangement::optionsFor(count($paths));
-        $rects = CollageArrangement::rects($options[array_rand($options)], count($paths));
+        $arrangement = $options[array_rand($options)];
+        $rects = CollageArrangement::rects($arrangement, count($paths));
 
         $half = (int) round(self::SEAM / 2);
 
@@ -80,7 +81,14 @@ class BuildCollage
             $canvas->place($photo, 'top-left', $x, $y);
         }
 
-        $this->headline($canvas, $headline, $provider->business_category);
+        if ($arrangement === 'before-after') {
+            $this->beforeAfterLabels($canvas, $provider->business_category);
+        } else {
+            // El titular se salta en antes/después: las dos etiquetas ya son
+            // el mensaje, y un titular encima tapa justo lo que se compara.
+            $this->headline($canvas, $headline, $provider->business_category);
+        }
+
         $this->badge($canvas, $provider);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
@@ -137,6 +145,25 @@ class BuildCollage
             default => (int) round((self::CANVAS - $blockHeight) / 2),
         };
 
+        // Antetítulo: la línea chica que promete algo antes de que se lea el
+        // titular. No va con 'blocks' — sobre bloques de color apilados no
+        // tiene dónde apoyarse y queda flotando.
+        $eyebrows = BrandStyle::eyebrows($category);
+
+        if ($style !== 'blocks' && $eyebrows !== [] && random_int(0, 1) === 1) {
+            $canvas->text($eyebrows[array_rand($eyebrows)], (int) round(self::CANVAS / 2), $top - 34, function (FontFactory $f) use ($category): void {
+                $f->filename(resource_path('fonts/Manrope.ttf'));
+                $f->size(20);
+                $f->color(BrandStyle::accent($category));
+                $f->align('center');
+                $f->valign('middle');
+            });
+        }
+
+        // Y a veces la última línea va en el color de acento en vez de blanca:
+        // es el truco de su referencia («que SIEMPRE quisiste» en dorado).
+        $accentLast = $style !== 'blocks' && random_int(0, 1) === 1;
+
         // La franja va de una sola pieza, antes del texto: dibujar una por
         // línea dejaba rayas de foto entre medio y se veía descuidado.
         if ($style === 'band') {
@@ -171,9 +198,45 @@ class BuildCollage
                 });
             }
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font): void {
+            $isLast = $i === count($lines) - 1;
+
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $accentLast, $isLast, $category): void {
                 $f->filename($font);
                 $f->size($size);
+                $f->color($accentLast && $isLast ? BrandStyle::accent($category) : '#ffffff');
+                $f->align('center');
+                $f->valign('middle');
+            });
+        }
+    }
+
+    /**
+     * Las etiquetas ANTES y DESPUÉS, una en cada mitad.
+     *
+     * Van abajo y no al centro para no taparle la cara al trabajo, que es
+     * justo lo que se está comparando. El "después" lleva el color de acento
+     * porque es el que se quiere mirar.
+     */
+    private function beforeAfterLabels(ImageInterface $canvas, ?BusinessCategory $category): void
+    {
+        $w = 210;
+        $h = 56;
+        $y = self::CANVAS - $h - 60;
+
+        $etiquetas = [
+            ['ANTES', (int) round(self::CANVAS * 0.25), 'rgba(10, 12, 18, 0.78)'],
+            ['DESPUÉS', (int) round(self::CANVAS * 0.75), BrandStyle::accent($category)],
+        ];
+
+        foreach ($etiquetas as [$texto, $centerX, $fondo]) {
+            $canvas->drawRectangle($centerX - (int) round($w / 2), $y, function ($rect) use ($w, $h, $fondo): void {
+                $rect->size($w, $h);
+                $rect->background($fondo);
+            });
+
+            $canvas->text($texto, $centerX, $y + (int) round($h / 2), function (FontFactory $f): void {
+                $f->filename(resource_path('fonts/Manrope.ttf'));
+                $f->size(26);
                 $f->color('#ffffff');
                 $f->align('center');
                 $f->valign('middle');
