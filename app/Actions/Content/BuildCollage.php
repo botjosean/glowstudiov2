@@ -60,23 +60,27 @@ class BuildCollage
 
         $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill('#ffffff');
 
-        // Filas de distinto largo para no dejar huecos ni perder fotos: cada
-        // fila se reparte el ancho entero entre las suyas. Ver rowSizes().
-        $rowSizes = PostLayout::rowSizes(count($paths));
-        $rows = count($rowSizes);
-        $cellH = (int) ((self::CANVAS - (self::SEAM * ($rows - 1))) / $rows);
+        // El armado se sortea entre los que sirven para esta cantidad, en vez
+        // de ser siempre la misma rejilla pareja. Ver CollageArrangement.
+        $options = CollageArrangement::optionsFor(count($paths));
+        $rects = CollageArrangement::rects($options[array_rand($options)], count($paths));
 
-        $index = 0;
+        $half = (int) round(self::SEAM / 2);
 
-        foreach ($rowSizes as $row => $inRow) {
-            $cellW = (int) ((self::CANVAS - (self::SEAM * ($inRow - 1))) / $inRow);
-            $y = $row * ($cellH + self::SEAM);
-
-            for ($col = 0; $col < $inRow; $col++) {
-                $photo = $manager->read(Storage::disk('r2')->get($paths[$index]))->cover($cellW, $cellH);
-                $canvas->place($photo, 'top-left', $col * ($cellW + self::SEAM), $y);
-                $index++;
+        foreach ($rects as $i => [$fx, $fy, $fw, $fh]) {
+            if (! isset($paths[$i])) {
+                break;
             }
+
+            // La junta se descuenta por dentro de cada rectángulo, así las
+            // fotos del borde llegan al filo y solo se separan entre ellas.
+            $x = (int) round($fx * self::CANVAS) + ($fx > 0 ? $half : 0);
+            $y = (int) round($fy * self::CANVAS) + ($fy > 0 ? $half : 0);
+            $w = (int) round($fw * self::CANVAS) - ($fx > 0 ? $half : 0) - ($fx + $fw < 1 ? $half : 0);
+            $h = (int) round($fh * self::CANVAS) - ($fy > 0 ? $half : 0) - ($fy + $fh < 1 ? $half : 0);
+
+            $photo = $manager->read(Storage::disk('r2')->get($paths[$i]))->cover(max($w, 1), max($h, 1));
+            $canvas->place($photo, 'top-left', $x, $y);
         }
 
         $this->headline($canvas, $headline);
@@ -113,27 +117,59 @@ class BuildCollage
             return;
         }
 
-        $size = 96;
-        $lineHeight = 118;
+        // También se sortea el estilo del titular: sin esto, aunque cambie la
+        // rejilla, todos los posts se seguían pareciendo entre sí.
+        $styles = ['blocks', 'band', 'clean'];
+        $style = $styles[array_rand($styles)];
+
+        // Y dónde cae: al centro, abajo o arriba.
+        $spots = ['center', 'bottom', 'top'];
+        $spot = $spots[array_rand($spots)];
+
+        $size = $style === 'clean' ? 104 : 96;
+        $lineHeight = (int) round($size * 1.22);
         $padX = 26;
         $padY = 12;
 
         $blockHeight = count($lines) * $lineHeight;
-        $top = (int) round((self::CANVAS - $blockHeight) / 2);
+
+        $top = match ($spot) {
+            'top' => 86,
+            'bottom' => self::CANVAS - $blockHeight - 210,
+            default => (int) round((self::CANVAS - $blockHeight) / 2),
+        };
 
         foreach ($lines as $i => $line) {
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
             $width = $this->textWidth($line, $size);
 
-            // El fondo primero, el texto encima.
-            $canvas->drawRectangle(
-                (int) round((self::CANVAS - $width) / 2) - $padX,
-                $centerY - (int) round($size / 2) - $padY,
-                function ($rect) use ($width, $size, $padX, $padY, $i): void {
-                    $rect->size($width + ($padX * 2), $size + ($padY * 2));
-                    $rect->background(self::BLOCK_COLORS[$i % count(self::BLOCK_COLORS)]);
-                },
-            );
+            if ($style === 'blocks') {
+                $canvas->drawRectangle(
+                    (int) round((self::CANVAS - $width) / 2) - $padX,
+                    $centerY - (int) round($size / 2) - $padY,
+                    function ($rect) use ($width, $size, $padX, $padY, $i): void {
+                        $rect->size($width + ($padX * 2), $size + ($padY * 2));
+                        $rect->background(self::BLOCK_COLORS[$i % count(self::BLOCK_COLORS)]);
+                    },
+                );
+            } elseif ($style === 'band') {
+                // Una franja de borde a borde, translúcida: deja ver la foto
+                // por detrás y aun así el texto se lee.
+                $canvas->drawRectangle(0, $centerY - (int) round($size / 2) - $padY, function ($rect) use ($size, $padY): void {
+                    $rect->size(self::CANVAS, $size + ($padY * 2));
+                    $rect->background('rgba(10, 12, 18, 0.72)');
+                });
+            } else {
+                // 'clean': sin fondo. Una sombra suave detrás para que sobreviva
+                // sobre una foto clara, que en belleza son la mitad.
+                $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $font) use ($size): void {
+                    $font->filename(resource_path('fonts/Anton.ttf'));
+                    $font->size($size);
+                    $font->color('rgba(0, 0, 0, 0.45)');
+                    $font->align('center');
+                    $font->valign('middle');
+                });
+            }
 
             $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $font) use ($size): void {
                 $font->filename(resource_path('fonts/Anton.ttf'));
