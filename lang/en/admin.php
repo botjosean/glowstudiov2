@@ -10,7 +10,8 @@ return [
     'contentOneVideoAtATime' => 'Upload the video on its own, one at a time and without photos.',
     'contentVideoType' => "That video format won't work. Try one recorded on your phone (MP4 or MOV).",
     'contentVideoTooBig' => 'That video is too heavy. Trim it or lower the quality — 50 MB is the limit.',
-    'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 8 MB per photo.',
+    'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 25 MB per photo.',
+    'contentBatchTooBig' => 'Together they are too heavy. Upload fewer photos at a time and repeat with the rest.',
     'contentUploadFailed' => 'The upload was cut off before it finished. Try again, and if it is a video, keep it under 50 MB.',
     // Stored as the block's reason, so the provider sees it in their list.
     'timeOffPauseReason' => 'Agenda closed',

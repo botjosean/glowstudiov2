@@ -10,7 +10,8 @@ return [
     'contentOneVideoAtATime' => 'Subí el video solo, de a uno y sin fotos.',
     'contentVideoType' => 'Ese formato de video no sirve. Probá con uno grabado desde el teléfono (MP4 o MOV).',
     'contentVideoTooBig' => 'El video pesa demasiado. Recortalo o bajale la calidad — el máximo son 50 MB.',
-    'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 8 MB por foto.',
+    'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 25 MB por foto.',
+    'contentBatchTooBig' => 'Todas juntas pesan demasiado. Subí menos fotos a la vez y repetí con el resto.',
     'contentUploadFailed' => 'La subida se cortó antes de terminar. Probá de nuevo, y si es un video, que pese menos de 50 MB.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',

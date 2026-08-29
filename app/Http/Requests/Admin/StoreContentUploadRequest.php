@@ -28,7 +28,7 @@ class StoreContentUploadRequest extends FormRequest
     {
         return [
             'purpose' => ['required', Rule::enum(ContentPurpose::class)],
-            'photos' => ['required', 'array', 'min:1', 'max:10', $this->oneVideoAtATime()],
+            'photos' => ['required', 'array', 'min:1', 'max:10', $this->oneVideoAtATime(), $this->batchFitsThrough()],
             // 'bail' para que, si el archivo llegó roto, la regla 'file' corte
             // ahí y el cierre de abajo no llegue a preguntarle nada.
             'photos.*' => ['required', 'bail', 'file', $this->imageOrVideo()],
@@ -36,6 +36,39 @@ class StoreContentUploadRequest extends FormRequest
             // por qué le gusta.
             'note' => ['nullable', 'string', 'max:2000'],
         ];
+    }
+
+    /**
+     * La tanda entera tiene que caber en una sola petición.
+     *
+     * Se mide el total y no solo cada archivo porque el techo real es el
+     * envío completo: post_max_size en PHP y, por encima de todo, el corte de
+     * 100 MB de Cloudflare. Diez fotos de 25 MB pasan la validación una por
+     * una y aun así no llegan nunca al servidor.
+     *
+     * Con un tope por archivo bajo esto no haría falta, pero un tope bajo
+     * rechazaba fotos legítimas de teléfono. Así se permite una foto enorme
+     * o muchas chicas, y solo se corta la combinación que de verdad no pasa.
+     */
+    private function batchFitsThrough(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            if (! is_array($value)) {
+                return;
+            }
+
+            $total = 0;
+
+            foreach ($value as $file) {
+                if ($file instanceof UploadedFile && $file->isValid()) {
+                    $total += $file->getSize();
+                }
+            }
+
+            if ($total > 85 * 1024 * 1024) {
+                $fail(__('admin.contentBatchTooBig'));
+            }
+        };
     }
 
     /**
@@ -110,7 +143,12 @@ class StoreContentUploadRequest extends FormRequest
                 return;
             }
 
-            if ($value->getSize() > 8 * 1024 * 1024) {
+            // 25 MB: un teléfono moderno saca fotos de más de 8 MB sin
+            // esfuerzo, y el tope viejo se las rechazaba. No cuesta
+            // almacenamiento: StoreProviderImage las reencoda a 1200² WebP
+            // (unos 100 KB) antes de guardarlas, así que el tamaño de origen
+            // solo afecta cuánto tarda en subir.
+            if ($value->getSize() > 25 * 1024 * 1024) {
                 $fail(__('admin.contentPhotoTooBig'));
             }
         };
