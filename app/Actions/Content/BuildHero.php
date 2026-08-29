@@ -98,10 +98,9 @@ class BuildHero
      */
     private function headline(ImageInterface $canvas, array $lines): void
     {
-        $lines = array_values(array_filter(array_map(
-            static fn (string $line): string => Str::upper(trim($line)),
-            array_slice($lines, 0, 3),
-        )));
+        // Misma limpieza que el collage: un emoji no dibuja letra pero sí
+        // ocupa lugar. Ver BuildCollage::cleanLines().
+        $lines = BuildCollage::cleanLines($lines);
 
         if ($lines === []) {
             return;

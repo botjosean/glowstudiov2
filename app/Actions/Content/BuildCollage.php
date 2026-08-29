@@ -108,10 +108,7 @@ class BuildCollage
      */
     private function headline(ImageInterface $canvas, array $lines): void
     {
-        $lines = array_values(array_filter(array_map(
-            static fn (string $line): string => Str::upper(trim($line)),
-            array_slice($lines, 0, 3),
-        )));
+        $lines = self::cleanLines($lines);
 
         if ($lines === []) {
             return;
@@ -139,6 +136,15 @@ class BuildCollage
             default => (int) round((self::CANVAS - $blockHeight) / 2),
         };
 
+        // La franja va de una sola pieza, antes del texto: dibujar una por
+        // línea dejaba rayas de foto entre medio y se veía descuidado.
+        if ($style === 'band') {
+            $canvas->drawRectangle(0, $top - $padY, function ($rect) use ($blockHeight, $padY): void {
+                $rect->size(self::CANVAS, $blockHeight + ($padY * 2));
+                $rect->background('rgba(10, 12, 18, 0.72)');
+            });
+        }
+
         foreach ($lines as $i => $line) {
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
             $width = $this->textWidth($line, $size);
@@ -152,14 +158,7 @@ class BuildCollage
                         $rect->background(self::BLOCK_COLORS[$i % count(self::BLOCK_COLORS)]);
                     },
                 );
-            } elseif ($style === 'band') {
-                // Una franja de borde a borde, translúcida: deja ver la foto
-                // por detrás y aun así el texto se lee.
-                $canvas->drawRectangle(0, $centerY - (int) round($size / 2) - $padY, function ($rect) use ($size, $padY): void {
-                    $rect->size(self::CANVAS, $size + ($padY * 2));
-                    $rect->background('rgba(10, 12, 18, 0.72)');
-                });
-            } else {
+            } elseif ($style !== 'band') {
                 // 'clean': sin fondo. Una sombra suave detrás para que sobreviva
                 // sobre una foto clara, que en belleza son la mitad.
                 $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $font) use ($size): void {
@@ -179,6 +178,40 @@ class BuildCollage
                 $font->valign('middle');
             });
         }
+    }
+
+    /**
+     * Deja solo lo que la tipografía sabe dibujar.
+     *
+     * Anton trae glifos latinos y nada más. El modelo devolvió un titular con
+     * un emoji al final y esa línea no pintó ninguna letra, pero SÍ midió
+     * ancho — así que quedó un bloque de color vacío colgando debajo del
+     * titular en un post real. Se limpia el texto y se descartan las líneas
+     * que quedan sin nada que dibujar.
+     *
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    public static function cleanLines(array $lines): array
+    {
+        // Rangos explícitos y no \p{Latin}: esa propiedad incluye el punto
+        // volado «·» —Unicode lo cuenta como latino porque el catalán lo usa—
+        // y una línea de solo puntos volados pasaba el filtro y volvía a
+        // pintar el bloque vacío. Lo cazó una prueba antes de llegar a un post.
+        $letters = 'A-Za-z0-9À-ÖØ-öø-ÿ';
+
+        $clean = array_map(static function (string $line) use ($letters): string {
+            $only = preg_replace('/[^'.$letters.'\s\'\-&¡!¿?.,]/u', '', $line) ?? '';
+
+            return Str::upper(trim(preg_replace('/\s+/u', ' ', $only) ?? ''));
+        }, array_slice($lines, 0, 3));
+
+        return array_values(array_filter(
+            $clean,
+            // No basta con que no esté vacía: una línea de solo signos
+            // también quedaría sin letras visibles.
+            static fn (string $line): bool => preg_match('/['.$letters.']/u', $line) === 1,
+        ));
     }
 
     /**
@@ -203,9 +236,12 @@ class BuildCollage
      */
     private function badge(ImageInterface $canvas, string $name): void
     {
-        $radius = 78;
-        $centerX = (int) round(self::CANVAS / 2);
-        $centerY = self::CANVAS - $radius - 38;
+        // Abajo a la derecha y no al centro: centrado caía justo sobre la
+        // unión entre dos fotos y quedaba partido por la junta blanca. En una
+        // esquina siempre se apoya dentro de una sola foto.
+        $radius = 70;
+        $centerX = self::CANVAS - $radius - 32;
+        $centerY = self::CANVAS - $radius - 32;
 
         $canvas->drawCircle($centerX, $centerY, function ($circle) use ($radius): void {
             $circle->radius($radius);
@@ -218,18 +254,18 @@ class BuildCollage
         $first = Str::upper($parts[0]);
         $rest = count($parts) > 1 ? Str::upper(implode(' ', array_slice($parts, 1))) : '';
 
-        $canvas->text($first, $centerX, $centerY - ($rest === '' ? 0 : 14), function (FontFactory $font): void {
+        $canvas->text($first, $centerX, $centerY - ($rest === '' ? 0 : 12), function (FontFactory $font): void {
             $font->filename(resource_path('fonts/Manrope.ttf'));
-            $font->size(26);
+            $font->size(23);
             $font->color('#8a6a25');
             $font->align('center');
             $font->valign('middle');
         });
 
         if ($rest !== '') {
-            $canvas->text($this->spaced($rest), $centerX, $centerY + 19, function (FontFactory $font): void {
+            $canvas->text($this->spaced($rest), $centerX, $centerY + 17, function (FontFactory $font): void {
                 $font->filename(resource_path('fonts/Manrope.ttf'));
-                $font->size(13);
+                $font->size(12);
                 $font->color('#b3852f');
                 $font->align('center');
                 $font->valign('middle');

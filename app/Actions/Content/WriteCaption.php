@@ -77,9 +77,12 @@ class WriteCaption
 
         Devuelves tres cosas:
 
-        1. TITULAR: hasta 3 palabras, UNA POR LÍNEA, que van impresas GRANDES sobre la
+        1. TITULAR: 2 o 3 palabras, UNA POR LÍNEA, que van impresas GRANDES sobre la
            foto. Es lo que hace que alguien pare de deslizar. Cortas y con gancho, como
-           "TRENDING / NAILS / VERANO" o "CITAS / ABIERTAS / YA". Sin signos ni emojis.
+           "TRENDING / NAILS / VERANO" o "CITAS / ABIERTAS / YA".
+           SOLO letras y espacios. Ni un emoji, ni un asterisco, ni un guion suelto:
+           la tipografía del cartel no los dibuja y dejan un hueco de color vacío.
+           Si no se te ocurre una tercera palabra, manda dos y ya.
         2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
         3. HASHTAGS: entre 5 y 8, cada uno empezando por #.
