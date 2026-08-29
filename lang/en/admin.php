@@ -11,6 +11,7 @@ return [
     'contentVideoType' => "That video format won't work. Try one recorded on your phone (MP4 or MOV).",
     'contentVideoTooBig' => 'That video is too heavy. Trim it or lower the quality — 50 MB is the limit.',
     'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 8 MB per photo.',
+    'contentUploadFailed' => 'The upload was cut off before it finished. Try again, and if it is a video, keep it under 50 MB.',
     // Stored as the block's reason, so the provider sees it in their list.
     'timeOffPauseReason' => 'Agenda closed',
     // Sent to the client via Kapso when the provider's WhatsApp is connected —

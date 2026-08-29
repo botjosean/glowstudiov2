@@ -29,11 +29,36 @@ class StoreContentUploadRequest extends FormRequest
         return [
             'purpose' => ['required', Rule::enum(ContentPurpose::class)],
             'photos' => ['required', 'array', 'min:1', 'max:10', $this->oneVideoAtATime()],
-            'photos.*' => ['required', 'file', $this->imageOrVideo()],
+            // 'bail' para que, si el archivo llegó roto, la regla 'file' corte
+            // ahí y el cierre de abajo no llegue a preguntarle nada.
+            'photos.*' => ['required', 'bail', 'file', $this->imageOrVideo()],
             // Solo tiene sentido en una referencia: es lo que ella dijo sobre
             // por qué le gusta.
             'note' => ['nullable', 'string', 'max:2000'],
         ];
+    }
+
+    /**
+     * El tipo del archivo, o cadena vacía si no se le puede preguntar.
+     *
+     * Existe por un 500 real en producción (29-ago): cuando una subida se
+     * corta a medio camino —conexión que se cae, archivo más grande que
+     * post_max_size— PHP igual entrega el UploadedFile, pero sin ruta en
+     * disco. Ahí `getMimeType()` lanza 'The "" file does not exist' y la
+     * profesional ve una pantalla de error en vez de saber que se le cortó
+     * la subida.
+     */
+    private static function mimeOf(UploadedFile $file): string
+    {
+        if (! $file->isValid()) {
+            return '';
+        }
+
+        try {
+            return (string) $file->getMimeType();
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**
@@ -55,7 +80,13 @@ class StoreContentUploadRequest extends FormRequest
                 return;
             }
 
-            $mime = (string) $value->getMimeType();
+            $mime = self::mimeOf($value);
+
+            if ($mime === '') {
+                $fail(__('admin.contentUploadFailed'));
+
+                return;
+            }
 
             if (str_starts_with($mime, 'video/')) {
                 if (! in_array($mime, StoreReferenceVideo::allowedMimes(), true)) {
@@ -103,7 +134,7 @@ class StoreContentUploadRequest extends FormRequest
             $videos = array_filter(
                 $value,
                 fn (mixed $file): bool => $file instanceof UploadedFile
-                    && str_starts_with((string) $file->getMimeType(), 'video/'),
+                    && str_starts_with(self::mimeOf($file), 'video/'),
             );
 
             if ($videos === []) {

@@ -11,6 +11,7 @@ return [
     'contentVideoType' => 'Ese formato de video no sirve. Probá con uno grabado desde el teléfono (MP4 o MOV).',
     'contentVideoTooBig' => 'El video pesa demasiado. Recortalo o bajale la calidad — el máximo son 50 MB.',
     'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 8 MB por foto.',
+    'contentUploadFailed' => 'La subida se cortó antes de terminar. Probá de nuevo, y si es un video, que pese menos de 50 MB.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',
     // Se le manda al cliente por Kapso cuando el WhatsApp de la profesional

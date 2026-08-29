@@ -199,6 +199,29 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->count());
     }
 
+    public function test_an_upload_that_failed_on_the_way_up_is_reported_not_crashed(): void
+    {
+        // Reproduce un 500 real de producción (29-ago): cuando la subida se
+        // corta a medio camino, PHP igual entrega el archivo pero sin ruta, y
+        // preguntarle el tipo lanza 'The "" file does not exist'. Tiene que
+        // salir un mensaje, no una pantalla de error.
+        $provider = Provider::factory()->published()->create();
+
+        $roto = new UploadedFile(
+            '/tmp/no-existe-'.uniqid().'.mp4',
+            'tutorial.mp4',
+            'video/mp4',
+            UPLOAD_ERR_INI_SIZE,
+            true,
+        );
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/subir', ['purpose' => 'reference', 'photos' => [$roto]])
+            ->assertSessionHasErrors();
+
+        $this->assertSame(0, ContentUpload::query()->count());
+    }
+
     public function test_a_reference_note_is_kept_once_not_on_every_photo(): void
     {
         $provider = Provider::factory()->published()->create();
