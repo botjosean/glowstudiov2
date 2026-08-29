@@ -635,12 +635,7 @@
         "chooseLayout": "Elegí el modelo",
         "layoutHint_hero": "Una sola, con titular encima",
         "layoutHint_collage": "Varias en una imagen",
-        "layoutHint_carousel": "Portada, collages y cierre",
-        "pasteLink": "Pegar un enlace",
-        "pasteLinkTitle": "Guardar desde un enlace",
-        "pasteLinkHint": "Abrí la imagen sola, copiá su dirección y pegala acá. No hace falta bajarla al teléfono.",
-        "linkLabel": "Dirección de la imagen",
-        "fetching": "Trayendo la imagen…"
+        "layoutHint_carousel": "Portada, collages y cierre"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

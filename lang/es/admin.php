@@ -12,11 +12,6 @@ return [
     'contentVideoTooBig' => 'El video pesa demasiado. Recortalo o bajale la calidad — el máximo son 50 MB.',
     'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 25 MB por foto.',
     'contentBatchTooBig' => 'Todas juntas pesan demasiado. Subí menos fotos a la vez y repetí con el resto.',
-    'contentLinkInvalid' => 'Ese enlace no sirve. Pegá la dirección de una imagen que empiece por https.',
-    'contentLinkBlocked' => 'Ese enlace apunta a una dirección interna y no se puede traer.',
-    'contentLinkUnreachable' => 'No se pudo abrir ese enlace. Comprobá que funcione en el navegador.',
-    'contentLinkNotImage' => 'Ese enlace no lleva a una imagen. Abrí la foto sola y copiá esa dirección.',
-    'contentLinkTooBig' => 'Esa imagen pesa demasiado.',
     'contentUploadFailed' => 'La subida se cortó antes de terminar. Probá de nuevo, y si es un video, que pese menos de 50 MB.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',

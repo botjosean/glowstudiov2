@@ -1,12 +1,11 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2, Link as LinkIcon } from '@lucide/vue';
+import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
-import OutlinedInput from '../../Components/ui/OutlinedInput.vue';
 import UploadOverlay from '../../Components/ui/UploadOverlay.vue';
 import { useHaptics } from '../../composables/useHaptics';
 
@@ -222,24 +221,6 @@ function copyCaption(post) {
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
 }
 
-// Traer una referencia desde un enlace, sin bajarla al teléfono primero.
-const linkOpen = ref(false);
-const linkForm = useForm({ url: '', note: '' });
-
-function saveLink() {
-    if (linkForm.processing || linkForm.url.trim() === '') return;
-
-    linkForm.post('/admin/contenido/enlace', {
-        preserveScroll: true,
-        onSuccess: () => {
-            haptics.success();
-            linkOpen.value = false;
-            linkForm.reset();
-        },
-        onError: () => haptics.error(),
-    });
-}
-
 // Lo recién armado va entero y arriba; lo anterior, en miniaturas. Con todos
 // a tamaño completo había que desplazarse muchísimo para ver lo que acababa
 // de salir, que es justo lo que viene a mirar.
@@ -332,15 +313,6 @@ const busyLabel = computed(() => {
                 {{ uploadForm.errors['photos.0'] }}
             </p>
 
-            <!-- Guardar una referencia sin bajarla al teléfono primero -->
-            <button
-                type="button"
-                class="flex items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] py-3 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)]"
-                @click="linkOpen = true"
-            >
-                <LinkIcon :size="15" />
-                {{ $t('content.pasteLink') }}
-            </button>
 
             <p v-if="uploadForm.errors.photos" class="text-[13px] font-normal text-[var(--danger)]">
                 {{ uploadForm.errors.photos }}
@@ -691,37 +663,6 @@ const busyLabel = computed(() => {
                     {{ rateForm.processing ? $t('common.saving') : $t('content.rateSend') }}
                 </button>
             </div>
-        </BottomSheet>
-
-        <!-- Referencia desde un enlace -->
-        <BottomSheet v-model="linkOpen">
-            <div class="mb-4">
-                <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
-                    {{ $t('content.pasteLinkTitle') }}
-                </div>
-                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.pasteLinkHint') }}</p>
-            </div>
-
-            <OutlinedInput
-                id="reference-link"
-                v-model="linkForm.url"
-                :label="$t('content.linkLabel')"
-                :error="linkForm.errors.url"
-                inputmode="url"
-            />
-
-            <div class="mt-4">
-                <Textarea v-model="linkForm.note" :label="$t('content.noteLabel')" :rows="3" />
-            </div>
-
-            <button
-                type="button"
-                :disabled="linkForm.processing || linkForm.url.trim() === ''"
-                class="mt-4 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                @click="saveLink"
-            >
-                {{ linkForm.processing ? $t('content.fetching') : $t('content.saveReference') }}
-            </button>
         </BottomSheet>
 
         <!-- Un post anterior, abierto entero -->

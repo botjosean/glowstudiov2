@@ -59,7 +59,14 @@ class BuildCollage
 
         // El armado se sortea entre los que sirven para esta cantidad, en vez
         // de ser siempre la misma rejilla pareja. Ver CollageArrangement.
-        $options = CollageArrangement::optionsFor(count($paths));
+        // De los armados que caben, se sortea entre los que le pegan al rubro:
+        // un spa quiere aire y una imagen grande, un salón de uñas quiere
+        // mostrar muchos diseños de una. Ver BrandStyle.
+        $options = BrandStyle::preferredArrangements(
+            $provider->business_category,
+            CollageArrangement::optionsFor(count($paths)),
+        );
+
         $arrangement = $options[array_rand($options)];
         $rects = CollageArrangement::rects($arrangement, count($paths));
 

@@ -87,16 +87,85 @@ class BrandStyle
     public static function eyebrows(?BusinessCategory $category): array
     {
         return match ($category) {
-            BusinessCategory::Nails => ['TRABAJO REAL · SIN FILTROS', 'HECHO A MANO', 'DISEÑO A MEDIDA'],
-            BusinessCategory::Barbershop => ['CORTE A NAVAJA', 'SIN CITA PERDIDA', 'ESTILO PROPIO'],
-            BusinessCategory::Hair => ['TRANSFORMACIÓN REAL', 'COLOR A MEDIDA', 'SIN FILTROS'],
-            BusinessCategory::LashesBrows => ['MIRADA A MEDIDA', 'TRABAJO REAL'],
-            BusinessCategory::Braids => ['HECHO A MANO', 'HORAS DE TRABAJO'],
-            BusinessCategory::Makeup => ['PARA TU DÍA', 'SIN FILTROS'],
-            BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['TU MOMENTO', 'RESULTADOS REALES'],
-            BusinessCategory::TattooPiercing => ['TINTA PROPIA', 'DISEÑO ÚNICO'],
-            default => ['TRABAJO REAL · SIN FILTROS', 'HECHO A MANO'],
+            BusinessCategory::Nails => [
+                'TRABAJO REAL · SIN FILTROS', 'HECHO A MANO', 'DISEÑO A MEDIDA',
+                'ESMALTE QUE DURA', 'SET NUEVO', 'DETALLE POR DETALLE',
+            ],
+            BusinessCategory::Barbershop => [
+                'CORTE A NAVAJA', 'SIN CITA PERDIDA', 'ESTILO PROPIO',
+                'DEGRADADO LIMPIO', 'TOALLA CALIENTE', 'PRECISIÓN',
+            ],
+            BusinessCategory::Hair => [
+                'TRANSFORMACIÓN REAL', 'COLOR A MEDIDA', 'SIN FILTROS',
+                'CABELLO SANO', 'DE RAÍZ A PUNTAS', 'LUZ NATURAL',
+            ],
+            BusinessCategory::LashesBrows => [
+                'MIRADA A MEDIDA', 'TRABAJO REAL', 'PELO POR PELO',
+                'SIN MAQUILLAJE', 'DISEÑO PARA TU ROSTRO',
+            ],
+            BusinessCategory::Braids => [
+                'HECHO A MANO', 'HORAS DE TRABAJO', 'RAÍZ PROTEGIDA',
+                'DURA SEMANAS', 'TRENZA POR TRENZA',
+            ],
+            BusinessCategory::Makeup => [
+                'PARA TU DÍA', 'SIN FILTROS', 'A PRUEBA DE FOTOS',
+                'PIEL PRIMERO', 'DURA TODA LA NOCHE',
+            ],
+            BusinessCategory::SpaMassage => [
+                'TU MOMENTO', 'RESULTADOS REALES', 'UNA HORA PARA VOS',
+                'SIN PRISA', 'CUERPO Y CABEZA',
+            ],
+            BusinessCategory::Aesthetics => [
+                'RESULTADOS REALES', 'PIEL PRIMERO', 'PROTOCOLO A MEDIDA',
+                'SIN RETOQUE DIGITAL', 'CONSTANCIA',
+            ],
+            BusinessCategory::Waxing => [
+                'PIEL LISA', 'SIN DOLOR INNECESARIO', 'TRABAJO PROLIJO',
+                'DURA SEMANAS',
+            ],
+            BusinessCategory::TattooPiercing => [
+                'TINTA PROPIA', 'DISEÑO ÚNICO', 'A UNA SOLA SESIÓN',
+                'MATERIAL ESTÉRIL', 'HECHO A MANO',
+            ],
+            default => ['TRABAJO REAL · SIN FILTROS', 'HECHO A MANO', 'DETALLE POR DETALLE'],
         };
+    }
+
+    /**
+     * Los armados que le pegan a este rubro, de entre los que caben con esa
+     * cantidad de fotos.
+     *
+     * Cada oficio muestra distinto: en cabello y estética manda el antes y
+     * después, en uñas se muestran muchos diseños a la vez, y en barbería se
+     * destaca un corte. Sin esto, un salón de uñas y un spa recibían
+     * exactamente el mismo reparto.
+     *
+     * Siempre queda al menos un armado: si el rubro no tiene preferencia
+     * disponible, se usan todos los que caben.
+     *
+     * @param  list<string>  $available
+     * @return list<string>
+     */
+    public static function preferredArrangements(?BusinessCategory $category, array $available): array
+    {
+        $preferred = match ($category) {
+            // Muchos diseños de una: la rejilla y la revista lucen el catálogo.
+            BusinessCategory::Nails, BusinessCategory::Braids => ['even', 'magazine', 'center-stage', 'banner-top'],
+            // Un corte destacado, no un muestrario.
+            BusinessCategory::Barbershop => ['feature-left', 'feature-right', 'before-after', 'banner-top'],
+            // El resultado manda; el antes y después es el formato del rubro.
+            BusinessCategory::Hair, BusinessCategory::Aesthetics => ['before-after', 'feature-top', 'feature-left', 'banner-top'],
+            BusinessCategory::LashesBrows, BusinessCategory::Waxing => ['before-after', 'feature-left', 'even'],
+            // Aire y una imagen grande, no densidad.
+            BusinessCategory::SpaMassage => ['feature-top', 'banner-top', 'banner-bottom'],
+            BusinessCategory::Makeup => ['feature-left', 'even', 'magazine'],
+            BusinessCategory::TattooPiercing => ['feature-left', 'center-stage', 'even'],
+            default => [],
+        };
+
+        $fits = array_values(array_intersect($preferred, $available));
+
+        return $fits === [] ? $available : $fits;
     }
 
     /**

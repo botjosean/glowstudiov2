@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
-use App\Actions\Content\FetchReferenceImage;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\WriteCaption;
 use App\Actions\Media\DeleteProviderImage;
@@ -21,7 +20,6 @@ use App\Models\ContentUpload;
 use App\Support\MediaUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -44,7 +42,6 @@ class ContentController extends Controller
         private readonly BuildCollage $collage,
         private readonly BuildHero $hero,
         private readonly BuildCarousel $carousel,
-        private readonly FetchReferenceImage $fetch,
         private readonly WriteCaption $caption,
     ) {}
 
@@ -211,59 +208,6 @@ class ContentController extends Controller
         });
 
         return to_route('admin.contenido')->with('success', 'admin.contentPostReady');
-    }
-
-    /**
-     * Guardar una referencia desde un enlace pegado.
-     *
-     * Ella lo pidió para no tener que bajar cada imagen al teléfono primero.
-     * El control de a dónde apunta el enlace vive en FetchReferenceImage: es
-     * el servidor quien hace la petición, así que un enlace a una dirección
-     * interna sería una puerta de entrada, no una foto fea.
-     */
-    public function storeLink(Request $request): RedirectResponse
-    {
-        $provider = $request->user()->provider;
-
-        $validated = $request->validate([
-            'url' => ['required', 'string', 'max:2000'],
-            'note' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $result = $this->fetch->handle(trim($validated['url']));
-
-        if ($result['ok'] === false) {
-            throw ValidationException::withMessages(['url' => __($result['error'])]);
-        }
-
-        // Reencodada igual que una subida normal: la defensa de verdad es que
-        // lo que se guarda lo genera este servidor, no el de enfrente.
-        //
-        // El archivo temporal y el `true` del final son para poder construir
-        // un UploadedFile sobre algo que no vino de un formulario — sin eso
-        // Symfony lo rechaza por no haber pasado por is_uploaded_file().
-        $tmp = tempnam(sys_get_temp_dir(), 'ref');
-        file_put_contents($tmp, $result['body']);
-
-        try {
-            $key = $this->store->handle(
-                $provider,
-                new UploadedFile($tmp, 'link.jpg', $result['mime'], null, true),
-                ImageVariant::Gallery,
-            );
-        } finally {
-            @unlink($tmp);
-        }
-
-        ContentUpload::create([
-            'provider_id' => $provider->id,
-            'path' => $key,
-            'kind' => UploadKind::Image->value,
-            'purpose' => ContentPurpose::Reference->value,
-            'note' => $validated['note'] ?? null,
-        ]);
-
-        return to_route('admin.contenido')->with('success', 'admin.contentReferenceSaved');
     }
 
     /**
