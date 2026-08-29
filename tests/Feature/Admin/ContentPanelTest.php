@@ -28,7 +28,7 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Contenido')
-            ->has('layouts', 2)
+            ->has('layouts', 3)
             ->has('waiting', 0)
             ->has('references', 0)
             ->has('posts', 0)
@@ -183,6 +183,34 @@ class ContentPanelTest extends TestCase
 
         $this->assertCount(5, ContentPost::query()->sole()->source_paths);
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
+    }
+
+    public function test_a_carousel_spreads_the_photos_across_several_slides(): void
+    {
+        // Lo que ella pedía: seis fotos no son un collage de seis cuadraditos,
+        // son portada + collages + cierre.
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 6))->map(fn () => UploadedFile::fake()->image('x.jpg'))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'carousel', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        // Portada + collage de 4 + collage de 1 + cierre.
+        $this->assertCount(4, $post->slides);
+        $this->assertSame($post->slides[0], $post->path);
+
+        foreach ($post->slides as $slide) {
+            Storage::disk('r2')->assertExists($slide);
+        }
     }
 
     public function test_a_hero_post_is_built_from_a_single_photo(): void

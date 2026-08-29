@@ -22,12 +22,20 @@ enum PostLayout: string
     /** Varias fotos en rejilla, con el titular en bloques al centro. */
     case Collage = 'collage';
 
+    /**
+     * Un juego de láminas: portada, collages en el medio y cierre.
+     *
+     * Es lo que ella quería desde el principio cuando hablaba de carruseles.
+     * Ver BuildCarousel para el reparto.
+     */
+    case Carousel = 'carousel';
+
     /** Cuántas fotos necesita como mínimo. */
     public function minPhotos(): int
     {
         return match ($this) {
             self::Hero => 1,
-            self::Collage => 2,
+            self::Collage, self::Carousel => 2,
         };
     }
 
@@ -41,6 +49,9 @@ enum PostLayout: string
         return match ($this) {
             self::Hero => 1,
             self::Collage => 12,
+            // Portada + hasta ocho collages de a cuatro + cierre, sin pasar
+            // las diez láminas que acepta Instagram.
+            self::Carousel => 33,
         };
     }
 

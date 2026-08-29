@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Un post ya armado: la imagen generada más el texto que la acompaña.
  */
 #[Fillable([
-    'provider_id', 'layout', 'path', 'caption', 'hashtags',
+    'provider_id', 'layout', 'path', 'slides', 'caption', 'hashtags',
     'source_paths', 'rating', 'rating_note',
 ])]
 class ContentPost extends Model
@@ -24,6 +24,7 @@ class ContentPost extends Model
     {
         return [
             'layout' => PostLayout::class,
+            'slides' => 'array',
             'hashtags' => 'array',
             'source_paths' => 'array',
         ];

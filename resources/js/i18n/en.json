@@ -608,6 +608,7 @@
         "building": "Building…",
         "layout_hero": "One big photo with a headline",
         "layout_collage": "Several photos in a grid",
+        "layout_carousel": "Full carousel (cover + collages + closing)",
         "usesPhotos": "uses 1 photo | uses 1 photo | uses {count} photos",
         "needOneMore": "Upload at least one photo to build something.",
         "noAiOnWork": "Your work isn't retouched. Only cropped and framed.",

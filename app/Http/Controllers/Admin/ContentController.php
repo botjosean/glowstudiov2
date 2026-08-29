@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
 use App\Actions\Content\StoreReferenceVideo;
@@ -40,6 +41,7 @@ class ContentController extends Controller
         private readonly DeleteProviderImage $deleteImage,
         private readonly BuildCollage $collage,
         private readonly BuildHero $hero,
+        private readonly BuildCarousel $carousel,
         private readonly WriteCaption $caption,
     ) {}
 
@@ -86,6 +88,11 @@ class ContentController extends Controller
                 ->map(fn (ContentPost $post): array => [
                     'id' => $post->id,
                     'url' => MediaUrl::resolve($post->path),
+                    // Los posts armados antes de que existieran los carruseles
+                    // no tienen láminas: su portada es todo el post.
+                    'slides' => collect($post->slides ?? [$post->path])
+                        ->map(fn (string $slide): string => MediaUrl::resolve($slide))
+                        ->values()->all(),
                     'caption' => $post->caption,
                     'hashtags' => $post->hashtags ?? [],
                     'rating' => $post->rating,
@@ -177,16 +184,21 @@ class ContentController extends Controller
         // dentro de la imagen, así que no se puede armar sin él.
         $written = $this->caption->handle($provider);
 
-        $key = match ($layout) {
-            PostLayout::Hero => $this->hero->handle($provider, $paths, $written['headline']),
-            PostLayout::Collage => $this->collage->handle($provider, $paths, $written['headline']),
+        $slides = match ($layout) {
+            PostLayout::Hero => [$this->hero->handle($provider, $paths, $written['headline'])],
+            PostLayout::Collage => [$this->collage->handle($provider, $paths, $written['headline'])],
+            PostLayout::Carousel => $this->carousel->handle($provider, $paths, $written['headline']),
         };
 
-        DB::transaction(function () use ($provider, $layout, $key, $written, $paths, $uploads): void {
+        // La portada es la que se ve en el muro y la que lista la pantalla.
+        $key = $slides[0];
+
+        DB::transaction(function () use ($provider, $layout, $key, $slides, $written, $paths, $uploads): void {
             ContentPost::create([
                 'provider_id' => $provider->id,
                 'layout' => $layout->value,
                 'path' => $key,
+                'slides' => $slides,
                 'caption' => $written['caption'],
                 'hashtags' => $written['hashtags'],
                 'source_paths' => $paths,

@@ -401,7 +401,25 @@ const busyLabel = computed(() => {
                     :key="post.id"
                     class="overflow-hidden rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                 >
-                    <img :src="post.url" alt="" class="aspect-square w-full object-cover" />
+                    <!-- Un carrusel se desliza como en Instagram; un post de
+                         una sola lámina se ve entero, sin barra que no lleva
+                         a ninguna parte. -->
+                    <div
+                        v-if="post.slides.length > 1"
+                        class="flex snap-x snap-mandatory gap-1.5 overflow-x-auto"
+                    >
+                        <div
+                            v-for="(slide, i) in post.slides"
+                            :key="i"
+                            class="relative w-full shrink-0 snap-center"
+                        >
+                            <img :src="slide" alt="" class="aspect-square w-full object-cover" />
+                            <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
+                                {{ i + 1 }}/{{ post.slides.length }}
+                            </span>
+                        </div>
+                    </div>
+                    <img v-else :src="post.url" alt="" class="aspect-square w-full object-cover" />
 
                     <div class="flex flex-col gap-3 p-4">
                         <p class="text-[14px] font-normal leading-relaxed text-[var(--text-body)]">{{ post.caption }}</p>

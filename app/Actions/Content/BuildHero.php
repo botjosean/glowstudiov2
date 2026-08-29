@@ -124,7 +124,11 @@ class BuildHero
             $y = $bottom - ((count($lines) - 1 - $i) * $lineHeight);
 
             $canvas->text($line, $left, $y, function (FontFactory $font) use ($size): void {
-                $font->filename(resource_path('fonts/Anton.ttf'));
+                // Playfair y no Anton: ella pidió «letras blancas elegantes»,
+                // y su propia referencia de cabello usa una serif fina, no la
+                // condensada gruesa. Anton se queda para los bloques del
+                // collage, donde lo que se busca es golpe y no elegancia.
+                $font->filename(resource_path('fonts/Playfair.ttf'));
                 $font->size($size);
                 $font->color('#ffffff');
                 $font->align('left');
