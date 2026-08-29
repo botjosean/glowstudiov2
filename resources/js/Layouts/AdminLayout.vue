@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { Settings, ArrowLeft, X, TriangleAlert } from '@lucide/vue';
 import NavCalendar from '../Components/icons/NavCalendar.vue';
 import NavClients from '../Components/icons/NavClients.vue';
+import NavContent from '../Components/icons/NavContent.vue';
 import NavSales from '../Components/icons/NavSales.vue';
 import NavStore from '../Components/icons/NavStore.vue';
 import Avatar from '../Components/ui/Avatar.vue';
@@ -51,6 +52,7 @@ const showBanner = computed(() =>
 const navItems = [
     { href: '/admin/citas', icon: NavCalendar, key: 'nav.appointments' },
     { href: '/admin/clientes', icon: NavClients, key: 'nav.clients' },
+    { href: '/admin/contenido', icon: NavContent, key: 'nav.content' },
     { href: '/admin/ventas', icon: NavSales, key: 'nav.sales' },
     { href: '/admin/perfil', icon: NavStore, key: 'nav.profile' },
 ];
@@ -144,7 +146,7 @@ function isActive(href) {
         <!-- Booksy's black bar, always on screen: sticky so a long page
              scrolls under it, black in BOTH themes on purpose (it is the
              brand's anchor, not a surface), active item in gold. -->
-        <nav class="sticky bottom-0 z-30 grid grid-cols-4 bg-[var(--nav-bg)] px-2 pb-3.5 pt-2.5">
+        <nav class="sticky bottom-0 z-30 grid grid-cols-5 bg-[var(--nav-bg)] px-2 pb-3.5 pt-2.5">
             <Link
                 v-for="item in navItems"
                 :key="item.href"

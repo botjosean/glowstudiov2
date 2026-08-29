@@ -5,6 +5,7 @@ return [
     'invalidService' => 'Ese servicio no está disponible.',
     'phoneInvalid' => 'El teléfono debe tener 10 dígitos (o déjalo vacío).',
     'publishBlockedNoServices' => 'Añade al menos un servicio activo para publicar tu perfil.',
+    'contentNeedsPhotos' => 'Hacen falta :count fotos para armar ese modelo.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',
     // Se le manda al cliente por Kapso cuando el WhatsApp de la profesional
