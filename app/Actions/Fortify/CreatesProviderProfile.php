@@ -14,12 +14,23 @@ use Illuminate\Support\Str;
  */
 class CreatesProviderProfile
 {
-    public function create(User $user, string $publicName, string $slugSeed, string $timezone = 'America/New_York'): Provider
-    {
+    /**
+     * @param  string|null  $businessCategory  obligatorio en el registro
+     *        manual; null solo en el alta por Google, donde no hay formulario
+     *        que preguntarlo y se pide después en la guía.
+     */
+    public function create(
+        User $user,
+        string $publicName,
+        string $slugSeed,
+        string $timezone = 'America/New_York',
+        ?string $businessCategory = null,
+    ): Provider {
         return $user->provider()->create([
             'slug' => $this->uniqueSlug($slugSeed),
             'public_name' => $publicName,
             'timezone' => $timezone,
+            'business_category' => $businessCategory,
         ]);
     }
 

@@ -19,7 +19,34 @@ class RegistrationTest extends TestCase
             'email' => 'newbarber@example.com',
             'password' => 'SuperSecret123',
             'confirmPassword' => 'SuperSecret123',
+            'businessCategory' => 'barbershop',
         ], $overrides);
+    }
+
+    public function test_the_business_category_is_required_to_register(): void
+    {
+        // Sin rubro el Taller de Contenido arma los posts con la paleta y los
+        // hashtags del oficio equivocado — pasó de verdad, una foto de cabello
+        // salió en rosa con #nailart. Por eso se pide en el registro y no
+        // queda como un paso más de la guía que se puede saltar.
+        $this->post('/register', array_diff_key($this->validPayload(), ['businessCategory' => null]))
+            ->assertSessionHasErrors('businessCategory');
+
+        $this->assertSame(0, User::query()->count());
+    }
+
+    public function test_an_invented_business_category_is_rejected(): void
+    {
+        $this->post('/register', $this->validPayload(['businessCategory' => 'astrologia']))
+            ->assertSessionHasErrors('businessCategory');
+    }
+
+    public function test_the_chosen_category_lands_on_the_provider(): void
+    {
+        $this->post('/register', $this->validPayload(['businessCategory' => 'nails']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('nails', User::query()->sole()->provider->business_category->value);
     }
 
     public function test_registering_creates_a_user_and_an_unpublished_provider(): void

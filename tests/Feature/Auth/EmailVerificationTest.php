@@ -25,6 +25,7 @@ class EmailVerificationTest extends TestCase
             'email' => 'newbarber@example.com',
             'password' => 'SuperSecret123',
             'confirmPassword' => 'SuperSecret123',
+            'businessCategory' => 'barbershop',
         ]);
 
         $user = User::where('email', 'newbarber@example.com')->firstOrFail();

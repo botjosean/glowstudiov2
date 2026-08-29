@@ -1,13 +1,15 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Mail } from '@lucide/vue';
+import { ArrowLeft, Mail, ChevronDown } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import PublicLayout from '../../Layouts/PublicLayout.vue';
 import AuthTabs from '../../Components/ui/AuthTabs.vue';
 import OutlinedInput from '../../Components/ui/OutlinedInput.vue';
 import PasswordField from '../../Components/ui/PasswordField.vue';
 import Button from '../../Components/ui/Button.vue';
+import BottomSheet from '../../Components/ui/BottomSheet.vue';
+import OptionPicker from '../../Components/ui/OptionPicker.vue';
 
 const { t } = useI18n();
 
@@ -18,7 +20,30 @@ const form = useForm({
     email: '',
     password: '',
     confirmPassword: '',
+    // Obligatorio desde el registro: sin rubro, el Taller de Contenido arma
+    // los posts con la paleta y los hashtags del oficio equivocado.
+    businessCategory: '',
 });
+
+// Mismo orden y mismas agrupaciones que el selector de Negocio.vue.
+const categoryOptions = computed(() => {
+    const option = (value) => ({ value, label: t(`admin.businessCategory_${value}`) });
+
+    return [
+        { label: t('admin.businessCategoryGroupBeauty'), options: ['nails', 'hair', 'lashes_brows', 'braids'].map(option) },
+        { label: t('admin.businessCategoryGroupBarber'), options: ['barbershop'].map(option) },
+        { label: t('admin.businessCategoryGroupWaxMakeup'), options: ['waxing', 'makeup'].map(option) },
+        { label: t('admin.businessCategoryGroupSpa'), options: ['spa_massage', 'aesthetics'].map(option) },
+        { label: t('admin.businessCategoryGroupBody'), options: ['tattoo_piercing'].map(option) },
+        { label: '', options: [option('other')] },
+    ];
+});
+
+const categoryLabel = computed(() => (form.businessCategory
+    ? t(`admin.businessCategory_${form.businessCategory}`)
+    : ''));
+
+const categoryOpen = ref(false);
 
 const passwordsMatch = computed(
     () => form.confirmPassword.length > 0 && form.confirmPassword === form.password,
@@ -147,6 +172,22 @@ function submit() {
                     <p v-if="firstError" class="text-[13px] font-normal text-[var(--danger)]">{{ firstError }}</p>
                     <OutlinedInput id="signup-username" ref="usernameFieldEl" v-model="form.username" :label="$t('signUp.usernameLabel')" type="text" />
                     <OutlinedInput id="signup-fullname" v-model="form.fullName" :label="$t('signUp.fullNameLabel')" type="text" />
+
+                    <!-- El rubro se pregunta acá y no en la guía: de él
+                         dependen los posts del Taller de Contenido, y una
+                         cuenta sin rubro los arma con el oficio equivocado. -->
+                    <button
+                        id="signup-category"
+                        type="button"
+                        class="relative flex w-full items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-[15px] pr-10 text-left text-[15px] font-semibold text-[var(--text-strong)] focus:border-[var(--text-strong)] focus-visible:outline-none"
+                        @click="categoryOpen = true"
+                    >
+                        <span class="truncate" :class="!categoryLabel && 'font-medium text-[var(--text-faint)]'">
+                            {{ categoryLabel || $t('signUp.categoryLabel') }}
+                        </span>
+                        <ChevronDown :size="16" class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                    </button>
+
                     <label class="flex flex-col gap-2">
                         <span class="text-[13px] font-medium text-[var(--text-mute)]">{{
                             $t('signUp.phoneLabel')
@@ -193,5 +234,14 @@ function submit() {
                 </div>
             </template>
         </div>
+
+        <BottomSheet v-model="categoryOpen">
+            <OptionPicker
+                v-model="form.businessCategory"
+                :options="categoryOptions"
+                :title="$t('signUp.categoryLabel')"
+                @close="categoryOpen = false"
+            />
+        </BottomSheet>
     </PublicLayout>
 </template>

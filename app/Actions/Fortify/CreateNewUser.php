@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Enums\BusinessCategory;
 use App\Models\User;
 use App\Support\Format;
 use App\Support\ReservedSlugs;
@@ -61,7 +62,14 @@ class CreateNewUser implements CreatesNewUsers
                 ...array_filter($this->passwordRules(), fn ($rule) => $rule !== 'confirmed'),
                 'confirmed:confirmPassword',
             ],
+            // Obligatorio desde el registro, no un paso más de la guía: sin
+            // rubro, el Taller de Contenido no sabe si le está armando un post
+            // a una barbería o a un salón de uñas, y sale con la paleta y los
+            // hashtags del rubro equivocado. Pasó de verdad — una foto de
+            // cabello salió en rosa con #nailart.
+            'businessCategory' => ['required', Rule::enum(BusinessCategory::class)],
         ], [
+            'businessCategory.required' => 'Elegí a qué te dedicás.',
             'username.unique' => 'Ese nombre de usuario ya está en uso.',
             'phone.unique' => 'Ese número de teléfono ya tiene una cuenta. Inicia sesión o usa otro número.',
             'email.unique' => 'Ese correo ya tiene una cuenta. Inicia sesión o usa otro correo.',
@@ -76,7 +84,12 @@ class CreateNewUser implements CreatesNewUsers
                 'password' => $input['password'],
             ]);
 
-            $this->providerProfiles->create($user, $input['fullName'], $input['username']);
+            $this->providerProfiles->create(
+                $user,
+                $input['fullName'],
+                $input['username'],
+                businessCategory: $input['businessCategory'],
+            );
 
             return $user;
         });

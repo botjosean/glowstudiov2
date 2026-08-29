@@ -735,7 +735,8 @@
         "passwordLabel": "Password",
         "confirmPasswordLabel": "Confirm password",
         "alreadyRegistered": "Already registered?",
-        "orContinueWith": "Or sign up with"
+        "orContinueWith": "Or sign up with",
+        "categoryLabel": "What do you do"
     },
     "createPassword": {
         "title": "Create a password",
