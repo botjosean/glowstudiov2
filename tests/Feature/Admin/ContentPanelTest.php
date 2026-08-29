@@ -147,6 +147,76 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentPost::query()->where('provider_id', $mine->id)->count());
     }
 
+    public function test_a_reference_video_is_stored_untouched(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/subir', [
+                'purpose' => 'reference',
+                'note' => 'Este explica qué tipografías usar.',
+                'photos' => [UploadedFile::fake()->create('tutorial.mp4', 2048, 'video/mp4')],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $upload = ContentUpload::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertSame('video', $upload->kind->value);
+        // Guardado tal cual: si hubiera pasado por el reencodado de imágenes
+        // el video quedaría destruido y con extensión .webp.
+        $this->assertStringEndsWith('.mp4', $upload->path);
+        Storage::disk('r2')->assertExists($upload->path);
+    }
+
+    public function test_a_video_cannot_be_sent_to_build_a_post(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/subir', [
+                'purpose' => 'edit',
+                'photos' => [UploadedFile::fake()->create('clip.mp4', 2048, 'video/mp4')],
+            ])
+            ->assertSessionHasErrors('photos');
+
+        $this->assertSame(0, ContentUpload::query()->count());
+    }
+
+    public function test_only_one_video_at_a_time(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/subir', [
+                'purpose' => 'reference',
+                'photos' => [
+                    UploadedFile::fake()->create('uno.mp4', 2048, 'video/mp4'),
+                    UploadedFile::fake()->create('dos.mp4', 2048, 'video/mp4'),
+                ],
+            ])
+            ->assertSessionHasErrors('photos');
+
+        $this->assertSame(0, ContentUpload::query()->count());
+    }
+
+    public function test_a_reference_note_is_kept_once_not_on_every_photo(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'note' => 'Me gusta la luz natural.',
+            'photos' => collect(range(1, 3))->map(fn () => UploadedFile::fake()->image('r.jpg'))->all(),
+        ]);
+
+        // Repetirla en las tres hacía que el modelo la viera tres veces y
+        // ahogara al resto de las referencias.
+        $this->assertSame(
+            1,
+            ContentUpload::query()->where('provider_id', $provider->id)->whereNotNull('note')->count(),
+        );
+    }
+
     public function test_rating_a_post_keeps_the_reason(): void
     {
         $provider = Provider::factory()->published()->create();

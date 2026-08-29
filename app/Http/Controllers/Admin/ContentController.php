@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Content\BuildCollage;
+use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\WriteCaption;
 use App\Actions\Media\StoreProviderImage;
 use App\Enums\ContentPurpose;
 use App\Enums\ImageVariant;
 use App\Enums\PostLayout;
+use App\Enums\UploadKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreContentUploadRequest;
 use App\Models\ContentPost;
@@ -32,6 +34,7 @@ class ContentController extends Controller
 {
     public function __construct(
         private readonly StoreProviderImage $store,
+        private readonly StoreReferenceVideo $video,
         private readonly BuildCollage $collage,
         private readonly WriteCaption $caption,
     ) {}
@@ -79,18 +82,24 @@ class ContentController extends Controller
         $purpose = ContentPurpose::from($request->string('purpose')->value());
         $note = $request->input('note');
 
-        foreach ($request->file('photos') as $photo) {
-            // Se guarda en el mismo tamaño que la galería (1200²) y reencodado
-            // a WebP, igual que el resto de las fotos del panel.
-            $key = $this->store->handle($provider, $photo, ImageVariant::Gallery);
+        foreach ($request->file('photos') as $index => $file) {
+            $isVideo = str_starts_with((string) $file->getMimeType(), 'video/');
+
+            // Un video se guarda tal cual; una foto se reencoda a WebP al
+            // tamaño de la galería, igual que el resto del panel.
+            $key = $isVideo
+                ? $this->video->handle($provider, $file)
+                : $this->store->handle($provider, $file, ImageVariant::Gallery);
 
             ContentUpload::create([
                 'provider_id' => $provider->id,
                 'path' => $key,
+                'kind' => ($isVideo ? UploadKind::Video : UploadKind::Image)->value,
                 'purpose' => $purpose->value,
-                // La nota describe la tanda, así que se copia en cada foto de
-                // la tanda — es lo que se le muestra al modelo después.
-                'note' => $purpose === ContentPurpose::Reference ? $note : null,
+                // La nota describe la tanda entera, así que se guarda una sola
+                // vez, en la primera. Copiarla en las diez hacía que el modelo
+                // viera diez veces lo mismo y ahogara al resto de referencias.
+                'note' => ($purpose === ContentPurpose::Reference && $index === 0) ? $note : null,
             ]);
         }
 

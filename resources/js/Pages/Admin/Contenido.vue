@@ -1,10 +1,12 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Sparkles, Pin, ChevronRight, Check, Download, X } from '@lucide/vue';
+import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
+import UploadOverlay from '../../Components/ui/UploadOverlay.vue';
 import { useHaptics } from '../../composables/useHaptics';
 
 /**
@@ -24,6 +26,7 @@ const props = defineProps({
     collagePhotos: { type: Number, required: true },
 });
 
+const { t } = useI18n();
 const haptics = useHaptics();
 
 const fileInput = ref(null);
@@ -46,9 +49,18 @@ function releasePreviews() {
 
 onBeforeUnmount(releasePreviews);
 
+// Un video ocupa la tanda entero: el envío pasa por Cloudflare, que corta en
+// 100 MB, y además un collage no se puede armar con video. Se recorta acá
+// para que ella lo vea de una, en vez de que el servidor lo rechace después
+// de haber esperado la subida.
+const hasVideo = computed(() => chosen.value.some((file) => file.type.startsWith('video/')));
+
 function pickFiles(event) {
-    const files = Array.from(event.target.files ?? []).slice(0, 10);
+    let files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
+
+    const video = files.find((file) => file.type.startsWith('video/'));
+    files = video ? [video] : files.slice(0, 10);
 
     releasePreviews();
     chosen.value = files;
@@ -134,6 +146,16 @@ function copyCaption(post) {
     const text = [post.caption, (post.hashtags ?? []).join(' ')].filter(Boolean).join('\n\n');
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
 }
+
+// La pantalla de carga cubre las dos esperas largas: subir archivos y armar
+// el collage. Sin ella la hoja se quedaba quieta y parecía trabada.
+const busy = computed(() => uploadForm.processing || generateForm.processing);
+
+const busyPercent = computed(() => uploadForm.progress?.percentage ?? null);
+
+const busyLabel = computed(() => (generateForm.processing
+    ? t('content.building')
+    : t('content.uploading')));
 </script>
 
 <template>
@@ -151,7 +173,7 @@ function copyCaption(post) {
             <input
                 ref="fileInput"
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 class="hidden"
                 @change="pickFiles"
@@ -169,6 +191,10 @@ function copyCaption(post) {
                 </span>
                 <span class="text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.uploadHint') }}</span>
             </button>
+
+            <p v-if="uploadForm.errors['photos.0']" class="text-[13px] font-normal text-[var(--danger)]">
+                {{ uploadForm.errors['photos.0'] }}
+            </p>
 
             <p v-if="uploadForm.errors.photos" class="text-[13px] font-normal text-[var(--danger)]">
                 {{ uploadForm.errors.photos }}
@@ -293,12 +319,26 @@ function copyCaption(post) {
                 <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.purposeHint') }}</p>
             </div>
 
-            <div class="mb-5 grid grid-cols-4 gap-1.5">
+            <!-- Un video se muestra reproducible; una foto, como miniatura. -->
+            <video
+                v-if="hasVideo"
+                :src="previews[0]"
+                controls
+                playsinline
+                class="mb-5 max-h-[220px] w-full rounded-xl bg-black object-contain"
+            />
+            <div v-else class="mb-5 grid grid-cols-4 gap-1.5">
                 <img v-for="(url, i) in previews.slice(0, 8)" :key="i" :src="url" alt="" class="aspect-square w-full rounded-lg object-cover" />
             </div>
 
+            <p v-if="hasVideo" class="mb-4 flex items-start gap-2 rounded-xl bg-[var(--surface-alt)] px-3.5 py-3 text-[12px] font-normal leading-relaxed text-[var(--text-mute)]">
+                <Clapperboard :size="15" class="mt-0.5 shrink-0 text-[var(--text-faint)]" />
+                {{ $t('content.videoOnlyReference') }}
+            </p>
+
             <div class="flex flex-col gap-2.5">
                 <button
+                    v-if="!hasVideo"
                     type="button"
                     :disabled="uploadForm.processing"
                     class="flex items-center gap-3.5 rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-soft)] p-4 text-left disabled:opacity-60"
@@ -393,5 +433,12 @@ function copyCaption(post) {
                 </button>
             </div>
         </BottomSheet>
+
+        <UploadOverlay
+            :show="busy"
+            :percent="busyPercent"
+            :label="busyLabel"
+            :hint="$t('content.busyHint')"
+        />
     </AdminLayout>
 </template>

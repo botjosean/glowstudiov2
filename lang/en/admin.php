@@ -6,6 +6,11 @@ return [
     'phoneInvalid' => 'The phone must have 10 digits (or leave it empty).',
     'publishBlockedNoServices' => 'Add at least one active service to publish your profile.',
     'contentNeedsPhotos' => 'That model needs :count photos.',
+    'contentVideoOnlyReference' => 'A video can only be saved as a reference, not used to build a post.',
+    'contentOneVideoAtATime' => 'Upload the video on its own, one at a time and without photos.',
+    'contentVideoType' => "That video format won't work. Try one recorded on your phone (MP4 or MOV).",
+    'contentVideoTooBig' => 'That video is too heavy. Trim it or lower the quality — 50 MB is the limit.',
+    'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 8 MB per photo.',
     // Stored as the block's reason, so the provider sees it in their list.
     'timeOffPauseReason' => 'Agenda closed',
     // Sent to the client via Kapso when the provider's WhatsApp is connected —

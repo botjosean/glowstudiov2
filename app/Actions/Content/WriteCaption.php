@@ -107,13 +107,21 @@ class WriteCaption
             $lines[] = 'Cómo se describe: '.$provider->bio;
         }
 
+        // unique() y no solo limit(): antes la nota se copiaba en cada foto de
+        // la tanda, así que una sola subida de diez fotos llenaba las cinco
+        // ranuras con el mismo texto y tapaba todas las demás referencias.
+        // Ya no se guarda repetida, pero las que se subieron antes sí lo están.
         $notes = ContentUpload::query()
             ->where('provider_id', $provider->id)
             ->references()
             ->whereNotNull('note')
             ->latest()
-            ->limit(5)
             ->pluck('note')
+            ->map(fn (string $note): string => trim($note))
+            ->filter()
+            ->unique()
+            ->take(5)
+            ->values()
             ->all();
 
         if ($notes !== []) {

@@ -6,6 +6,11 @@ return [
     'phoneInvalid' => 'El teléfono debe tener 10 dígitos (o déjalo vacío).',
     'publishBlockedNoServices' => 'Añade al menos un servicio activo para publicar tu perfil.',
     'contentNeedsPhotos' => 'Hacen falta :count fotos para armar ese modelo.',
+    'contentVideoOnlyReference' => 'Un video solo se puede guardar como referencia, no para armar un post.',
+    'contentOneVideoAtATime' => 'Subí el video solo, de a uno y sin fotos.',
+    'contentVideoType' => 'Ese formato de video no sirve. Probá con uno grabado desde el teléfono (MP4 o MOV).',
+    'contentVideoTooBig' => 'El video pesa demasiado. Recortalo o bajale la calidad — el máximo son 50 MB.',
+    'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 8 MB por foto.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',
     // Se le manda al cliente por Kapso cuando el WhatsApp de la profesional
