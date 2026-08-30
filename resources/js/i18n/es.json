@@ -588,7 +588,9 @@
         "pmTapSoonHint": "Pronto vas a poder cobrar con tarjeta, Apple Pay o Google Pay desde el mismo teléfono, sin lector.",
         "leadsOrderHint": "Primero las que más esperaron. Las de hoy van marcadas en verde.",
         "leadToday": "Hoy",
-        "contentColorSaved": "Color guardado"
+        "contentColorSaved": "Color guardado",
+        "contentNeedsColor": "Para este modelo necesito saber el color del trabajo. Subí las fotos de nuevo y confirmá el color cuando te lo pregunte.",
+        "contentColorMismatch": "Esas fotos no son del mismo color. Elegí fotos de un solo trabajo para esta plantilla."
     },
     "nav": {
         "appointments": "Citas",
@@ -671,7 +673,13 @@
         "colorLabel": "El color de este trabajo",
         "colorWhy": "Con esto puedo pintar el fondo del post y ponerle el nombre del color, como en las plantillas que te gustan.",
         "colorSave": "Guardar",
-        "colorSkip": "Dejarlo así"
+        "colorSkip": "Dejarlo así",
+        "layout_color": "Fondo de color",
+        "layoutHint_color": "Fotos alrededor, el color en el medio",
+        "colorPickTitle": "Elegí las fotos",
+        "colorPickHint": "De 2 a 4, todas del mismo color.",
+        "colorPickConfirm": "Armar el post",
+        "colorPickEmpty": "Subí fotos para editar antes de armar este post."
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

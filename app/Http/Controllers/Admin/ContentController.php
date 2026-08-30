@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
+use App\Actions\Content\BuildColorBlock;
 use App\Actions\Content\BuildHero;
+use App\Actions\Content\ColorNames;
 use App\Actions\Content\DetectDesignedPhoto;
 use App\Actions\Content\ReadPhotoColor;
 use App\Actions\Content\ReadReferenceStyle;
@@ -51,6 +53,7 @@ class ContentController extends Controller
         private readonly WriteCaption $caption,
         private readonly DetectDesignedPhoto $detectDesigned,
         private readonly ReadPhotoColor $photoColor,
+        private readonly BuildColorBlock $colorBlock,
     ) {}
 
     public function index(Request $request): Response
@@ -66,7 +69,10 @@ class ContentController extends Controller
             'providerName' => $provider->public_name,
             'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
             'contentStyle' => $provider->content_style,
-            // Las que esperan que ella elija un modelo.
+            // Las que esperan que ella elija un modelo. Con su color, para
+            // "Fondo de color": sin verlo, dos tandas subidas por separado se
+            // pueden mezclar sin que se note hasta ver el post armado — pasó
+            // de verdad, una tanda con una uña rosa metida entre unas negras.
             'waiting' => ContentUpload::query()
                 ->where('provider_id', $provider->id)
                 ->waiting()
@@ -75,6 +81,8 @@ class ContentController extends Controller
                 ->map(fn (ContentUpload $upload): array => [
                     'id' => $upload->id,
                     'url' => MediaUrl::resolve($upload->path),
+                    'colorName' => $upload->color_name,
+                    'colorHex' => $upload->color_hex,
                 ])->values()->all(),
             // Las últimas fotos "para editar", usadas o no. Antes, apenas una
             // foto se usaba en un post, desaparecía de la pantalla sin dejar
@@ -227,14 +235,21 @@ class ContentController extends Controller
         // del fondo, comprobado con sus fotos reales—. Ella misma pidió que
         // fuera así: «yo detecto tal cosa, ¿puedes decirnos algo más de los
         // colores como tú lo ves, con tu propia palabra?».
+        //
+        // Se lee UNA sola vez, de la primera foto, pero se guarda en TODAS
+        // las de la tanda: son fotos del mismo trabajo, subidas juntas. Antes
+        // solo quedaba en la primera y las demás se quedaban sin color — con
+        // una tanda mezclada por error eso hacía que "Fondo de color" pudiera
+        // agarrar una foto sin etiqueta y otra de un trabajo distinto sin que
+        // nada avisara. Visto en una tanda real: una uña rosa degradado
+        // mezclada con dos negras.
         if ($purpose === ContentPurpose::Edit && $request->boolean('first') && $primeraImagen !== null) {
             $color = $this->photoColor->handle($primeraImagen);
 
             if ($color !== null) {
-                $primeraImagen->update([
-                    'color_name' => $color['nombre'],
-                    'color_hex' => $color['hex'],
-                ]);
+                ContentUpload::query()
+                    ->whereIn('id', $creadas->pluck('id'))
+                    ->update(['color_name' => $color['nombre'], 'color_hex' => $color['hex']]);
 
                 $redirect->with('colorSuggestion', [
                     'uploadIds' => $creadas->pluck('id')->all(),
@@ -309,6 +324,35 @@ class ContentController extends Controller
         $uploads = $chosen->take($uses);
         $paths = $uploads->pluck('path')->all();
 
+        // El fondo de color necesita saber de qué color es el trabajo, y eso
+        // lo confirmó ella al subir las fotos.
+        $color = null;
+
+        if ($layout === PostLayout::ColorBlock) {
+            $conColor = $uploads->first(fn (ContentUpload $u): bool => $u->color_hex !== null);
+
+            if ($conColor === null) {
+                throw ValidationException::withMessages([
+                    'uploadIds' => __('admin.contentNeedsColor'),
+                ]);
+            }
+
+            // Si en lo elegido hay más de un color y son bien distintos entre
+            // sí, no se adivina con cuál quedarse: se avisa. Es justo lo que
+            // pasó de verdad con una tanda que mezclaba una uña rosa con dos
+            // negras — el post salió con "ROSA" escrito sobre fotos negras.
+            $distinta = $uploads->first(fn (ContentUpload $u): bool => $u->color_hex !== null
+                && ColorNames::farApart($u->color_hex, $conColor->color_hex));
+
+            if ($distinta !== null) {
+                throw ValidationException::withMessages([
+                    'uploadIds' => __('admin.contentColorMismatch'),
+                ]);
+            }
+
+            $color = ['name' => (string) $conColor->color_name, 'hex' => (string) $conColor->color_hex];
+        }
+
         // El texto primero: el titular que escribe el modelo va impreso
         // dentro de la imagen, así que no se puede armar sin él.
         $written = $this->caption->handle($provider);
@@ -317,6 +361,14 @@ class ContentController extends Controller
             PostLayout::Hero => [$this->hero->handle($provider, $paths, $written['headline'])],
             PostLayout::Collage => [$this->collage->handle($provider, $paths, $written['headline'])],
             PostLayout::Carousel => $this->carousel->handle($provider, $paths, $written['headline']),
+            // Esta no usa el titular: su texto ES el nombre del color, que
+            // ella confirmó al subir las fotos. Ver BuildColorBlock.
+            PostLayout::ColorBlock => [$this->colorBlock->handle(
+                $provider,
+                $paths,
+                $color['name'],
+                $color['hex'],
+            )],
         };
 
         // La portada es la que se ve en el muro y la que lista la pantalla.
@@ -376,6 +428,10 @@ class ContentController extends Controller
      * El modelo lo propuso al subir; acá manda lo que ella escribió. Si lo
      * deja vacío se borra: prefiere no decir nada antes que dejar puesto algo
      * que no es.
+     *
+     * Se aplica a TODA la tanda, no solo a la primera foto: son fotos del
+     * mismo trabajo, y si la corrección quedara solo en una, las demás se
+     * quedarían con el color viejo que el modelo propuso.
      */
     public function updateColor(Request $request): RedirectResponse
     {
@@ -390,17 +446,14 @@ class ContentController extends Controller
 
         // Reconsultado con el provider_id del servidor: unos ids inventados no
         // alcanzan las fotos de otra profesional.
-        $primera = ContentUpload::query()
+        ContentUpload::query()
             ->where('provider_id', $provider->id)
             ->where('purpose', ContentPurpose::Edit->value)
             ->whereIn('id', $validated['uploadIds'])
-            ->oldest()
-            ->first();
-
-        $primera?->update([
-            'color_name' => $validated['name'] ?: null,
-            'color_hex' => isset($validated['hex']) ? strtoupper($validated['hex']) : null,
-        ]);
+            ->update([
+                'color_name' => $validated['name'] ?: null,
+                'color_hex' => isset($validated['hex']) ? strtoupper($validated['hex']) : null,
+            ]);
 
         return to_route('admin.contenido')->with('success', 'admin.contentColorSaved');
     }

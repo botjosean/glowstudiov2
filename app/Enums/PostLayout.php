@@ -30,12 +30,24 @@ enum PostLayout: string
      */
     case Carousel = 'carousel';
 
+    /**
+     * Fondo del color del trabajo, las fotos en las esquinas y el nombre del
+     * color grande en el medio.
+     *
+     * Es la forma que ella trajo una y otra vez —Mimosa Studio, «Butter
+     * yellow», «Milky Pink», «Mocha Mousse»— y la resumió así: «agarra la
+     * foto, la pone alrededor de la pantalla, pone algo en el medio, el fondo
+     * lo pone de un color; esto debería ser una plantilla, está demasiado
+     * fácil». Ver BuildColorBlock.
+     */
+    case ColorBlock = 'color';
+
     /** Cuántas fotos necesita como mínimo. */
     public function minPhotos(): int
     {
         return match ($this) {
             self::Hero => 1,
-            self::Collage, self::Carousel => 2,
+            self::Collage, self::Carousel, self::ColorBlock => 2,
         };
     }
 
@@ -49,9 +61,12 @@ enum PostLayout: string
         return match ($this) {
             self::Hero => 1,
             self::Collage => 12,
-            // Portada + hasta ocho collages de a cuatro + cierre, sin pasar
-            // las diez láminas que acepta Instagram.
-            self::Carousel => 33,
+            // Portada + una foto por lámina, sin pasar las diez que acepta
+            // Instagram.
+            self::Carousel => 10,
+            // Cuatro esquinas y ni una más: la gracia es que el centro quede
+            // libre para el nombre del color.
+            self::ColorBlock => 4,
         };
     }
 

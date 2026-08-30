@@ -33,7 +33,7 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Contenido')
-            ->has('layouts', 3)
+            ->has('layouts', 4)
             ->has('waiting', 0)
             ->has('references', 0)
             ->has('posts', 0)
@@ -110,6 +110,82 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->references()->count());
     }
 
+    public function test_the_colour_background_post_uses_the_colour_she_confirmed(): void
+    {
+        // La plantilla que ella describió sola: «agarra la foto, la pone
+        // alrededor de la pantalla, pone algo en el medio, el fondo lo pone
+        // de un color». Su texto ES el nombre del color.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => "DESCRIPCION: texto\nHASHTAGS: #nails"]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 4))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        // El color, como lo dejó ella.
+        ContentUpload::find($ids[0])->update(['color_name' => 'rosa palo', 'color_hex' => '#F2D5D5']);
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'color', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertSame('color', $post->layout->value);
+        Storage::disk('r2')->assertExists($post->path);
+    }
+
+    public function test_the_colour_background_post_says_what_is_missing_without_a_colour(): void
+    {
+        // Sin color no hay nada que pintar ni que escribir: mejor decirlo que
+        // sacar un post gris con el nombre vacío.
+        Http::fake();
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'color', 'uploadIds' => $ids])
+            ->assertSessionHasErrors('uploadIds');
+
+        $this->assertSame(0, ContentPost::query()->where('provider_id', $provider->id)->count());
+    }
+
+    public function test_the_colour_background_post_refuses_mismatched_photos(): void
+    {
+        // Pasó de verdad: una tanda con una uña rosa metida entre dos negras
+        // hizo que el post saliera con "ROSA" escrito sobre fotos negras. No
+        // se adivina con cuál color quedarse: se avisa.
+        $provider = Provider::factory()->published()->create();
+
+        $rosa = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/rosa.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'rosa degradado a blanco', 'color_hex' => '#F2D5D5',
+        ]);
+        $negra = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/negra.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'negro azabache', 'color_hex' => '#1A1A1A',
+        ]);
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'color', 'uploadIds' => [$rosa->id, $negra->id]])
+            ->assertSessionHasErrors('uploadIds');
+
+        $this->assertSame(0, ContentPost::query()->where('provider_id', $provider->id)->count());
+    }
+
     public function test_the_colour_of_the_work_is_proposed_so_she_can_correct_it(): void
     {
         // Mirando los píxeles no se puede: las uñas son una parte chica del
@@ -141,6 +217,29 @@ class ContentPanelTest extends TestCase
         $this->assertSame('#F2D5D5', $upload->color_hex);
     }
 
+    public function test_the_colour_read_from_the_first_photo_covers_the_whole_batch(): void
+    {
+        // Son fotos del mismo trabajo, subidas juntas: si el color quedara
+        // solo en la primera, las demás llegaban sin etiqueta a "Fondo de
+        // color" y una tanda ajena podía colarse sin que nada avisara.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => '{"nombre": "rosa degradado a blanco", "hex": "#F2D5D5"}']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => collect(range(1, 3))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $uploads = ContentUpload::query()->where('provider_id', $provider->id)->get();
+
+        $this->assertCount(3, $uploads);
+        $this->assertTrue($uploads->every(fn (ContentUpload $u): bool => $u->color_hex === '#F2D5D5'));
+    }
+
     public function test_her_words_win_over_the_model(): void
     {
         Http::fake(['*' => Http::response([
@@ -170,6 +269,34 @@ class ContentPanelTest extends TestCase
         // Guardado en mayúsculas, como lo devuelve el modelo, para que las
         // comparaciones no dependan de cómo lo escribió ella.
         $this->assertSame('#E8D5C4', $upload->color_hex);
+    }
+
+    public function test_correcting_the_colour_updates_the_whole_batch(): void
+    {
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => '{"nombre": "rosa palo", "hex": "#F2D5D5"}']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => collect(range(1, 3))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->pluck('id')->all();
+
+        $this->actingAs($provider->user)->patch('/admin/contenido/fotos/color', [
+            'uploadIds' => $ids,
+            'name' => 'nude con glitter',
+            'hex' => '#e8d5c4',
+        ]);
+
+        $uploads = ContentUpload::query()->whereIn('id', $ids)->get();
+
+        $this->assertTrue($uploads->every(fn (ContentUpload $u): bool => $u->color_name === 'nude con glitter'
+            && $u->color_hex === '#E8D5C4'));
     }
 
     public function test_a_provider_cannot_set_the_colour_of_another_providers_photo(): void

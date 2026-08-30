@@ -86,6 +86,26 @@ class ColorNames
     }
 
     /**
+     * ¿Son dos colores lo bastante distintos como para no ser el mismo
+     * trabajo?
+     *
+     * Red de seguridad para "Fondo de color": si a pesar del selector ella
+     * junta fotos de colores bien distintos, mejor avisar que rotular mal.
+     * El umbral es generoso a propósito —dos tonos rosados con distinta luz
+     * no deben disparar la alarma— y solo agarra choques claros, como rosa
+     * pálido contra negro.
+     */
+    public static function farApart(string $a, string $b): bool
+    {
+        [$ar, $ag, $ab] = self::rgb($a);
+        [$br, $bg, $bb] = self::rgb($b);
+
+        $distancia = ($ar - $br) ** 2 + ($ag - $bg) ** 2 + ($ab - $bb) ** 2;
+
+        return $distancia > 14000;
+    }
+
+    /**
      * @return array{0: int, 1: int, 2: int}
      */
     private static function rgb(string $hex): array

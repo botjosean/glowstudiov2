@@ -21,7 +21,7 @@ import { useHaptics } from '../../composables/useHaptics';
 const props = defineProps({
     providerName: { type: String, required: true },
     avatarPhoto: { type: String, default: '' },
-    waiting: { type: Array, required: true }, // [{ id, url }] subidas sin usar
+    waiting: { type: Array, required: true }, // [{ id, url, colorName, colorHex }] subidas sin usar
     recentEdits: { type: Array, required: true }, // [{ id, url, used }] últimas fotos "para editar"
     references: { type: Array, required: true }, // [{ id, url, kind, note }]
     // La ficha leída de sus referencias, o null si todavía no la generó.
@@ -193,11 +193,76 @@ const usableLayouts = computed(() => props.layouts.filter((l) => l.fits));
 // un estilo promedio, poder elegir UNA puntual para copiar esa.
 const templateOpen = ref(false);
 const pendingLayout = ref(null);
+// null = usar las más viejas de la cola, automático. Un array = las que ella
+// misma eligió a mano (ver colorPick, para "Fondo de color").
+const pendingUploadIds = ref(null);
+
+// "Fondo de color" necesita fotos DEL MISMO trabajo, y agarrar las más
+// viejas de la cola a ciegas no lo garantiza: si se subieron dos tandas de
+// colores distintos antes de armar el post, se mezclan sin que se note hasta
+// ver el resultado. Pasó de verdad — una tanda con una uña rosa metida entre
+// dos negras — y el post salió con "ROSA" escrito sobre fotos negras. Para
+// esta plantilla ella elige a mano, viendo el color de cada una.
+const colorPickOpen = ref(false);
+const colorPickSelected = ref([]);
+
+// Los nombres de color de lo que lleva elegido hasta ahora, sin repetir. Si
+// hay más de uno, es la misma señal que se le escapó la vez pasada: fotos de
+// trabajos distintos en una sola selección.
+const colorPickNames = computed(() => {
+    const names = new Set();
+
+    for (const id of colorPickSelected.value) {
+        const item = props.waiting.find((w) => w.id === id);
+
+        if (item?.colorName) names.add(item.colorName);
+    }
+
+    return [...names];
+});
+
+function toggleColorPick(id) {
+    const i = colorPickSelected.value.indexOf(id);
+
+    if (i !== -1) {
+        colorPickSelected.value.splice(i, 1);
+
+        return;
+    }
+
+    // Cuatro es lo que "Fondo de color" usa: una por esquina.
+    if (colorPickSelected.value.length >= 4) return;
+
+    colorPickSelected.value.push(id);
+}
+
+function confirmColorPick() {
+    if (colorPickSelected.value.length < 2) return;
+
+    pendingUploadIds.value = [...colorPickSelected.value];
+    colorPickOpen.value = false;
+
+    if (props.references.length === 0) {
+        generate(pendingLayout.value, null);
+
+        return;
+    }
+
+    templateOpen.value = true;
+}
 
 function build(layout) {
     if (generateForm.processing) return;
 
     pendingLayout.value = layout;
+    pendingUploadIds.value = null;
+
+    if (layout.value === 'color') {
+        colorPickSelected.value = [];
+        colorPickOpen.value = true;
+
+        return;
+    }
 
     // Sin referencias guardadas no hay nada entre qué elegir: se arma
     // directo, como antes.
@@ -219,7 +284,7 @@ function chooseTemplate(templateId) {
 
 function generate(layout, templateId) {
     generateForm.layout = layout.value;
-    generateForm.uploadIds = props.waiting.slice(0, layout.uses).map((item) => item.id);
+    generateForm.uploadIds = pendingUploadIds.value ?? props.waiting.slice(0, layout.uses).map((item) => item.id);
     generateForm.templateUploadId = templateId;
 
     generateForm.post('/admin/contenido/generar', {
@@ -481,7 +546,7 @@ const busyLabel = computed(() => {
                         <span class="grid h-11 w-11 shrink-0 gap-[2px] rounded-lg bg-[var(--surface-mute)] p-1.5"
                             :class="{
                                 'grid-cols-1': layout.value === 'hero',
-                                'grid-cols-2': layout.value === 'collage',
+                                'grid-cols-2': layout.value === 'collage' || layout.value === 'color',
                                 'grid-cols-3 items-center': layout.value === 'carousel',
                             }"
                         >
@@ -490,6 +555,11 @@ const busyLabel = computed(() => {
                             </template>
                             <template v-else-if="layout.value === 'collage'">
                                 <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)]" />
+                            </template>
+                            <!-- Fondo de color: las cuatro esquinas con el
+                                 medio libre, que es justo lo que la define. -->
+                            <template v-else-if="layout.value === 'color'">
+                                <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)] opacity-70" />
                             </template>
                             <template v-else>
                                 <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
@@ -803,6 +873,64 @@ const busyLabel = computed(() => {
                     <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
                 </button>
             </div>
+        </BottomSheet>
+
+        <!-- Elegir a mano las fotos para "Fondo de color": tienen que ser del
+             mismo trabajo, y agarrar las más viejas de la cola a ciegas no lo
+             garantiza. Ver colorPickNames más arriba. -->
+        <BottomSheet v-model="colorPickOpen">
+            <div class="mb-4">
+                <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
+                    {{ $t('content.colorPickTitle') }}
+                </div>
+                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.colorPickHint') }}</p>
+            </div>
+
+            <p v-if="waiting.length === 0" class="text-[13px] font-normal text-[var(--text-mute)]">
+                {{ $t('content.colorPickEmpty') }}
+            </p>
+
+            <div v-else class="grid grid-cols-4 gap-1.5">
+                <button
+                    v-for="item in waiting"
+                    :key="item.id"
+                    type="button"
+                    class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
+                    :class="colorPickSelected.includes(item.id) ? 'ring-2 ring-[var(--gold)]' : ''"
+                    @click="toggleColorPick(item.id)"
+                >
+                    <img :src="item.url" alt="" class="h-full w-full object-cover" />
+
+                    <!-- El color que ya se le leyó a esa foto, de un vistazo. -->
+                    <span
+                        class="absolute left-1 top-1 h-3.5 w-3.5 rounded-full border border-white/80"
+                        :style="{ background: item.colorHex || 'transparent' }"
+                    />
+
+                    <span v-if="colorPickSelected.includes(item.id)" class="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Check :size="20" class="text-white" />
+                    </span>
+                </button>
+            </div>
+
+            <!-- La alarma: si lo elegido trae más de un nombre de color, es
+                 justo la mezcla que causó la confusión la vez pasada. -->
+            <p
+                v-if="colorPickNames.length > 0"
+                class="mt-3 text-[13px] font-medium"
+                :class="colorPickNames.length > 1 ? 'text-[var(--danger)]' : 'text-[var(--text-mute)]'"
+            >
+                {{ colorPickNames.join(' · ') }}
+            </p>
+
+            <button
+                type="button"
+                :disabled="colorPickSelected.length < 2"
+                class="mt-4 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-40"
+                @click="confirmColorPick"
+            >
+                {{ $t('content.colorPickConfirm') }}<template v-if="colorPickSelected.length > 0"> ({{ colorPickSelected.length }})</template>
+            </button>
         </BottomSheet>
 
         <!-- ¿Como cuál de tus referencias? Ella lo pidió directo: en vez de
