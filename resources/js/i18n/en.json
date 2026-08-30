@@ -573,10 +573,14 @@
         "statMonthSales": "Sales this month",
         "settingsSearch": "Search settings…",
         "importContacts": "Import from your contacts",
-        "clientsImported": "Contacts imported to your book.",
+        "clientsImported": "No new ones were added | 1 new client added | {count} new clients added",
         "botHours": "When it replies",
         "botHoursHint": "Outside these hours it says nothing, but the request still reaches your panel.",
-        "contentStyleLearned": "Style learned from your references"
+        "contentStyleLearned": "Style learned from your references",
+        "clientsImportFileEmpty": "I couldn't find any contacts in that file. It has to be the .vcf or .csv your phone exports.",
+        "importFromFile": "Import from a file",
+        "importHelp": "How do I get that file?",
+        "importHelpBody": "On iPhone: Contacts → Lists → press and hold the group → Export. On Android: Contacts → menu → Manage contacts → Import or export → Export to file. You get a .vcf file to upload here."
     },
     "nav": {
         "appointments": "Appointments",

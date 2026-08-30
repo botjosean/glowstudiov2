@@ -6,6 +6,7 @@ use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Support\ContactsFile;
 use App\Support\Format;
 use App\Support\MediaUrl;
 use Illuminate\Http\RedirectResponse;
@@ -136,35 +137,71 @@ class ClientController extends Controller
      * already know. No usable phone, no card — a card the assistant and the
      * agenda can never match by phone would only clutter the book.
      */
+    /**
+     * Traer la libreta del teléfono, por cualquiera de las dos vías.
+     *
+     * La API de contactos del navegador solo existe en Chrome de Android: en
+     * iPhone, en Brave y en escritorio el botón desaparecía y no quedaba
+     * NINGUNA forma de importar. Ella lo reportó desde el perfil de Paty
+     * («ya no le da la opción como de importar todos tus contactos»), así que
+     * ahora también entra un archivo .vcf o .csv, que cualquier teléfono
+     * exporta. Las dos vías terminan en el mismo guardado, con el mismo
+     * descarte de repetidos.
+     */
     public function import(Request $request): RedirectResponse
     {
         $provider = $request->user()->provider;
 
-        $validated = $request->validate([
-            'contacts' => ['required', 'array', 'max:500'],
-            'contacts.*.name' => ['required', 'string', 'max:120'],
-            'contacts.*.phone' => ['nullable', 'string', 'max:30'],
-        ]);
+        if ($request->hasFile('file')) {
+            $request->validate([
+                // Sin regla 'mimes': un .vcf llega como text/plain,
+                // text/x-vcard o application/octet-stream según el teléfono,
+                // y rechazarlo por eso sería volver al problema de origen.
+                'file' => ['required', 'file', 'max:5120'],
+            ]);
+
+            $contacts = ContactsFile::parse((string) file_get_contents($request->file('file')->getRealPath()));
+
+            if ($contacts === []) {
+                throw ValidationException::withMessages([
+                    'file' => __('admin.clientsImportFileEmpty'),
+                ]);
+            }
+
+            $contacts = array_slice($contacts, 0, 500);
+        } else {
+            $contacts = $request->validate([
+                'contacts' => ['required', 'array', 'max:500'],
+                'contacts.*.name' => ['required', 'string', 'max:120'],
+                'contacts.*.phone' => ['nullable', 'string', 'max:30'],
+            ])['contacts'];
+        }
 
         $known = $provider->clients()->pluck('phone')->filter()->flip();
         $imported = 0;
 
-        foreach ($validated['contacts'] as $contact) {
+        foreach ($contacts as $contact) {
             $digits = Format::digitsOnly($contact['phone'] ?? '');
 
+            // El set arranca con lo que ya tiene guardado y va creciendo, así
+            // que no se duplica ni contra su libreta ni dentro del mismo
+            // archivo, donde el mismo número suele venir dos veces.
             if (strlen($digits) !== 10 || isset($known[$digits])) {
                 continue;
             }
 
             $provider->clients()->create([
-                'name' => trim($contact['name']),
+                'name' => mb_substr(trim($contact['name']), 0, 120),
                 'phone' => $digits,
             ]);
             $known[$digits] = true;
             $imported++;
         }
 
-        return to_route('admin.clientes')->with('success', 'admin.clientsImported');
+        return to_route('admin.clientes')->with('success', [
+            'key' => 'admin.clientsImported',
+            'count' => $imported,
+        ]);
     }
 
     /**

@@ -4,6 +4,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { ChevronRight, Plus, Search, UserPlus, Users } from '@lucide/vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ClientFormSheet from '../../Components/admin/ClientFormSheet.vue';
+import BottomSheet from '../../Components/ui/BottomSheet.vue';
 
 const props = defineProps({
     providerName: { type: String, default: 'Pati' },
@@ -96,18 +97,36 @@ function onIndexPointerUp() {
 
 const createOpen = ref(false);
 
-// Contact Picker API: Chrome/Android hands over exactly what she selects.
-// Feature-detected — on browsers without it the button simply is not there,
-// which beats a button that fails.
+// La API de contactos del navegador solo la trae Chrome de Android. Antes,
+// cuando no estaba, el botón directamente NO SE DIBUJABA — y en iPhone, en
+// Brave o en escritorio no quedaba ninguna forma de traer la libreta. Ella lo
+// reportó desde el perfil de Paty: «ya no le da la opción como de importar
+// todos tus contactos».
+//
+// Ahora el botón está siempre: con la API se abre el selector del teléfono, y
+// sin ella se pide el archivo .vcf/.csv que exporta cualquier teléfono.
 const pickerSupported = ref(false);
 const importing = ref(false);
+const fileInput = ref(null);
+const helpOpen = ref(false);
 
 onMounted(() => {
     pickerSupported.value = 'contacts' in navigator && 'select' in navigator.contacts;
 });
 
-async function importContacts() {
+function importContacts() {
     if (importing.value) return;
+
+    if (pickerSupported.value) {
+        pickFromPhone();
+
+        return;
+    }
+
+    fileInput.value?.click();
+}
+
+async function pickFromPhone() {
     let picked;
     try {
         picked = await navigator.contacts.select(['name', 'tel'], { multiple: true });
@@ -121,8 +140,21 @@ async function importContacts() {
         }))
         .filter((contact) => contact.name !== '');
     if (contacts.length === 0) return;
+    send({ contacts });
+}
+
+function pickFile(event) {
+    const file = event.target.files?.[0];
+    // Se limpia el input para poder volver a elegir el MISMO archivo: sin
+    // esto, el segundo intento no dispara nada.
+    event.target.value = '';
+    if (file) send({ file });
+}
+
+function send(payload) {
     importing.value = true;
-    router.post('/admin/clientes/importar', { contacts }, {
+    router.post('/admin/clientes/importar', payload, {
+        forceFormData: payload.file !== undefined,
         preserveScroll: true,
         onFinish: () => {
             importing.value = false;
@@ -147,15 +179,33 @@ async function importContacts() {
                     class="w-full bg-transparent text-[15px] text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:outline-none"
                 />
             </label>
+            <!-- Siempre presente, con API de contactos o sin ella. -->
+            <input
+                ref="fileInput"
+                type="file"
+                accept=".vcf,.csv,text/vcard,text/x-vcard,text/csv,text/plain"
+                class="hidden"
+                @change="pickFile"
+            />
+
             <button
-                v-if="pickerSupported && clients.length > 0"
+                v-if="clients.length > 0"
                 type="button"
                 :disabled="importing"
                 class="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] py-3 text-[14px] font-semibold text-[var(--text-body)] hover:bg-[var(--surface-mute)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="importContacts"
             >
                 <UserPlus :size="15" />
-                {{ importing ? $t('common.saving') : $t('admin.importContacts') }}
+                {{ importing ? $t('common.saving') : (pickerSupported ? $t('admin.importContacts') : $t('admin.importFromFile')) }}
+            </button>
+
+            <button
+                v-if="clients.length > 0 && !pickerSupported"
+                type="button"
+                class="mt-2 w-full text-center text-[12px] font-medium text-[var(--text-mute)] underline"
+                @click="helpOpen = true"
+            >
+                {{ $t('admin.importHelp') }}
             </button>
         </div>
 
@@ -166,13 +216,21 @@ async function importContacts() {
             <p class="mt-4 text-base font-bold text-[var(--text-strong)]">{{ $t('admin.clientsEmpty') }}</p>
             <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('admin.clientsEmptyHint') }}</p>
             <button
-                v-if="pickerSupported"
                 type="button"
                 :disabled="importing"
                 class="mt-5 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 @click="importContacts"
             >
-                {{ importing ? $t('common.saving') : $t('admin.importContacts') }}
+                {{ importing ? $t('common.saving') : (pickerSupported ? $t('admin.importContacts') : $t('admin.importFromFile')) }}
+            </button>
+
+            <button
+                v-if="!pickerSupported"
+                type="button"
+                class="mt-2.5 text-[12px] font-medium text-[var(--text-mute)] underline"
+                @click="helpOpen = true"
+            >
+                {{ $t('admin.importHelp') }}
             </button>
         </div>
 
@@ -261,5 +319,23 @@ async function importContacts() {
         </button>
 
         <ClientFormSheet v-model="createOpen" />
+
+        <!-- Cómo sacar el .vcf del teléfono, para quien no tiene el selector
+             de contactos del navegador. -->
+        <BottomSheet v-model="helpOpen">
+            <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
+                {{ $t('admin.importHelp') }}
+            </div>
+            <p class="mt-2 text-[14px] font-normal leading-relaxed text-[var(--text-body)]">
+                {{ $t('admin.importHelpBody') }}
+            </p>
+            <button
+                type="button"
+                class="mt-5 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)]"
+                @click="helpOpen = false; importContacts()"
+            >
+                {{ $t('admin.importFromFile') }}
+            </button>
+        </BottomSheet>
     </AdminLayout>
 </template>

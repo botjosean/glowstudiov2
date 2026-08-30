@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\Provider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ClientManagementTest extends TestCase
@@ -150,6 +151,55 @@ class ClientManagementTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(1, $provider->clients()->count());
+    }
+
+    public function test_a_contacts_file_imports_the_same_way_the_phone_picker_does(): void
+    {
+        // La vía que funciona en iPhone, en Brave y en escritorio, donde la
+        // API de contactos del navegador no existe. Ella lo reportó desde el
+        // perfil de Paty: «ya no le da la opción de importar todos tus
+        // contactos».
+        $provider = Provider::factory()->published()->create();
+        Client::factory()->for($provider)->create(['name' => 'Ya Estaba', 'phone' => '3055550199']);
+
+        $vcf = "BEGIN:VCARD\r\nFN:Ana Nueva\r\nTEL;TYPE=CELL:+1 (305) 555-0111\r\nEND:VCARD\r\n"
+            ."BEGIN:VCARD\r\nFN:Repetida\r\nTEL:305-555-0199\r\nEND:VCARD\r\n"
+            ."BEGIN:VCARD\r\nFN:Sin Teléfono\r\nEND:VCARD\r\n";
+
+        $this->actingAs($provider->user)->post('/admin/clientes/importar', [
+            'file' => UploadedFile::fake()->createWithContent('contactos.vcf', $vcf),
+        ])->assertRedirect('/admin/clientes');
+
+        // Solo Ana: la repetida ya estaba y la del vCard sin teléfono no sirve.
+        $this->assertSame(2, $provider->clients()->count());
+        $this->assertSame('Ana Nueva', $provider->clients()->where('phone', '3055550111')->sole()->name);
+        $this->assertSame('Ya Estaba', $provider->clients()->where('phone', '3055550199')->sole()->name);
+    }
+
+    public function test_a_file_with_no_readable_contacts_says_so_instead_of_failing_silently(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/clientes/importar', [
+            'file' => UploadedFile::fake()->createWithContent('cualquiera.txt', 'esto no es una libreta'),
+        ])->assertSessionHasErrors('file');
+
+        $this->assertSame(0, $provider->clients()->count());
+    }
+
+    public function test_a_provider_cannot_import_into_another_providers_book(): void
+    {
+        // La ruta no lleva {id}: siempre apunta a $request->user()->provider,
+        // así que una sesión ajena no puede sembrar fichas en otra libreta.
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $this->actingAs($mine->user)->post('/admin/clientes/importar', [
+            'contacts' => [['name' => 'Ana', 'phone' => '3055550111']],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $mine->clients()->count());
+        $this->assertSame(0, $hers->clients()->count());
     }
 
     public function test_a_booking_with_a_new_phone_grows_a_card_on_any_channel(): void

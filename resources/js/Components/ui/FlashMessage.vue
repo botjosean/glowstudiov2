@@ -45,7 +45,12 @@ watch(
         if (!key) return;
 
         variant.value = key;
-        message.value = typeof value === 'string' ? t(value) : t(value.key, value);
+        // Con `count` se elige la forma plural: vue-i18n solo la selecciona
+        // cuando el segundo argumento es un número, y pasándole el objeto se
+        // quedaba siempre con la primera forma («no se agregó ninguna»).
+        message.value = typeof value === 'string'
+            ? t(value)
+            : (typeof value.count === 'number' ? t(value.key, value.count) : t(value.key, value));
         visible.value = true;
 
         clearTimeout(dismissTimer);
