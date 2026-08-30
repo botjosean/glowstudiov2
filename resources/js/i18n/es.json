@@ -601,8 +601,8 @@
         "purposeEditHint": "Te lo devuelvo listo para publicar",
         "purposeReference": "Guardar como referencia",
         "purposeReferenceHint": "Para que aprenda lo que te gusta",
-        "noteTitle": "Contame qué te gusta de estas",
-        "noteHint": "Con tus palabras. Es lo que más ayuda a que los posts te salgan parecidos.",
+        "noteTitle": "¿Qué te gusta de estas?",
+        "noteHint": "Te dejé escrito lo que veo. Cambialo o dejalo así.",
         "noteLabel": "Qué te gusta de estas fotos",
         "saveReference": "Guardar referencia",
         "waitingTitle": "1 foto esperando | 1 foto esperando | {count} fotos esperando",
@@ -640,7 +640,10 @@
         "learnStyle": "Aprender de mis referencias",
         "learning": "Mirando tus referencias…",
         "styleNotYet": "Todavía no aprendió de tus referencias. Tocalo y mira tus fotos guardadas para sacar tus colores y tu tipo de letra.",
-        "styleLearnedFrom": "Aprendido de 1 referencia | Aprendido de 1 referencia | Aprendido de {count} referencias"
+        "styleLearnedFrom": "Aprendido de 1 referencia | Aprendido de 1 referencia | Aprendido de {count} referencias",
+        "noteSuggested": "Esto lo escribió el sistema mirando tus fotos. Corregilo si no es lo que te gusta — mientras más tuyo sea, mejor te salen los posts.",
+        "saveNote": "Guardar",
+        "skipNote": "Dejarlo sin nota"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

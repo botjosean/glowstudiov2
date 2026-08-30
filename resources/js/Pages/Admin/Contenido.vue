@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref, onBeforeUnmount } from 'vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2, Wand } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -30,6 +30,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const haptics = useHaptics();
+const page = usePage();
 
 const fileInput = ref(null);
 const chosen = ref([]); // File[]
@@ -37,7 +38,8 @@ const previews = ref([]); // objectURL[]
 const purposeOpen = ref(false);
 const noteOpen = ref(false);
 
-const uploadForm = useForm({ purpose: '', note: '', photos: [] });
+const uploadForm = useForm({ purpose: '', note: '', first: false, photos: [] });
+const noteForm = useForm({ uploadIds: [], note: '' });
 const generateForm = useForm({ layout: 'collage_4', uploadIds: [] });
 const rateForm = useForm({ rating: '', note: '' });
 
@@ -149,6 +151,9 @@ function sendBatch(batches, index, purpose, note) {
     // La nota describe la selección entera, así que va solo en la primera
     // tanda — repetirla en cada una es lo que ya ahogaba las referencias.
     uploadForm.note = index === 0 ? note : '';
+    // Y solo la primera pide sugerencia: las demás son las mismas fotos
+    // partidas para pasar por Cloudflare.
+    uploadForm.first = index === 0;
     uploadForm.photos = batches[index];
 
     uploadForm.post('/admin/contenido/subir', {
@@ -170,9 +175,11 @@ function chooseEdit() {
     send('edit');
 }
 
+// Se sube primero y la nota se pide DESPUÉS, ya con una sugerencia hecha.
+// Antes se le pedía escribir antes de subir, contra un cuadro vacío, y una
+// referencia sin nota enseña la mitad.
 function chooseReference() {
-    purposeOpen.value = false;
-    noteOpen.value = true;
+    send('reference');
 }
 
 // Solo los modelos que cuadran con las fotos que tiene ahora. Ofrecer uno
@@ -221,6 +228,33 @@ function rate(value) {
 function copyCaption(post) {
     const text = [post.caption, (post.hashtags ?? []).join(' ')].filter(Boolean).join('\n\n');
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
+}
+
+// Cuando el servidor devuelve una sugerencia de nota, se abre la hoja ya
+// escrita. Se observa el objeto flash entero y no la clave: Inertia reemplaza
+// las props en bloque, y mirar solo la hoja se tragaría dos sugerencias
+// iguales seguidas.
+watch(() => page.props.flash, (flash) => {
+    const sugerencia = flash?.noteSuggestion;
+
+    if (!sugerencia) return;
+
+    noteForm.uploadIds = sugerencia.uploadIds ?? [];
+    noteForm.note = sugerencia.text ?? '';
+    noteOpen.value = true;
+}, { deep: true });
+
+function saveNote() {
+    if (noteForm.processing) return;
+
+    noteForm.patch('/admin/contenido/referencias/nota', {
+        preserveScroll: true,
+        onSuccess: () => {
+            haptics.success();
+            noteOpen.value = false;
+            noteForm.reset();
+        },
+    });
 }
 
 // Leer las referencias y quedarse con su estilo. Es lo que conecta lo que
@@ -663,15 +697,27 @@ const busyLabel = computed(() => {
                 <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.noteHint') }}</p>
             </div>
 
-            <Textarea v-model="uploadForm.note" :label="$t('content.noteLabel')" :rows="4" />
+            <Textarea v-model="noteForm.note" :label="$t('content.noteLabel')" :rows="4" />
+
+            <p class="mt-2 text-[12px] font-normal leading-relaxed text-[var(--text-faint)]">
+                {{ $t('content.noteSuggested') }}
+            </p>
 
             <button
                 type="button"
-                :disabled="uploadForm.processing"
+                :disabled="noteForm.processing"
                 class="mt-4 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-60"
-                @click="send('reference', uploadForm.note)"
+                @click="saveNote"
             >
-                {{ uploadForm.processing ? $t('common.saving') : $t('content.saveReference') }}
+                {{ noteForm.processing ? $t('common.saving') : $t('content.saveNote') }}
+            </button>
+
+            <button
+                type="button"
+                class="mt-2 w-full py-2 text-[13px] font-medium text-[var(--text-mute)] hover:underline"
+                @click="noteOpen = false"
+            >
+                {{ $t('content.skipNote') }}
             </button>
         </BottomSheet>
 

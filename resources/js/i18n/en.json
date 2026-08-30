@@ -601,8 +601,8 @@
         "purposeEditHint": "I'll hand it back ready to publish",
         "purposeReference": "Save as reference",
         "purposeReferenceHint": "So I learn what you like",
-        "noteTitle": "Tell me what you like about these",
-        "noteHint": "In your own words. This is what makes your posts come out like you want.",
+        "noteTitle": "What do you like about these?",
+        "noteHint": "I wrote down what I see. Change it or leave it as is.",
         "noteLabel": "What you like about these photos",
         "saveReference": "Save reference",
         "waitingTitle": "1 photo waiting | 1 photo waiting | {count} photos waiting",
@@ -640,7 +640,10 @@
         "learnStyle": "Learn from my references",
         "learning": "Looking at your references…",
         "styleNotYet": "It hasn't learned from your references yet. Tap it and it will look at your saved photos to pick up your colors and lettering.",
-        "styleLearnedFrom": "Learned from 1 reference | Learned from 1 reference | Learned from {count} references"
+        "styleLearnedFrom": "Learned from 1 reference | Learned from 1 reference | Learned from {count} references",
+        "noteSuggested": "This was written by looking at your photos. Fix it if it is not what you like — the more it sounds like you, the better your posts come out.",
+        "saveNote": "Save",
+        "skipNote": "Leave it without a note"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

@@ -7,6 +7,7 @@ use App\Models\ContentUpload;
 use App\Models\Provider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -345,6 +346,106 @@ class ContentPanelTest extends TestCase
             ->assertSessionHasErrors();
 
         $this->assertSame(0, ContentUpload::query()->count());
+    }
+
+    public function test_uploading_a_reference_without_a_note_gets_a_suggestion(): void
+    {
+        // «A la gente le da flojera pensar»: en vez de un cuadro vacío, se le
+        // propone una nota mirando lo que subió.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => 'Me gusta el fondo limpio y las letras doradas.']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->from('/admin/contenido')->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $response->assertSessionHas('noteSuggestion');
+        $sugerencia = $response->getSession()->get('noteSuggestion');
+
+        $this->assertSame('Me gusta el fondo limpio y las letras doradas.', $sugerencia['text']);
+        $this->assertCount(1, $sugerencia['uploadIds']);
+    }
+
+    public function test_no_suggestion_is_asked_when_she_already_wrote_a_note(): void
+    {
+        // Si ella ya escribió, no hay nada que sugerir ni que pagar.
+        Http::fake();
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'note' => 'Ya lo sé, me gusta así.',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $response->assertSessionMissing('noteSuggestion');
+        Http::assertNothingSent();
+    }
+
+    public function test_no_suggestion_is_asked_past_the_first_batch(): void
+    {
+        // Las tandas siguientes son las mismas fotos partidas para Cloudflare;
+        // sugerir en cada una pagaría lo mismo varias veces.
+        Http::fake();
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'first' => '0',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $response->assertSessionMissing('noteSuggestion');
+        Http::assertNothingSent();
+    }
+
+    public function test_the_suggested_note_can_be_edited_and_saved(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'photos' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->patch('/admin/contenido/referencias/nota', ['uploadIds' => $ids, 'note' => 'Lo edité yo.'])
+            ->assertSessionHasNoErrors();
+
+        // En la primera, igual que al subir — no repetida en las dos.
+        $notas = ContentUpload::query()->where('provider_id', $provider->id)->oldest()->pluck('note')->all();
+        $this->assertSame(['Lo edité yo.', null], $notas);
+    }
+
+    public function test_a_provider_cannot_set_the_note_of_another_providers_upload(): void
+    {
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $this->actingAs($hers->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ]);
+
+        $suyo = ContentUpload::query()->where('provider_id', $hers->id)->sole();
+
+        $this->actingAs($mine->user)
+            ->patch('/admin/contenido/referencias/nota', ['uploadIds' => [$suyo->id], 'note' => 'no debería entrar'])
+            ->assertSessionHasNoErrors(); // no revienta...
+
+        // ...pero tampoco toca la ajena: al no encontrarla scopeada a $mine,
+        // updateNote() no actualiza nada.
+        $this->assertNull($suyo->fresh()->note);
     }
 
     public function test_a_reference_note_is_kept_once_not_on_every_photo(): void

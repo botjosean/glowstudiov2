@@ -181,6 +181,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     // llamada manda varias imágenes — ver ReadReferenceStyle.
     Route::post('/contenido/estilo', [ContentController::class, 'learnStyle'])
         ->middleware('throttle:10,60')->name('contenido.estilo');
+    Route::patch('/contenido/referencias/nota', [ContentController::class, 'updateNote'])
+        ->name('contenido.referencias.nota');
     // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');

@@ -7,6 +7,7 @@ use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
 use App\Actions\Content\ReadReferenceStyle;
 use App\Actions\Content\StoreReferenceVideo;
+use App\Actions\Content\SuggestReferenceNote;
 use App\Actions\Content\WriteCaption;
 use App\Actions\Media\DeleteProviderImage;
 use App\Actions\Media\StoreProviderImage;
@@ -44,6 +45,7 @@ class ContentController extends Controller
         private readonly BuildHero $hero,
         private readonly BuildCarousel $carousel,
         private readonly ReadReferenceStyle $style,
+        private readonly SuggestReferenceNote $noteSuggestions,
         private readonly WriteCaption $caption,
     ) {}
 
@@ -118,6 +120,8 @@ class ContentController extends Controller
         $purpose = ContentPurpose::from($request->string('purpose')->value());
         $note = $request->input('note');
 
+        $creadas = collect();
+
         foreach ($request->file('photos') as $index => $file) {
             $isVideo = str_starts_with((string) $file->getMimeType(), 'video/');
 
@@ -127,7 +131,7 @@ class ContentController extends Controller
                 ? $this->video->handle($provider, $file)
                 : $this->store->handle($provider, $file, ImageVariant::Gallery);
 
-            ContentUpload::create([
+            $creadas->push(ContentUpload::create([
                 'provider_id' => $provider->id,
                 'path' => $key,
                 'kind' => ($isVideo ? UploadKind::Video : UploadKind::Image)->value,
@@ -136,13 +140,30 @@ class ContentController extends Controller
                 // vez, en la primera. Copiarla en las diez hacía que el modelo
                 // viera diez veces lo mismo y ahogara al resto de referencias.
                 'note' => ($purpose === ContentPurpose::Reference && $index === 0) ? $note : null,
-            ]);
+            ]));
         }
 
-        return to_route('admin.contenido')->with(
+        $redirect = to_route('admin.contenido')->with(
             'success',
             $purpose === ContentPurpose::Reference ? 'admin.contentReferenceSaved' : 'admin.contentUploaded',
         );
+
+        // Con una referencia recién guardada y sin nota, se le propone una en
+        // vez de dejarle el cuadro vacío. «A la gente le da flojera pensar»,
+        // y una referencia sin nota enseña la mitad: es la nota, no la imagen,
+        // lo que le dice al sistema QUÉ mirar.
+        //
+        // Solo en la primera tanda de la selección: las siguientes son las
+        // mismas fotos partidas para que pasen por Cloudflare, y sugerir en
+        // cada una sería pagar lo mismo varias veces.
+        if ($purpose === ContentPurpose::Reference && $note === null && $request->boolean('first')) {
+            $redirect->with('noteSuggestion', [
+                'uploadIds' => $creadas->pluck('id')->all(),
+                'text' => $this->noteSuggestions->handle($creadas),
+            ]);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -211,6 +232,37 @@ class ContentController extends Controller
         });
 
         return to_route('admin.contenido')->with('success', 'admin.contentPostReady');
+    }
+
+    /**
+     * Guardar la nota de una tanda de referencias, con la sugerencia ya
+     * editada por ella.
+     *
+     * La nota se guarda en la primera de la tanda, igual que al subirlas —
+     * repetirla en todas ahogaba al resto de las referencias.
+     */
+    public function updateNote(Request $request): RedirectResponse
+    {
+        $provider = $request->user()->provider;
+
+        $validated = $request->validate([
+            'uploadIds' => ['required', 'array'],
+            'uploadIds.*' => ['integer'],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        // Reconsultado con el provider_id del servidor: unos ids inventados no
+        // alcanzan las referencias de otra profesional.
+        $primera = ContentUpload::query()
+            ->where('provider_id', $provider->id)
+            ->references()
+            ->whereIn('id', $validated['uploadIds'])
+            ->oldest()
+            ->first();
+
+        $primera?->update(['note' => $validated['note'] ?: null]);
+
+        return to_route('admin.contenido')->with('success', 'admin.contentReferenceSaved');
     }
 
     /**

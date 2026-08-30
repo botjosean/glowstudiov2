@@ -69,6 +69,9 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
                 'booking' => fn () => $request->session()->get('booking'),
+                // La nota que el sistema le propone tras guardar referencias,
+                // con los ids de la tanda. Ver ContentController::store().
+                'noteSuggestion' => fn () => $request->session()->get('noteSuggestion'),
                 // Whether AppointmentStatusController auto-sent the WhatsApp
                 // notice via Kapso — the frontend skips its own manual prompt
                 // only when this is true, never on a static "bot connected" flag.
