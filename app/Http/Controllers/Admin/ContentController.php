@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildColorBlock;
+use App\Actions\Content\BuildColorCombo;
 use App\Actions\Content\BuildHero;
 use App\Actions\Content\ColorNames;
 use App\Actions\Content\DetectDesignedPhoto;
@@ -54,6 +55,7 @@ class ContentController extends Controller
         private readonly DetectDesignedPhoto $detectDesigned,
         private readonly ReadPhotoColor $photoColor,
         private readonly BuildColorBlock $colorBlock,
+        private readonly BuildColorCombo $colorCombo,
     ) {}
 
     public function index(Request $request): Response
@@ -353,6 +355,33 @@ class ContentController extends Controller
             $color = ['name' => (string) $conColor->color_name, 'hex' => (string) $conColor->color_hex];
         }
 
+        // La combinación es lo opuesto: necesita DOS colores distintos, uno
+        // por foto. Si las dos fotos elegidas resultan del mismo color —o
+        // sin color leído todavía—, no hay combinación que mostrar.
+        $combo = null;
+
+        if ($layout === PostLayout::ColorCombo) {
+            [$primera, $segunda] = [$uploads->get(0), $uploads->get(1)];
+
+            $listas = $primera !== null && $segunda !== null
+                && $primera->color_hex !== null && $segunda->color_hex !== null
+                && ColorNames::farApart($primera->color_hex, $segunda->color_hex);
+
+            if (! $listas) {
+                throw ValidationException::withMessages([
+                    'uploadIds' => __('admin.contentNeedsTwoColors'),
+                ]);
+            }
+
+            $combo = [
+                'paths' => [$primera->path, $segunda->path],
+                'colores' => [
+                    ['nombre' => (string) $primera->color_name, 'hex' => (string) $primera->color_hex],
+                    ['nombre' => (string) $segunda->color_name, 'hex' => (string) $segunda->color_hex],
+                ],
+            ];
+        }
+
         // El texto primero: el titular que escribe el modelo va impreso
         // dentro de la imagen, así que no se puede armar sin él.
         $written = $this->caption->handle($provider);
@@ -369,6 +398,9 @@ class ContentController extends Controller
                 $color['name'],
                 $color['hex'],
             )],
+            // Tampoco esta usa el titular: la tarjeta lleva los dos nombres
+            // de color. Ver BuildColorCombo.
+            PostLayout::ColorCombo => [$this->colorCombo->handle($provider, $combo['paths'], $combo['colores'])],
         };
 
         // La portada es la que se ve en el muro y la que lista la pantalla.

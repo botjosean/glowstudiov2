@@ -590,7 +590,8 @@
         "leadToday": "Hoy",
         "contentColorSaved": "Color guardado",
         "contentNeedsColor": "Para este modelo necesito saber el color del trabajo. Subí las fotos de nuevo y confirmá el color cuando te lo pregunte.",
-        "contentColorMismatch": "Esas fotos no son del mismo color. Elegí fotos de un solo trabajo para esta plantilla."
+        "contentColorMismatch": "Esas fotos no son del mismo color. Elegí fotos de un solo trabajo para esta plantilla.",
+        "contentNeedsTwoColors": "Para esta plantilla necesito dos fotos de colores bien distintos. Elegí otra combinación, o confirmá el color de alguna primero."
     },
     "nav": {
         "appointments": "Citas",
@@ -679,7 +680,11 @@
         "colorPickTitle": "Elegí las fotos",
         "colorPickHint": "De 2 a 4, todas del mismo color.",
         "colorPickConfirm": "Armar el post",
-        "colorPickEmpty": "Subí fotos para editar antes de armar este post."
+        "colorPickEmpty": "Subí fotos para editar antes de armar este post.",
+        "layout_combo": "Combinación",
+        "layoutHint_combo": "Dos colores juntos, con su tarjeta",
+        "comboPickTitle": "Elegí las dos fotos",
+        "comboPickHint": "Una por cada color de la combinación."
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

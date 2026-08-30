@@ -33,7 +33,7 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Contenido')
-            ->has('layouts', 4)
+            ->has('layouts', 5)
             ->has('waiting', 0)
             ->has('references', 0)
             ->has('posts', 0)
@@ -181,6 +181,83 @@ class ContentPanelTest extends TestCase
 
         $this->actingAs($provider->user)
             ->post('/admin/contenido/generar', ['layout' => 'color', 'uploadIds' => [$rosa->id, $negra->id]])
+            ->assertSessionHasErrors('uploadIds');
+
+        $this->assertSame(0, ContentPost::query()->where('provider_id', $provider->id)->count());
+    }
+
+    public function test_the_colour_combo_post_needs_two_different_colours(): void
+    {
+        // La que trajo de @metanoia.espaciodeestetica: "Combinaciones ¿sí o
+        // no?", dos fotos con una tarjeta de dos colores apilados. Es lo
+        // opuesto de "Fondo de color": ahí dos colores distintos es un
+        // error, acá es el pedido.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => "DESCRIPCION: texto\nHASHTAGS: #nails"]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        // Con bytes de foto de verdad en el disco falso: BuildColorCombo lee
+        // y decodifica la imagen de cada ruta, así que un path inventado sin
+        // archivo detrás revienta al armar el post, no al validar.
+        $manager = \Intervention\Image\ImageManager::imagick();
+        Storage::disk('r2')->put('x/rosa.webp', (string) $manager->create(60, 60)->fill('#F2D5D5')->toJpeg());
+        Storage::disk('r2')->put('x/negra.webp', (string) $manager->create(60, 60)->fill('#1A1A1A')->toJpeg());
+
+        $rosa = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/rosa.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'rosa degradado a blanco', 'color_hex' => '#F2D5D5',
+        ]);
+        $negra = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/negra.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'negro azabache', 'color_hex' => '#1A1A1A',
+        ]);
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'combo', 'uploadIds' => [$rosa->id, $negra->id]])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertSame('combo', $post->layout->value);
+        Storage::disk('r2')->assertExists($post->path);
+    }
+
+    public function test_the_colour_combo_post_refuses_the_same_colour_twice(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $rosa1 = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/rosa1.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'rosa degradado a blanco', 'color_hex' => '#F2D5D5',
+        ]);
+        $rosa2 = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/rosa2.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'rosa palo', 'color_hex' => '#F0DDD5',
+        ]);
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'combo', 'uploadIds' => [$rosa1->id, $rosa2->id]])
+            ->assertSessionHasErrors('uploadIds');
+
+        $this->assertSame(0, ContentPost::query()->where('provider_id', $provider->id)->count());
+    }
+
+    public function test_the_colour_combo_post_needs_the_colour_read_on_both_photos(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $rosa = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/rosa.webp', 'kind' => 'image',
+            'purpose' => 'edit', 'color_name' => 'rosa degradado a blanco', 'color_hex' => '#F2D5D5',
+        ]);
+        $sinColor = ContentUpload::create([
+            'provider_id' => $provider->id, 'path' => 'x/sincolor.webp', 'kind' => 'image', 'purpose' => 'edit',
+        ]);
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'combo', 'uploadIds' => [$rosa->id, $sinColor->id]])
             ->assertSessionHasErrors('uploadIds');
 
         $this->assertSame(0, ContentPost::query()->where('provider_id', $provider->id)->count());

@@ -203,12 +203,17 @@ const pendingUploadIds = ref(null);
 // ver el resultado. Pasó de verdad — una tanda con una uña rosa metida entre
 // dos negras — y el post salió con "ROSA" escrito sobre fotos negras. Para
 // esta plantilla ella elige a mano, viendo el color de cada una.
+//
+// "Combinación" usa la MISMA hoja al revés: ahí dos colores distintos no es
+// un error, es el pedido — dos fotos, una por color.
 const colorPickOpen = ref(false);
 const colorPickSelected = ref([]);
+const colorPickIsCombo = computed(() => pendingLayout.value?.value === 'combo');
+// Combinación es siempre una foto por color, dos y no más. Fondo de color
+// admite hasta cuatro, una por esquina.
+const colorPickMax = computed(() => (colorPickIsCombo.value ? 2 : 4));
 
-// Los nombres de color de lo que lleva elegido hasta ahora, sin repetir. Si
-// hay más de uno, es la misma señal que se le escapó la vez pasada: fotos de
-// trabajos distintos en una sola selección.
+// Los nombres de color de lo que lleva elegido hasta ahora, sin repetir.
 const colorPickNames = computed(() => {
     const names = new Set();
 
@@ -221,6 +226,11 @@ const colorPickNames = computed(() => {
     return [...names];
 });
 
+// En "Fondo de color" más de un nombre es la señal de una tanda mezclada por
+// error. En "Combinación" es exactamente lo contrario: es lo que se busca,
+// así que ahí nunca es una alarma.
+const colorPickWarn = computed(() => !colorPickIsCombo.value && colorPickNames.value.length > 1);
+
 function toggleColorPick(id) {
     const i = colorPickSelected.value.indexOf(id);
 
@@ -230,8 +240,7 @@ function toggleColorPick(id) {
         return;
     }
 
-    // Cuatro es lo que "Fondo de color" usa: una por esquina.
-    if (colorPickSelected.value.length >= 4) return;
+    if (colorPickSelected.value.length >= colorPickMax.value) return;
 
     colorPickSelected.value.push(id);
 }
@@ -257,7 +266,7 @@ function build(layout) {
     pendingLayout.value = layout;
     pendingUploadIds.value = null;
 
-    if (layout.value === 'color') {
+    if (layout.value === 'color' || layout.value === 'combo') {
         colorPickSelected.value = [];
         colorPickOpen.value = true;
 
@@ -545,7 +554,7 @@ const busyLabel = computed(() => {
                              que un nombre solo no dice. -->
                         <span class="grid h-11 w-11 shrink-0 gap-[2px] rounded-lg bg-[var(--surface-mute)] p-1.5"
                             :class="{
-                                'grid-cols-1': layout.value === 'hero',
+                                'grid-cols-1': layout.value === 'hero' || layout.value === 'combo',
                                 'grid-cols-2': layout.value === 'collage' || layout.value === 'color',
                                 'grid-cols-3 items-center': layout.value === 'carousel',
                             }"
@@ -560,6 +569,12 @@ const busyLabel = computed(() => {
                                  medio libre, que es justo lo que la define. -->
                             <template v-else-if="layout.value === 'color'">
                                 <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)] opacity-70" />
+                            </template>
+                            <!-- Combinación: una foto arriba, otra abajo — la
+                                 tarjeta de los dos colores va en la costura. -->
+                            <template v-else-if="layout.value === 'combo'">
+                                <span class="h-[17px] rounded-[2px] bg-[var(--gold)]" />
+                                <span class="h-[17px] rounded-[2px] bg-[var(--gold)] opacity-70" />
                             </template>
                             <template v-else>
                                 <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
@@ -881,9 +896,11 @@ const busyLabel = computed(() => {
         <BottomSheet v-model="colorPickOpen">
             <div class="mb-4">
                 <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
-                    {{ $t('content.colorPickTitle') }}
+                    {{ $t(colorPickIsCombo ? 'content.comboPickTitle' : 'content.colorPickTitle') }}
                 </div>
-                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.colorPickHint') }}</p>
+                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">
+                    {{ $t(colorPickIsCombo ? 'content.comboPickHint' : 'content.colorPickHint') }}
+                </p>
             </div>
 
             <p v-if="waiting.length === 0" class="text-[13px] font-normal text-[var(--text-mute)]">
@@ -897,9 +914,10 @@ const busyLabel = computed(() => {
                     type="button"
                     class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
                     :class="colorPickSelected.includes(item.id) ? 'ring-2 ring-[var(--gold)]' : ''"
+                    :disabled="!colorPickSelected.includes(item.id) && colorPickSelected.length >= colorPickMax"
                     @click="toggleColorPick(item.id)"
                 >
-                    <img :src="item.url" alt="" class="h-full w-full object-cover" />
+                    <img :src="item.url" alt="" class="h-full w-full object-cover" :class="!colorPickSelected.includes(item.id) && colorPickSelected.length >= colorPickMax ? 'opacity-40' : ''" />
 
                     <!-- El color que ya se le leyó a esa foto, de un vistazo. -->
                     <span
@@ -913,12 +931,14 @@ const busyLabel = computed(() => {
                 </button>
             </div>
 
-            <!-- La alarma: si lo elegido trae más de un nombre de color, es
-                 justo la mezcla que causó la confusión la vez pasada. -->
+            <!-- En "Fondo de color" más de un nombre es la alarma de la
+                 mezcla que causó la confusión la vez pasada. En
+                 "Combinación" es justo lo que se busca, así que nunca se
+                 pinta de alarma ahí. -->
             <p
                 v-if="colorPickNames.length > 0"
                 class="mt-3 text-[13px] font-medium"
-                :class="colorPickNames.length > 1 ? 'text-[var(--danger)]' : 'text-[var(--text-mute)]'"
+                :class="colorPickWarn ? 'text-[var(--danger)]' : 'text-[var(--text-mute)]'"
             >
                 {{ colorPickNames.join(' · ') }}
             </p>

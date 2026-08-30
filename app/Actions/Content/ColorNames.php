@@ -106,9 +106,38 @@ class ColorNames
     }
 
     /**
+     * El mismo color, aclarado hacia el blanco. Para pintar un fondo: con el
+     * tono puro, el texto y las fotos encima se pierden.
+     */
+    public static function tint(string $hex, float $amount): string
+    {
+        [$r, $g, $b] = self::rgb($hex);
+
+        return sprintf(
+            '#%02X%02X%02X',
+            (int) round($r + (255 - $r) * $amount),
+            (int) round($g + (255 - $g) * $amount),
+            (int) round($b + (255 - $b) * $amount),
+        );
+    }
+
+    /** El mismo color, oscurecido hacia el negro. Para la tinta del texto. */
+    public static function shade(string $hex, float $amount): string
+    {
+        [$r, $g, $b] = self::rgb($hex);
+
+        return sprintf(
+            '#%02X%02X%02X',
+            (int) round($r * (1 - $amount)),
+            (int) round($g * (1 - $amount)),
+            (int) round($b * (1 - $amount)),
+        );
+    }
+
+    /**
      * @return array{0: int, 1: int, 2: int}
      */
-    private static function rgb(string $hex): array
+    public static function rgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
 

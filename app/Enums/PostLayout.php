@@ -42,12 +42,25 @@ enum PostLayout: string
      */
     case ColorBlock = 'color';
 
+    /**
+     * Dos fotos, una arriba y otra abajo, con una tarjetita de dos colores
+     * en el medio: el nombre y el hex de cada uno, apilados.
+     *
+     * Es la que trajo de @metanoia.espaciodeestetica: «Combinaciones ¿sí o
+     * no?», dos colores de esmalte usados juntos en el mismo trabajo. No es
+     * un descuido de tanda mezclada —es justo lo contrario de eso—, así que
+     * usa la misma lectura de color de cada foto pero para lo opuesto:
+     * requiere DOS colores distintos, no uno solo repetido. Ver
+     * BuildColorCombo.
+     */
+    case ColorCombo = 'combo';
+
     /** Cuántas fotos necesita como mínimo. */
     public function minPhotos(): int
     {
         return match ($this) {
             self::Hero => 1,
-            self::Collage, self::Carousel, self::ColorBlock => 2,
+            self::Collage, self::Carousel, self::ColorBlock, self::ColorCombo => 2,
         };
     }
 
@@ -67,6 +80,8 @@ enum PostLayout: string
             // Cuatro esquinas y ni una más: la gracia es que el centro quede
             // libre para el nombre del color.
             self::ColorBlock => 4,
+            // Dos colores, dos fotos: una por color.
+            self::ColorCombo => 2,
         };
     }
 

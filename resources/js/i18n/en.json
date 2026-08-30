@@ -590,7 +590,8 @@
         "leadToday": "Today",
         "contentColorSaved": "Color saved",
         "contentNeedsColor": "For this one I need to know the work's color. Upload the photos again and confirm the color when asked.",
-        "contentColorMismatch": "Those photos aren't the same color. Pick photos of a single work for this template."
+        "contentColorMismatch": "Those photos aren't the same color. Pick photos of a single work for this template.",
+        "contentNeedsTwoColors": "For this one I need two photos of clearly different colors. Pick another combo, or confirm the color on one of them first."
     },
     "nav": {
         "appointments": "Appointments",
@@ -679,7 +680,11 @@
         "colorPickTitle": "Pick the photos",
         "colorPickHint": "2 to 4, all the same color.",
         "colorPickConfirm": "Build the post",
-        "colorPickEmpty": "Upload photos to edit before building this post."
+        "colorPickEmpty": "Upload photos to edit before building this post.",
+        "layout_combo": "Combo",
+        "layoutHint_combo": "Two colors together, with their card",
+        "comboPickTitle": "Pick the two photos",
+        "comboPickHint": "One for each color in the combo."
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",
