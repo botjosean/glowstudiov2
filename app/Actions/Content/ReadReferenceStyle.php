@@ -10,6 +10,8 @@ use App\Support\MediaUrl;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 /**
  * Lee las referencias que ella guardó y saca de ahí una ficha de estilo.
@@ -35,20 +37,61 @@ class ReadReferenceStyle
     private const MAX_REFERENCES = 6;
 
     /**
+     * Los videos salen aparte y con un tope propio, más chico: sacarle un
+     * fotograma a cada uno cuesta más que leer una foto que ya está lista.
+     */
+    private const MAX_VIDEO_REFERENCES = 2;
+
+    public function __construct(
+        private readonly ExtractVideoFrame $extractFrame,
+    ) {}
+
+    /**
      * @return array{ok: true, style: array<string, mixed>}|array{ok: false, error: string}
      */
     public function handle(Provider $provider): array
     {
-        $urls = ContentUpload::query()
+        $imageUrls = ContentUpload::query()
             ->where('provider_id', $provider->id)
             ->references()
-            // Un video no se puede mirar; solo entran imágenes.
             ->where('kind', UploadKind::Image->value)
             ->latest()
             ->limit(self::MAX_REFERENCES)
             ->pluck('path')
             ->map(fn (string $path): string => MediaUrl::resolve($path))
             ->all();
+
+        // Un video no se le puede pasar tal cual al modelo de texto/visión de
+        // esta app: se le saca un fotograma cerca del arranque y se lee como
+        // a cualquier otra imagen. Ella lo notó primero: «siento que no está
+        // leyendo esa parte del video, [...] no agrega ese tipo de letra».
+        $videoFrames = ContentUpload::query()
+            ->where('provider_id', $provider->id)
+            ->references()
+            ->where('kind', UploadKind::Video->value)
+            ->latest()
+            ->limit(self::MAX_VIDEO_REFERENCES)
+            ->pluck('path')
+            ->map(function (string $path): ?string {
+                try {
+                    $binary = Storage::disk('r2')->get($path);
+                } catch (Throwable) {
+                    return null;
+                }
+
+                if ($binary === null) {
+                    return null;
+                }
+
+                $frame = $this->extractFrame->handle($binary);
+
+                return $frame === null ? null : 'data:image/jpeg;base64,'.base64_encode($frame);
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $urls = [...$imageUrls, ...$videoFrames];
 
         if ($urls === []) {
             return ['ok' => false, 'error' => 'admin.contentStyleNoReferences'];
@@ -129,7 +172,7 @@ class ReadReferenceStyle
           "colores": ["#RRGGBB", "#RRGGBB", "#RRGGBB"],
           "posicion_texto": "arriba" | "centro" | "abajo",
           "tipografia": "serif" | "condensada",
-          "estilo_titular": "bloques" | "franja" | "limpio",
+          "estilo_titular": "bloques" | "franja" | "limpio" | "cursiva",
           "lleva_precio": true | false
         }
 
@@ -138,7 +181,9 @@ class ReadReferenceStyle
         otro de apoyo.
         estilo_titular: "bloques" si cada línea tiene su propio recuadro de color,
         "franja" si hay una banda de lado a lado, "limpio" si el texto va suelto sobre
-        la foto sin fondo.
+        la foto sin fondo, "cursiva" si hay dos palabras apiladas y UNA de ellas está en
+        letra script/manuscrita (inclinada, con trazos que se conectan) mientras la otra
+        va en mayúsculas gruesas de molde — no importa cuál de las dos va arriba.
         TXT;
     }
 
@@ -174,7 +219,7 @@ class ReadReferenceStyle
             'colores' => array_slice($colores, 0, 3),
             'posicion_texto' => $this->oneOf($decoded['posicion_texto'] ?? null, ['arriba', 'centro', 'abajo']),
             'tipografia' => $this->oneOf($decoded['tipografia'] ?? null, ['serif', 'condensada']),
-            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio']),
+            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio', 'cursiva']),
             'lleva_precio' => (bool) ($decoded['lleva_precio'] ?? false),
         ];
     }

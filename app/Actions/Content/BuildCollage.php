@@ -145,10 +145,20 @@ class BuildCollage
         $spots = ['center', 'bottom', 'top'];
         $spot = BrandStyle::headlineSpotFor($style) ?? $spots[array_rand($spots)];
 
-        $size = $look === 'clean' ? 104 : 96;
-        $lineHeight = (int) round($size * 1.22);
+        $size = in_array($look, ['clean', 'cursiva'], true) ? 104 : 96;
+        // La script agranda la línea y sus trazos vuelan más allá de la caja
+        // normal de una letra: con el mismo aire de siempre, su cola tocaba
+        // la línea de abajo cuando le tocaba ir arriba.
+        $lineHeight = (int) round($size * ($look === 'cursiva' ? 1.42 : 1.22));
         $padX = 26;
         $padY = 12;
+
+        // 'cursiva': una línea en letra script y el resto en la gruesa
+        // condensada, apiladas — la tendencia que ella pidió imitar («una
+        // montada sobre otra, arriba cursiva y abajo grueso, o al revés»).
+        // Cuál línea es la script se sortea, así sale a veces arriba y a
+        // veces abajo, como en sus referencias.
+        $scriptLine = $look === 'cursiva' ? array_rand($lines) : null;
 
         $blockHeight = count($lines) * $lineHeight;
 
@@ -175,7 +185,9 @@ class BuildCollage
 
         // Y a veces la última línea va en el color de acento en vez de blanca:
         // es el truco de su referencia («que SIEMPRE quisiste» en dorado).
-        $accentLast = $look !== 'blocks' && random_int(0, 1) === 1;
+        // 'cursiva' queda afuera: sus referencias de este estilo son siempre
+        // blancas, sin acento de color.
+        $accentLast = ! in_array($look, ['blocks', 'cursiva'], true) && random_int(0, 1) === 1;
 
         // La franja va de una sola pieza, antes del texto: dibujar una por
         // línea dejaba rayas de foto entre medio y se veía descuidado.
@@ -188,7 +200,18 @@ class BuildCollage
 
         foreach ($lines as $i => $line) {
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
-            $width = $this->textWidth($line, $size, $font);
+
+            // La script se lee más chica que la condensada al mismo tamaño de
+            // punto por sus trazos finos — se agranda para que pese igual.
+            $isScriptLine = $look === 'cursiva' && $i === $scriptLine;
+            $lineFont = match (true) {
+                $isScriptLine => resource_path('fonts/Pacifico.ttf'),
+                $look === 'cursiva' => resource_path('fonts/Anton.ttf'),
+                default => $font,
+            };
+            $lineSize = $isScriptLine ? (int) round($size * 1.3) : $size;
+
+            $width = $this->textWidth($line, $lineSize, $lineFont);
             $blockColor = $colors[$i % count($colors)];
 
             if ($look === 'blocks') {
@@ -201,11 +224,11 @@ class BuildCollage
                     },
                 );
             } elseif ($look !== 'band') {
-                // 'clean': sin fondo. Una sombra suave detrás para que sobreviva
-                // sobre una foto clara, que en belleza son la mitad.
-                $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $f) use ($size, $font): void {
-                    $f->filename($font);
-                    $f->size($size);
+                // 'clean' y 'cursiva': sin fondo. Una sombra suave detrás para
+                // que sobreviva sobre una foto clara, que en belleza son la mitad.
+                $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $f) use ($lineSize, $lineFont): void {
+                    $f->filename($lineFont);
+                    $f->size($lineSize);
                     $f->color('rgba(0, 0, 0, 0.45)');
                     $f->align('center');
                     $f->valign('middle');
@@ -225,9 +248,9 @@ class BuildCollage
                 default => '#ffffff',
             };
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $textColor): void {
-                $f->filename($font);
-                $f->size($size);
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($lineSize, $lineFont, $textColor): void {
+                $f->filename($lineFont);
+                $f->size($lineSize);
                 $f->color($textColor);
                 $f->align('center');
                 $f->valign('middle');

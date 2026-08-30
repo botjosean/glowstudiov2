@@ -65,6 +65,7 @@ class BrandStyle
             'bloques' => 'blocks',
             'franja' => 'band',
             'limpio' => 'clean',
+            'cursiva' => 'cursiva',
             default => null,
         };
 
@@ -294,14 +295,19 @@ class BrandStyle
      * franja o con texto limpio. Restringirlo por rubro evita justo el post
      * que ella no publicaría.
      *
+     * 'cursiva' —script apilada con la condensada, la tendencia que ella
+     * pidió imitar— se deja afuera de barbería y tatuajes: son rubros de
+     * marca dura, y una script ahí desentona con lo que ellos mismos
+     * publicarían.
+     *
      * @return list<string>
      */
     public static function headlineStyles(?BusinessCategory $category): array
     {
         return match ($category) {
             BusinessCategory::Barbershop, BusinessCategory::TattooPiercing => ['band', 'clean'],
-            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band'],
-            default => ['blocks', 'band', 'clean'],
+            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band', 'cursiva'],
+            default => ['blocks', 'band', 'clean', 'cursiva'],
         };
     }
 }

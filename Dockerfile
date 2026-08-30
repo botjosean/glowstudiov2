@@ -38,6 +38,10 @@ RUN apk add --no-cache \
         icu \
         imagemagick \
         libwebp-tools \
+        # Para sacarle un fotograma a un video de referencia y poder leerlo
+        # con el mismo modelo de visión que ya lee las fotos. Ver
+        # App\Actions\Content\ExtractVideoFrame.
+        ffmpeg \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         g++ \

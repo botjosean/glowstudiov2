@@ -8,6 +8,7 @@ use App\Models\Provider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -397,6 +398,61 @@ class ContentPanelTest extends TestCase
         // el video quedaría destruido y con extensión .webp.
         $this->assertStringEndsWith('.mp4', $upload->path);
         Storage::disk('r2')->assertExists($upload->path);
+    }
+
+    public function test_learning_style_reads_video_references_too(): void
+    {
+        // Antes esta parte quedaba completamente ciega: un video de
+        // referencia se guardaba pero nunca se miraba. Ella lo notó primero:
+        // «siento que no está leyendo esa parte del video [...] no agrega ese
+        // tipo de letra».
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'colores' => ['#0b0f19', '#c9a227', '#ffffff'],
+                'posicion_texto' => 'centro',
+                'tipografia' => 'condensada',
+                'estilo_titular' => 'cursiva',
+                'lleva_precio' => false,
+            ])]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/subir', [
+                'purpose' => 'reference',
+                // El clip sintético es tan mínimo (un segundo, sin audio) que
+                // libmagic a veces lo clasifica como "application/mp4" en vez
+                // de "video/mp4" al no tener extensión en el archivo
+                // temporal — se fuerza el tipo real para no probar una
+                // ambigüedad de fixture en vez del código.
+                'photos' => [UploadedFile::fake()->createWithContent('tendencia.mp4', $this->unVideoDePrueba())->mimeType('video/mp4')],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/estilo')
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('cursiva', $provider->fresh()->content_style['estilo_titular']);
+    }
+
+    /**
+     * Un clip real y chiquito, generado en el momento: la prueba necesita
+     * bytes de video de verdad para que ffmpeg le saque un fotograma, no un
+     * archivo relleno como el que usan las pruebas de solo-guardado.
+     */
+    private function unVideoDePrueba(): string
+    {
+        $out = sys_get_temp_dir().'/glow-test-clip-'.uniqid().'.mp4';
+
+        Process::timeout(20)->run([
+            'ffmpeg', '-y',
+            '-f', 'lavfi', '-i', 'color=c=blue:s=64x64:d=1',
+            $out,
+        ]);
+
+        return file_get_contents($out);
     }
 
     public function test_a_video_cannot_be_sent_to_build_a_post(): void

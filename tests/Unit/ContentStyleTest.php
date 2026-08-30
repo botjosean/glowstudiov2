@@ -78,6 +78,27 @@ class ContentStyleTest extends TestCase
         $this->assertNull(BrandStyle::headlineSpotFor(null));
     }
 
+    public function test_a_read_cursiva_style_is_honoured(): void
+    {
+        // La tendencia que ella pidió imitar: script apilada con la gruesa.
+        // Ver App\Actions\Content\BuildCollage::headline().
+        $this->assertSame(
+            ['cursiva'],
+            BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'cursiva'])),
+        );
+    }
+
+    public function test_cursiva_is_offered_for_most_rubros_but_not_barbershop(): void
+    {
+        $this->assertContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::Nails));
+        $this->assertContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::Hair));
+        $this->assertContains('cursiva', BrandStyle::headlineStyles(null));
+
+        // Marca dura, sin script: no es lo que ellos mismos publicarían.
+        $this->assertNotContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::Barbershop));
+        $this->assertNotContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::TattooPiercing));
+    }
+
     public function test_a_half_broken_card_falls_back_field_by_field(): void
     {
         // El modelo puede acertar los colores y no la tipografía. Cada campo
