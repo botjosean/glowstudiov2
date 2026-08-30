@@ -7,12 +7,15 @@ use App\Models\Provider;
 /**
  * Reparte las fotos en las láminas de un carrusel.
  *
- * **Ésta es la pieza que faltaba.** Diez fotos no son un collage de diez
- * cuadraditos donde no se distingue nada: son una portada con titular, uno o
- * dos collages en el medio y un cierre que invita a agendar. Ella lo dijo
- * así: «no es que si sube 10 fotos arme algo de 10 fotos, la idea es armar
- * collage, armar el carrusel, armar todo ese tipo de cosas», y sus propias
- * referencias son carruseles de tres láminas (1/3, 2/3, 3/3).
+ * **La receta: portada con frase, y después el trabajo solo.** Es la forma
+ * que se repite en todos los carruseles de salón que ella trajo como
+ * referencia, y lo dijo en una línea mirando uno: «una portada con letras
+ * bonitas, buena frase, seguido de fotos».
+ *
+ * La primera versión metía collages de cuatro fotitos en el medio, cada uno
+ * con su pie de contacto encima. A esa altura del carrusel eso solo tapa lo
+ * que se vino a ver: quien ya deslizó hasta la lámina 3 no necesita que le
+ * repitan el teléfono, necesita ver las uñas.
  *
  * La receta es fija a propósito. Dejar que el modelo invente una estructura
  * distinta cada vez da resultados dispares y ella termina rechazándolos; lo
@@ -23,12 +26,8 @@ class BuildCarousel
     /** Instagram no acepta más de diez. */
     private const MAX_SLIDES = 10;
 
-    /** Cuántas fotos entran en cada collage del medio. */
-    private const PER_COLLAGE = 4;
-
     public function __construct(
         private readonly BuildHero $hero,
-        private readonly BuildCollage $collage,
     ) {}
 
     /**
@@ -45,32 +44,24 @@ class BuildCarousel
             return [$this->hero->handle($provider, $paths, $headline)];
         }
 
-        $slides = [];
-
-        // Portada: la primera foto a pantalla completa con el titular. Es la
+        // Portada: la primera foto a pantalla completa con la frase. Es la
         // única que se ve en el muro, así que se lleva la foto de entrada.
-        $slides[] = $this->hero->handle($provider, [$paths[0]], $headline);
+        $slides = [$this->hero->handle($provider, [$paths[0]], $headline)];
 
-        // El medio: el resto repartido en collages de a cuatro. Se salta la
-        // portada para no repetirla de inmediato.
-        $rest = array_slice($paths, 1);
-
-        foreach (array_chunk($rest, self::PER_COLLAGE) as $chunk) {
-            if (count($slides) >= self::MAX_SLIDES - 1) {
+        // Y después, el trabajo solo. Sin texto, sin sello, sin pie: la
+        // portada ya dijo lo que había que decir y a partir de ahí lo único
+        // que importa son las uñas o el cabello.
+        //
+        // Antes acá iban collages de cuatro fotitos con su propio pie de
+        // contacto encima, y a esa altura del carrusel eso solo tapa el
+        // trabajo. Ella lo mostró con un ejemplo y lo dijo en una línea:
+        // «una portada con letras bonitas, buena frase, seguido de fotos».
+        foreach (array_slice($paths, 1) as $path) {
+            if (count($slides) >= self::MAX_SLIDES) {
                 break;
             }
 
-            // Un collage de una sola foto no es un collage: va como lámina
-            // entera, sin titular encima para no tapar dos veces lo mismo.
-            $slides[] = count($chunk) === 1
-                ? $this->hero->handle($provider, $chunk, [])
-                : $this->collage->handle($provider, $chunk, []);
-        }
-
-        // Cierre: vuelve la foto de portada con la invitación. Repetirla es lo
-        // normal en un carrusel — cierra por donde abrió.
-        if (count($slides) < self::MAX_SLIDES) {
-            $slides[] = $this->hero->handle($provider, [$paths[0]], ['AGENDA', 'TU CITA']);
+            $slides[] = $this->hero->plain($provider, $path);
         }
 
         return $slides;

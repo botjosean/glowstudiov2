@@ -553,10 +553,12 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
-    public function test_a_carousel_spreads_the_photos_across_several_slides(): void
+    public function test_a_carousel_is_a_cover_plus_one_clean_photo_per_slide(): void
     {
-        // Lo que ella pedía: seis fotos no son un collage de seis cuadraditos,
-        // son portada + collages + cierre.
+        // La receta que ella mostró con un ejemplo: «una portada con letras
+        // bonitas, buena frase, seguido de fotos». Antes el medio eran
+        // collages de cuatro fotitos con el pie de contacto encima, que a esa
+        // altura del carrusel solo tapan el trabajo.
         $provider = Provider::factory()->published()->create();
 
         $this->actingAs($provider->user)->post('/admin/contenido/subir', [
@@ -572,13 +574,33 @@ class ContentPanelTest extends TestCase
 
         $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
 
-        // Portada + collage de 4 + collage de 1 + cierre.
-        $this->assertCount(4, $post->slides);
+        // Seis fotos = una portada + las cinco restantes, una por lámina.
+        $this->assertCount(6, $post->slides);
         $this->assertSame($post->slides[0], $post->path);
 
         foreach ($post->slides as $slide) {
             Storage::disk('r2')->assertExists($slide);
         }
+    }
+
+    public function test_a_carousel_never_goes_past_what_instagram_accepts(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 10))->map(fn () => UploadedFile::fake()->image('x.jpg'))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'carousel', 'uploadIds' => $ids]);
+
+        $this->assertLessThanOrEqual(
+            10,
+            count(ContentPost::query()->where('provider_id', $provider->id)->sole()->slides),
+        );
     }
 
     public function test_a_hero_post_is_built_from_a_single_photo(): void

@@ -34,6 +34,23 @@ class BuildHero
     ) {}
 
     /**
+     * La foto sola, al cuadrado, sin una sola letra encima.
+     *
+     * Son las láminas 2 en adelante del carrusel. Ella lo mostró con un
+     * ejemplo: «una portada con letras bonitas, buena frase, seguido de
+     * fotos». Después de la portada, el trabajo se muestra y ya — ni sombra,
+     * ni sello, ni pie de contacto tapando las uñas.
+     */
+    public function plain(Provider $provider, string $path): string
+    {
+        $canvas = ImageManager::imagick()
+            ->read(Storage::disk('r2')->get($path))
+            ->cover(self::CANVAS, self::CANVAS);
+
+        return $this->store($provider, $canvas);
+    }
+
+    /**
      * @param  list<string>  $paths  se usa la primera
      * @param  list<string>  $headline  hasta 3 líneas
      */
@@ -64,6 +81,15 @@ class BuildHero
             $this->drawHeadline->draw($canvas, $plan, self::CANVAS);
         }
 
+        return $this->store($provider, $canvas);
+    }
+
+    /**
+     * Guarda la lámina y devuelve su clave de R2. Compartido por la portada
+     * y por las fotos limpias.
+     */
+    private function store(Provider $provider, ImageInterface $canvas): string
+    {
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
 
         Storage::disk('r2')->put($key, (string) $canvas->toJpeg(quality: 90), [
