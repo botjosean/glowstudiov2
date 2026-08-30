@@ -45,6 +45,10 @@ class BuildColorBlock
     /** La franja del medio que queda libre, en píxeles. */
     private const BAND = (int) (self::CANVAS * (1 - 2 * self::CORNER));
 
+    public function __construct(
+        private readonly FindOrCreateColorProp $props,
+    ) {}
+
     /**
      * @param  list<string>  $paths  hasta cuatro; las de más se ignoran
      * @return string la clave de R2 del post generado
@@ -58,7 +62,7 @@ class BuildColorBlock
 
         $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill($fondo);
 
-        $this->corners($canvas, $manager, array_values($paths));
+        $this->corners($canvas, $manager, array_values($paths), $provider, $colorName, $colorHex);
         $this->name($canvas, $colorName, $tinta);
         $this->wordmark($canvas, $provider, $tinta);
 
@@ -80,19 +84,44 @@ class BuildColorBlock
      * diagonal —arriba a la izquierda y abajo a la derecha— para que el
      * cuadro no quede desbalanceado.
      *
+     * Si sobran esquinas —ella eligió dos o tres fotos, no cuatro— las que
+     * quedan libres se llenan con una foto decorativa a juego con el color
+     * en vez de dejarse en blanco: es lo que hace Mimosa Studio con el limón
+     * de "Butter yellow" y la fresa de "Strawberry Red". Nunca es el trabajo
+     * real —eso sigue siendo siempre una foto de verdad, nunca generada—.
+     *
      * @param  list<string>  $paths
      */
-    private function corners(ImageInterface $canvas, ImageManager $manager, array $paths): void
+    private function corners(ImageInterface $canvas, ImageManager $manager, array $paths, Provider $provider, string $colorName, string $colorHex): void
     {
         $lado = (int) round(self::CANVAS * self::CORNER);
 
         // Orden de llenado: diagonal primero, después las otras dos.
         $esquinas = ['top-left', 'bottom-right', 'bottom-left', 'top-right'];
+        $reales = array_slice($paths, 0, 4);
 
-        foreach (array_slice($paths, 0, 4) as $i => $path) {
+        foreach ($reales as $i => $path) {
             $foto = $manager->read(Storage::disk('r2')->get($path))->cover($lado, $lado);
 
             $canvas->place($foto, $esquinas[$i], 0, 0);
+        }
+
+        $faltan = array_slice($esquinas, count($reales));
+
+        if ($faltan === [] || $provider->business_category === null) {
+            return;
+        }
+
+        $prop = $this->props->handle($provider->business_category, $colorName, $colorHex);
+
+        if ($prop === null) {
+            return;
+        }
+
+        $decoracion = $manager->read(Storage::disk('r2')->get($prop))->cover($lado, $lado);
+
+        foreach ($faltan as $esquina) {
+            $canvas->place($decoracion, $esquina, 0, 0);
         }
     }
 

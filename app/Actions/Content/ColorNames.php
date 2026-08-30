@@ -86,6 +86,32 @@ class ColorNames
     }
 
     /**
+     * El hex del catálogo más cercano —no el hex exacto que se le pasó—,
+     * para agrupar por "cajón" de color. Lo usa FindOrCreateColorProp: con
+     * ~26 colores fijos, cachear por el más cercano evita generar de nuevo
+     * una foto decorativa por cada tono ligeramente distinto de rosa.
+     */
+    public static function nearestKey(string $hex): string
+    {
+        [$r, $g, $b] = self::rgb($hex);
+
+        $mejor = null;
+        $menorDistancia = PHP_INT_MAX;
+
+        foreach (array_keys(self::CATALOG) as $candidato) {
+            [$cr, $cg, $cb] = self::rgb($candidato);
+            $distancia = ($r - $cr) ** 2 + ($g - $cg) ** 2 + ($b - $cb) ** 2;
+
+            if ($distancia < $menorDistancia) {
+                $menorDistancia = $distancia;
+                $mejor = $candidato;
+            }
+        }
+
+        return $mejor ?? $hex;
+    }
+
+    /**
      * ¿Son dos colores lo bastante distintos como para no ser el mismo
      * trabajo?
      *

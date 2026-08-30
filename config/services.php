@@ -23,6 +23,12 @@ return [
         // referencias reales de una proveedora — acertó la paleta y la
         // tipografía donde gpt-4o-mini se equivocó en las dos.
         'vision_model' => env('ASSISTANT_VISION_MODEL', 'google/gemini-2.5-flash'),
+        // Otro aparte que genera imágenes en vez de solo leerlas: lo usa
+        // GeneratePropImage para las fotos decorativas de "Fondo de color"
+        // (la fruta, la tela, el accesorio a juego con el color — nunca el
+        // trabajo real). Comprobado contra la misma cuenta ya configurada
+        // antes de construir nada encima.
+        'image_model' => env('ASSISTANT_IMAGE_MODEL', 'google/gemini-2.5-flash-image'),
         'timeout' => env('ASSISTANT_TIMEOUT', 30),
         'temperature' => env('ASSISTANT_TEMPERATURE', 0.3),
         'max_completion_tokens' => env('ASSISTANT_MAX_COMPLETION_TOKENS', 1024),
