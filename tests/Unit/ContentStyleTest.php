@@ -51,14 +51,20 @@ class ContentStyleTest extends TestCase
         );
     }
 
-    public function test_a_read_headline_style_leaves_no_room_for_chance(): void
+    public function test_a_read_headline_style_weighs_the_bag_but_leaves_room_for_variety(): void
     {
-        // Uno solo, no un sorteo: si ella usa franja, sortear entre tres le
-        // devolvería dos de cada tres posts que no se parecen a lo suyo.
-        $this->assertSame(
-            ['band'],
-            BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha()),
-        );
+        // Antes era uno solo y nada más — y eso fue el error real: con la
+        // ficha marcando "limpio", cada post le salía exactamente igual al
+        // anterior, para siempre. Ella lo pidió con las mismas palabras que
+        // usó para las plantillas: «no hay combinación de letras cursivas».
+        // Ahora pesa más, pero no es el único que puede salir.
+        $bolsa = BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha());
+
+        $this->assertContains('band', $bolsa);
+        $this->assertContains('cursiva', $bolsa);
+        $this->assertContains('resaltado', $bolsa);
+        // Pesa más: aparece más veces que cualquier otro estilo suelto.
+        $this->assertGreaterThan(1, array_count_values($bolsa)['band']);
     }
 
     public function test_the_read_position_is_honoured(): void
@@ -78,14 +84,14 @@ class ContentStyleTest extends TestCase
         $this->assertNull(BrandStyle::headlineSpotFor(null));
     }
 
-    public function test_a_read_cursiva_style_is_honoured(): void
+    public function test_a_read_cursiva_style_is_weighted_in(): void
     {
         // La tendencia que ella pidió imitar: script apilada con la gruesa.
-        // Ver App\Actions\Content\BuildCollage::headline().
-        $this->assertSame(
-            ['cursiva'],
-            BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'cursiva'])),
-        );
+        // Ver App\Actions\Content\DrawHeadline::draw().
+        $bolsa = BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'cursiva']));
+
+        $this->assertGreaterThan(1, array_count_values($bolsa)['cursiva']);
+        $this->assertContains('blocks', $bolsa);
     }
 
     public function test_cursiva_is_offered_for_most_rubros_but_not_barbershop(): void
@@ -99,15 +105,15 @@ class ContentStyleTest extends TestCase
         $this->assertNotContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::TattooPiercing));
     }
 
-    public function test_a_read_resaltado_style_is_honoured(): void
+    public function test_a_read_resaltado_style_is_weighted_in(): void
     {
         // Texto blanco con una palabra en color de acento, sin recuadro —
         // la otra tendencia de video que ella señaló. Ver
-        // BuildCollage::highlightedLine().
-        $this->assertSame(
-            ['resaltado'],
-            BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'resaltado'])),
-        );
+        // DrawHeadline::highlightedLine().
+        $bolsa = BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'resaltado']));
+
+        $this->assertGreaterThan(1, array_count_values($bolsa)['resaltado']);
+        $this->assertContains('band', $bolsa);
     }
 
     public function test_a_half_broken_card_falls_back_field_by_field(): void

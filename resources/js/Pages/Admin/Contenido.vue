@@ -598,6 +598,15 @@ const busyLabel = computed(() => {
                 <p v-else class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
                     {{ $t('content.needOneMore') }}
                 </p>
+
+                <!-- Por qué no salió nada: antes esto se quedaba en el
+                     servidor sin avisar nunca. Ella lo probó con "Fondo de
+                     color" y "Combinación" y no vio ni un mensaje — parecía
+                     que el botón no hacía nada. -->
+                <p v-if="generateForm.errors.uploadIds" class="mt-3 rounded-xl bg-[var(--danger-hover)] p-3 text-center text-[13px] font-medium text-[var(--danger)]">
+                    {{ generateForm.errors.uploadIds }}
+                </p>
+
                 <p class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
                     {{ $t('content.noAiOnWork') }}
                 </p>

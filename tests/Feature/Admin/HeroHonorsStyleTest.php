@@ -49,24 +49,32 @@ class HeroHonorsStyleTest extends TestCase
             'tipografia' => 'condensada',
         ];
 
-        $key = app(BuildHero::class)->handle($provider, [$path], ['PALABRA']);
-
-        $canvas = ImageManager::imagick()->read(Storage::disk('r2')->get($key));
-
+        $hero = app(BuildHero::class);
         $encontrado = false;
 
-        // Barrido por la banda central, donde la ficha pidió el titular.
-        for ($x = 100; $x < 980 && ! $encontrado; $x += 6) {
-            for ($y = 480; $y < 600; $y += 6) {
-                if (strtolower($canvas->pickColor($x, $y)->toHex()) === 'ff00aa') {
-                    $encontrado = true;
+        // "Bloques" pesa más en la bolsa pero ya no es el único que puede
+        // salir —ella pidió justo eso, variedad real (ver
+        // BrandStyle::headlineStylesFor)—, así que un solo intento puede
+        // caer en otro tratamiento sin que eso sea un fallo real. Con ~43%
+        // de probabilidad por intento, quince intentos dejan la chance de
+        // fallar en cero de quince por debajo del 0.1%.
+        for ($intento = 0; $intento < 15 && ! $encontrado; $intento++) {
+            $key = $hero->handle($provider, [$path], ['PALABRA']);
+            $canvas = ImageManager::imagick()->read(Storage::disk('r2')->get($key));
 
-                    break;
+            // Barrido por la banda central, donde la ficha pidió el titular.
+            for ($x = 100; $x < 980 && ! $encontrado; $x += 6) {
+                for ($y = 480; $y < 600; $y += 6) {
+                    if (strtolower($canvas->pickColor($x, $y)->toHex()) === 'ff00aa') {
+                        $encontrado = true;
+
+                        break;
+                    }
                 }
             }
         }
 
-        $this->assertTrue($encontrado, 'El titular de la foto grande no usó el color de la plantilla.');
+        $this->assertTrue($encontrado, 'El titular de la foto grande no usó el color de la plantilla en quince intentos.');
     }
 
     public function test_two_different_style_cards_do_not_produce_the_same_hero(): void

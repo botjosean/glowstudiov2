@@ -70,10 +70,19 @@ class BrandStyle
             default => null,
         };
 
-        // Se devuelve UNO solo cuando se leyó de sus referencias: si ella usa
-        // bloques, sortear entre tres estilos le devolvería dos de cada tres
-        // posts que no se parecen a lo suyo.
-        return $leido !== null ? [$leido] : self::headlineStyles($category);
+        // Antes se devolvía UNO solo cuando se leyó de sus referencias, y
+        // eso fue un error real: con su ficha marcando "limpio", cada post
+        // salía exactamente igual al anterior, para siempre. Ella lo pidió
+        // con las mismas palabras que usó para las plantillas fijas: quiere
+        // ver los tratamientos combinados —cursiva, resaltado— y no un solo
+        // estilo repetido. «No hay combinación de letras cursivas».
+        //
+        // Con el estilo leído puesto TRES veces en la bolsa y cada uno de
+        // los demás una sola vez, la mayoría de los posts se le siguen
+        // pareciendo a lo suyo, pero no todos — hay variedad de verdad.
+        return $leido !== null
+            ? [...array_fill(0, 3, $leido), ...self::headlineStyles($category)]
+            : self::headlineStyles($category);
     }
 
     /**

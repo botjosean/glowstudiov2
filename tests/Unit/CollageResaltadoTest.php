@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Actions\Content\DrawHeadline;
+use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
@@ -14,15 +15,36 @@ use Tests\TestCase;
  */
 class CollageResaltadoTest extends TestCase
 {
-    public function test_the_highlighted_word_and_the_rest_of_the_line_use_different_colors(): void
+    /**
+     * "Resaltado" pesa más en la bolsa de estilos cuando la ficha lo pide,
+     * pero ya no es el único que puede salir —ella pidió justo eso, variedad
+     * real, ver BrandStyle::headlineStylesFor—, así que un intento solo
+     * puede caer en otro tratamiento sin que eso sea un fallo de verdad.
+     * Se reintenta hasta pintar de nuevo sobre un lienzo limpio.
+     */
+    private function drawResaltado(array $lines): ImageInterface
     {
         $manager = ImageManager::imagick();
-        $canvas = $manager->create(1080, 1080)->fill('#2b2320');
-
         $build = app(DrawHeadline::class);
         $style = ['colores' => ['#111827', '#e11d63', '#7c3aed'], 'estilo_titular' => 'resaltado', 'posicion_texto' => 'centro'];
 
-        $build->handle($canvas, ['PALABRA CLAVE'], null, $style);
+        for ($intento = 0; $intento < 15; $intento++) {
+            $plan = $build->plan($lines, null, $style);
+
+            if ($plan['look'] === 'resaltado') {
+                $canvas = $manager->create(1080, 1080)->fill('#2b2320');
+                $build->draw($canvas, $plan);
+
+                return $canvas;
+            }
+        }
+
+        $this->fail('"resaltado" no salió sorteado en quince intentos.');
+    }
+
+    public function test_the_highlighted_word_and_the_rest_of_the_line_use_different_colors(): void
+    {
+        $canvas = $this->drawResaltado(['PALABRA CLAVE']);
 
         $foundWhite = false;
         $foundAccent = false;
@@ -44,13 +66,7 @@ class CollageResaltadoTest extends TestCase
     public function test_a_single_word_highlighted_line_is_painted_entirely_in_the_accent_color(): void
     {
         // Sin "resto" que dejar en blanco: la línea entera va en acento.
-        $manager = ImageManager::imagick();
-        $canvas = $manager->create(1080, 1080)->fill('#2b2320');
-
-        $build = app(DrawHeadline::class);
-        $style = ['colores' => ['#111827', '#e11d63', '#7c3aed'], 'estilo_titular' => 'resaltado', 'posicion_texto' => 'centro'];
-
-        $build->handle($canvas, ['PROFESIONAL'], null, $style);
+        $canvas = $this->drawResaltado(['PROFESIONAL']);
 
         $foundAccent = false;
 
