@@ -29,6 +29,10 @@ class BuildHero
     /** Alto del degradado, desde abajo. */
     private const SHADE = 560;
 
+    public function __construct(
+        private readonly DrawHeadline $drawHeadline,
+    ) {}
+
     /**
      * @param  list<string>  $paths  se usa la primera
      * @param  list<string>  $headline  hasta 3 líneas
@@ -42,7 +46,18 @@ class BuildHero
 
         $this->shade($canvas);
         $this->mark($canvas, $provider);
-        $this->headline($canvas, $headline);
+
+        // El MISMO motor de titulares que el collage. Antes acá había una
+        // versión propia escrita a mano —serif blanca, abajo a la izquierda,
+        // siempre igual— que ignoraba por completo la ficha de estilo, así
+        // que elegir una plantilla no cambiaba nada en este formato, que es
+        // el más usado. Ella lo dijo directo: «sí agarra la foto de
+        // referencia, sí hace todo, pero cuando me da el resultado no es
+        // nada parecido».
+        //
+        // El resguardo de abajo es más chico que en el collage: acá no hay
+        // pie de contacto ni sello en esa esquina.
+        $this->drawHeadline->handle($canvas, $headline, $provider->business_category, $provider->content_style, self::CANVAS, 120);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
 
@@ -121,51 +136,6 @@ class BuildHero
             $font->align('center');
             $font->valign('middle');
         });
-    }
-
-    /**
-     * El antetítulo y el titular, alineados a la izquierda sobre el degradado.
-     *
-     * @param  list<string>  $lines
-     */
-    private function headline(ImageInterface $canvas, array $lines): void
-    {
-        // Misma limpieza que el collage: un emoji no dibuja letra pero sí
-        // ocupa lugar. Ver BuildCollage::cleanLines().
-        $lines = BuildCollage::cleanLines($lines);
-
-        if ($lines === []) {
-            return;
-        }
-
-        $size = 82;
-        $lineHeight = 96;
-        $left = 74;
-        $bottom = self::CANVAS - 96;
-
-        $canvas->text('SU TRABAJO · SIN FILTROS', $left, $bottom - (count($lines) * $lineHeight) - 26, function (FontFactory $font): void {
-            $font->filename(resource_path('fonts/Manrope.ttf'));
-            $font->size(17);
-            $font->color('#e8c877');
-            $font->align('left');
-            $font->valign('middle');
-        });
-
-        foreach ($lines as $i => $line) {
-            $y = $bottom - ((count($lines) - 1 - $i) * $lineHeight);
-
-            $canvas->text($line, $left, $y, function (FontFactory $font) use ($size): void {
-                // Playfair y no Anton: ella pidió «letras blancas elegantes»,
-                // y su propia referencia de cabello usa una serif fina, no la
-                // condensada gruesa. Anton se queda para los bloques del
-                // collage, donde lo que se busca es golpe y no elegancia.
-                $font->filename(resource_path('fonts/Playfair.ttf'));
-                $font->size($size);
-                $font->color('#ffffff');
-                $font->align('left');
-                $font->valign('middle');
-            });
-        }
     }
 
     private function spaced(string $text): string

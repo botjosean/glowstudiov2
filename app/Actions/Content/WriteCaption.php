@@ -84,7 +84,7 @@ class WriteCaption
                     // contestar. 'low' salvo que se configure otra cosa.
                     'reasoning' => ['effort' => $config['reasoning_effort'] ?: 'low'],
                     'messages' => [
-                        ['role' => 'system', 'content' => $this->instructions()],
+                        ['role' => 'system', 'content' => $this->instructions($this->wantsPrice($provider))],
                         ['role' => 'user', 'content' => $this->brief($provider)],
                     ],
                 ]);
@@ -109,9 +109,53 @@ class WriteCaption
         return (string) $response->json('choices.0.message.content', '');
     }
 
-    private function instructions(): string
+    /**
+     * ¿Este post lleva precio en el titular?
+     *
+     * Lo dice la ficha leída de sus referencias: si el diseño que ella eligió
+     * como plantilla no muestra precios, el suyo tampoco. Sin ficha se
+     * sortea, para que no salgan todos iguales.
+     */
+    private function wantsPrice(Provider $provider): bool
     {
-        return <<<'TXT'
+        $ficha = $provider->content_style;
+
+        if (is_array($ficha) && array_key_exists('lleva_precio', $ficha)) {
+            return (bool) $ficha['lleva_precio'];
+        }
+
+        return random_int(0, 1) === 1;
+    }
+
+    /**
+     * Qué se le pide al modelo.
+     *
+     * El precio no va siempre. Antes se le ordenaba usar SIEMPRE un servicio
+     * con su precio, y todos los posts salían con el mismo "ACRILICAS DESDE
+     * 65" encima — ella lo señaló directo: «siempre pone el precio desde 65».
+     * Ahora manda lo que dicen sus propias referencias (`lleva_precio` de la
+     * ficha, que se leía pero no se usaba en ningún lado), y sin ficha se
+     * sortea, para que no sean todos iguales.
+     */
+    private function instructions(bool $conPrecio): string
+    {
+        $reglaPrecio = $conPrecio
+            ? <<<'PRECIO'
+               USA UN SERVICIO Y SU PRECIO DE VERDAD de la lista de abajo: el nombre
+               del servicio en una línea y el precio en otra, como
+               "ACRILICAS / DESDE 65" o "BALAYAGE / 200".
+               Nunca inventes un precio ni cambies el de la lista. Si no hay lista de
+               servicios, usá 2 o 3 palabras con gancho y ningún número.
+            PRECIO
+            : <<<'PRECIO'
+               NO PONGAS NINGÚN PRECIO ni número de dinero en el titular, aunque
+               tengas la lista de servicios abajo. Usá 2 o 3 palabras con gancho:
+               el nombre del servicio ("ACRILICAS / NUEVO SET"), una invitación
+               ("CITAS ABIERTAS / ESTA SEMANA") o el resultado ("TRANSFORMACIÓN /
+               REAL"). Variá: no uses siempre la misma fórmula.
+            PRECIO;
+
+        return <<<TXT
         Escribes posts de Instagram para profesionales de belleza en Estados Unidos.
 
         Devuelves tres cosas:
@@ -119,20 +163,14 @@ class WriteCaption
         1. TITULAR: 2 o 3 líneas cortas que van impresas GRANDES sobre la foto. Es lo
            que hace que alguien pare de deslizar.
 
-           Cuando tengas los servicios y precios de ella, USA UNO DE VERDAD: el nombre
-           del servicio en una línea y el precio en otra, como
-           "ACRILICAS / DESDE 65" o "BALAYAGE / 200". Un titular con un servicio y un
-           precio vende; uno que dice "NUEVOS" no dice nada.
-           Nunca inventes un precio ni cambies el de la lista.
+        {$reglaPrecio}
 
-           Si no hay servicios en la lista, usá 2 o 3 palabras con gancho que
-           sirvan para CUALQUIER rubro de belleza, como "CITAS ABIERTAS / ESTA
-           SEMANA". Nunca asumas uñas, cabello ni ningún servicio puntual si
-           el rubro no viene indicado más abajo.
+           Nunca asumas uñas, cabello ni ningún servicio puntual si el rubro no
+           viene indicado más abajo.
 
            SOLO letras, números y espacios. Ni un emoji, ni un símbolo de dólar, ni un
            asterisco: la tipografía del cartel no los dibuja y dejan un hueco de color
-           vacío. Escribí el precio en números pelados: 65, no $65.
+           vacío. Escribí el precio en números pelados: 65, no \$65.
         2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
         3. HASHTAGS: entre 5 y 8, cada uno empezando por #. Tienen que ser del rubro

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Actions\Content\BuildCollage;
+use App\Actions\Content\DrawHeadline;
 use PHPUnit\Framework\TestCase;
 
 class CollageHeadlineTest extends TestCase
@@ -16,7 +16,7 @@ class CollageHeadlineTest extends TestCase
     {
         $this->assertSame(
             ['RESULTADOS', 'DE HOY'],
-            BuildCollage::cleanLines(['Resultados', 'de hoy', '✨']),
+            DrawHeadline::cleanLines(['Resultados', 'de hoy', '✨']),
         );
     }
 
@@ -24,7 +24,7 @@ class CollageHeadlineTest extends TestCase
     {
         $this->assertSame(
             ['CITAS ABIERTAS', 'YA'],
-            BuildCollage::cleanLines(['✨ Citas abiertas ✨', '  ya  ']),
+            DrawHeadline::cleanLines(['✨ Citas abiertas ✨', '  ya  ']),
         );
     }
 
@@ -32,18 +32,18 @@ class CollageHeadlineTest extends TestCase
     {
         $this->assertSame(
             ['¿QUÉ ESPERÁS?', 'AGENDÁ'],
-            BuildCollage::cleanLines(['¿Qué esperás?', 'agendá']),
+            DrawHeadline::cleanLines(['¿Qué esperás?', 'agendá']),
         );
     }
 
     public function test_at_most_three_lines(): void
     {
-        $this->assertCount(3, BuildCollage::cleanLines(['una', 'dos', 'tres', 'cuatro']));
+        $this->assertCount(3, DrawHeadline::cleanLines(['una', 'dos', 'tres', 'cuatro']));
     }
 
     public function test_a_headline_of_only_symbols_leaves_nothing(): void
     {
-        $this->assertSame([], BuildCollage::cleanLines(['✨', '🔥', '···']));
+        $this->assertSame([], DrawHeadline::cleanLines(['✨', '🔥', '···']));
     }
 
     /**
@@ -53,13 +53,13 @@ class CollageHeadlineTest extends TestCase
      */
     public function test_dark_text_on_a_light_block_so_it_stays_readable(): void
     {
-        $this->assertSame('#111827', BuildCollage::textColorFor('#FFFFFF'));
-        $this->assertSame('#111827', BuildCollage::textColorFor('#DCC9B7'));
+        $this->assertSame('#111827', DrawHeadline::textColorFor('#FFFFFF'));
+        $this->assertSame('#111827', DrawHeadline::textColorFor('#DCC9B7'));
     }
 
     public function test_white_text_on_a_dark_block_as_before(): void
     {
-        $this->assertSame('#ffffff', BuildCollage::textColorFor('#000000'));
-        $this->assertSame('#ffffff', BuildCollage::textColorFor('#111827'));
+        $this->assertSame('#ffffff', DrawHeadline::textColorFor('#000000'));
+        $this->assertSame('#ffffff', DrawHeadline::textColorFor('#111827'));
     }
 }

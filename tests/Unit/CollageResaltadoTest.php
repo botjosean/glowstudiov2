@@ -2,16 +2,15 @@
 
 namespace Tests\Unit;
 
-use App\Actions\Content\BuildCollage;
+use App\Actions\Content\DrawHeadline;
 use Intervention\Image\ImageManager;
-use ReflectionMethod;
 use Tests\TestCase;
 
 /**
  * Otra referencia de video que ella señaló directo (30-ago): en varios de
  * sus subtítulos el texto es blanco grueso con una sola palabra o frase
  * resaltada en un color de acento, sin recuadro de fondo. Ver
- * BuildCollage::highlightedLine().
+ * DrawHeadline::handle().
  */
 class CollageResaltadoTest extends TestCase
 {
@@ -20,11 +19,10 @@ class CollageResaltadoTest extends TestCase
         $manager = ImageManager::imagick();
         $canvas = $manager->create(1080, 1080)->fill('#2b2320');
 
-        $build = app(BuildCollage::class);
-        $ref = new ReflectionMethod($build, 'headline');
+        $build = app(DrawHeadline::class);
         $style = ['colores' => ['#111827', '#e11d63', '#7c3aed'], 'estilo_titular' => 'resaltado', 'posicion_texto' => 'centro'];
 
-        $ref->invoke($build, $canvas, ['PALABRA CLAVE'], null, $style);
+        $build->handle($canvas, ['PALABRA CLAVE'], null, $style);
 
         $foundWhite = false;
         $foundAccent = false;
@@ -49,11 +47,10 @@ class CollageResaltadoTest extends TestCase
         $manager = ImageManager::imagick();
         $canvas = $manager->create(1080, 1080)->fill('#2b2320');
 
-        $build = app(BuildCollage::class);
-        $ref = new ReflectionMethod($build, 'headline');
+        $build = app(DrawHeadline::class);
         $style = ['colores' => ['#111827', '#e11d63', '#7c3aed'], 'estilo_titular' => 'resaltado', 'posicion_texto' => 'centro'];
 
-        $ref->invoke($build, $canvas, ['PROFESIONAL'], null, $style);
+        $build->handle($canvas, ['PROFESIONAL'], null, $style);
 
         $foundAccent = false;
 
