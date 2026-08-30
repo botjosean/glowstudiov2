@@ -37,10 +37,17 @@ class ReadReferenceStyle
     private const MAX_REFERENCES = 6;
 
     /**
-     * Los videos salen aparte y con un tope propio, más chico: sacarle un
-     * fotograma a cada uno cuesta más que leer una foto que ya está lista.
+     * Los videos salen aparte, con el mismo tope que las fotos.
+     *
+     * Antes era más chico (2) para ahorrar, pero en una cuenta real (Josean,
+     * 30-ago) eso tomaba solo los DOS MÁS RECIENTES de sus seis videos —y
+     * esos dos resultaron ser clips de "hooks" de marketing sin relación con
+     * el diseño, mientras que los dos que sí mostraban la tendencia que ella
+     * quería (letra script apilada con la gruesa) eran justo los más viejos
+     * y quedaban afuera. Con el mismo tope que las fotos, nada se descarta
+     * en silencio por orden de subida.
      */
-    private const MAX_VIDEO_REFERENCES = 2;
+    private const MAX_VIDEO_REFERENCES = self::MAX_REFERENCES;
 
     public function __construct(
         private readonly ExtractVideoFrame $extractFrame,
