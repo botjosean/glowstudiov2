@@ -165,6 +165,24 @@ class ContentController extends Controller
             ]);
         }
 
+        // Aprender el estilo era un botón aparte que ella tenía que
+        // acordarse de tocar después de subir — y si no lo hacía, la ficha
+        // quedaba vieja o vacía aunque hubiera subido referencias nuevas.
+        // Ella lo dijo directo: «apenas se suba algo como referencia tiene
+        // que detectarlo». Ahora se lee sola en la primera tanda de cada
+        // subida de referencias, con las que ya tenía guardadas más esta.
+        // El botón sigue ahí para releerla a mano después de borrar una.
+        if ($purpose === ContentPurpose::Reference && $request->boolean('first')) {
+            $resultado = $this->style->handle($provider);
+
+            if ($resultado['ok']) {
+                $provider->update([
+                    'content_style' => $resultado['style'],
+                    'content_style_at' => now(),
+                ]);
+            }
+        }
+
         // Solo la primera foto de la primera tanda: si YA es un flyer
         // terminado —título, precio, contacto ya impresos—, el sistema le va
         // a montar SU propio titular arriba y queda ilegible. Visto en una

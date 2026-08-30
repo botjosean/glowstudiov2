@@ -458,24 +458,16 @@ const busyLabel = computed(() => {
                     </div>
                 </div>
 
-                <!-- Aprender el estilo de las referencias: es lo que conecta lo
-                     que ella guardó con cómo se ven los posts. -->
+                <!-- El estilo se aprende solo apenas sube una referencia (ver
+                     ContentController::store()); esto ya no es el botón
+                     principal, queda para releerlo a mano después de borrar
+                     una referencia que no quería. -->
                 <div v-if="references.length > 0" class="mt-3.5">
-                    <button
-                        type="button"
-                        :disabled="styleForm.processing"
-                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold-border)] bg-[var(--gold-soft)] py-3 text-[14px] font-semibold text-[var(--gold-text)] hover:brightness-[0.97] disabled:opacity-60"
-                        @click="learnStyle"
-                    >
-                        <Wand :size="15" />
-                        {{ styleForm.processing ? $t('content.learning') : $t('content.learnStyle') }}
-                    </button>
-
-                    <p v-if="styleForm.errors.style" class="mt-2 text-[13px] font-normal text-[var(--danger)]">
+                    <p v-if="styleForm.errors.style" class="text-[13px] font-normal text-[var(--danger)]">
                         {{ styleForm.errors.style }}
                     </p>
 
-                    <div v-else-if="contentStyle" class="mt-2.5 flex items-center gap-2.5 rounded-xl bg-[var(--surface-alt)] px-3 py-2.5">
+                    <div v-else-if="contentStyle" class="flex items-center gap-2.5 rounded-xl bg-[var(--surface-alt)] px-3 py-2.5">
                         <span class="flex gap-1">
                             <span
                                 v-for="c in contentStyle.colores"
@@ -488,9 +480,19 @@ const busyLabel = computed(() => {
                             {{ $t('content.styleLearnedFrom', contentStyle.referencias) }}
                         </span>
                     </div>
-                    <p v-else class="mt-2 text-[12px] font-normal text-[var(--text-faint)]">
+                    <p v-else class="text-[12px] font-normal text-[var(--text-faint)]">
                         {{ $t('content.styleNotYet') }}
                     </p>
+
+                    <button
+                        type="button"
+                        :disabled="styleForm.processing"
+                        class="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-mute)] hover:text-[var(--text-strong)] disabled:opacity-60"
+                        @click="learnStyle"
+                    >
+                        <Wand :size="13" />
+                        {{ styleForm.processing ? $t('content.learning') : $t('content.relearnStyle') }}
+                    </button>
                 </div>
 
                 <div v-if="references.length > 0" class="mt-3.5 grid grid-cols-4 gap-1.5">

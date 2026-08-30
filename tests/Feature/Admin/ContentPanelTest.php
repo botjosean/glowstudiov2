@@ -589,9 +589,10 @@ class ContentPanelTest extends TestCase
         $this->assertCount(1, $sugerencia['uploadIds']);
     }
 
-    public function test_no_suggestion_is_asked_when_she_already_wrote_a_note(): void
+    public function test_no_note_suggestion_is_asked_when_she_already_wrote_one(): void
     {
-        // Si ella ya escribió, no hay nada que sugerir ni que pagar.
+        // Si ella ya escribió la nota, no hay nada que sugerir ahí — pero el
+        // estilo se sigue leyendo solo, que es una cosa aparte.
         Http::fake();
 
         $provider = Provider::factory()->published()->create();
@@ -604,7 +605,36 @@ class ContentPanelTest extends TestCase
         ]);
 
         $response->assertSessionMissing('noteSuggestion');
-        Http::assertNothingSent();
+        Http::assertSentCount(1);
+    }
+
+    public function test_uploading_the_first_reference_batch_learns_the_style_on_its_own(): void
+    {
+        // Antes había que acordarse de tocar un botón aparte después de
+        // subir. Ella lo dijo directo: «apenas se suba algo como referencia
+        // tiene que detectarlo».
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'colores' => ['#0b0f19', '#c9a227', '#ffffff'],
+                'posicion_texto' => 'centro',
+                'tipografia' => 'condensada',
+                'estilo_titular' => 'resaltado',
+                'lleva_precio' => false,
+            ])]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+        $this->assertNull($provider->content_style);
+
+        // Con nota ya puesta, para que la única llamada sea la del estilo.
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'note' => 'algo',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('a.jpg')],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('resaltado', $provider->fresh()->content_style['estilo_titular']);
     }
 
     public function test_no_suggestion_is_asked_past_the_first_batch(): void
