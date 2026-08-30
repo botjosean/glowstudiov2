@@ -33,6 +33,39 @@ class WriteCaption
             return $this->fallback($provider);
         }
 
+        // Un reintento y no más: es lo que hace falta para un vacío
+        // ocasional, y una descripción no vale una cadena de reintentos que
+        // demoren el post.
+        for ($intento = 1; $intento <= 2; $intento++) {
+            $texto = $this->ask($provider, $config, $apiKey);
+
+            if ($texto === null) {
+                // Sin respuesta o rechazada: reintentar no cambia nada, ya
+                // quedó registrado en ask().
+                return $this->fallback($provider);
+            }
+
+            if (trim($texto) !== '') {
+                return $this->parse($texto, $provider);
+            }
+
+            Log::warning('El modelo devolvió una respuesta vacía al escribir la descripción.', [
+                'provider' => $provider->slug,
+                'intento' => $intento,
+            ]);
+        }
+
+        return $this->fallback($provider);
+    }
+
+    /**
+     * Una llamada al modelo. Devuelve el texto crudo, o null si no hubo
+     * respuesta que valga la pena reintentar (sin conexión o rechazada).
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function ask(Provider $provider, array $config, string $apiKey): ?string
+    {
         try {
             $response = Http::withToken($apiKey)
                 ->timeout((int) ($config['timeout'] ?? 30))
@@ -44,6 +77,12 @@ class WriteCaption
                     // presupuesto. Con 400 la respuesta salía cortada a media
                     // frase y sin hashtags — visto en producción el 29-ago.
                     'max_completion_tokens' => 1500,
+                    // Un titular de tres líneas no necesita razonar en
+                    // profundidad, y dejarlo sin tope es justo lo que vació
+                    // la respuesta en un post real (30-ago): el modelo gastó
+                    // todo el presupuesto pensando y no dejó nada para
+                    // contestar. 'low' salvo que se configure otra cosa.
+                    'reasoning' => ['effort' => $config['reasoning_effort'] ?: 'low'],
                     'messages' => [
                         ['role' => 'system', 'content' => $this->instructions()],
                         ['role' => 'user', 'content' => $this->brief($provider)],
@@ -55,7 +94,7 @@ class WriteCaption
                 'reason' => $exception->getMessage(),
             ]);
 
-            return $this->fallback($provider);
+            return null;
         }
 
         if ($response->failed()) {
@@ -64,10 +103,10 @@ class WriteCaption
                 'status' => $response->status(),
             ]);
 
-            return $this->fallback($provider);
+            return null;
         }
 
-        return $this->parse((string) $response->json('choices.0.message.content', ''), $provider);
+        return (string) $response->json('choices.0.message.content', '');
     }
 
     private function instructions(): string

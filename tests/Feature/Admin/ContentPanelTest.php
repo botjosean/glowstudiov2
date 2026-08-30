@@ -271,6 +271,63 @@ class ContentPanelTest extends TestCase
         $this->assertSame('Hoy estuve creando magia en el salón.', $post->caption);
     }
 
+    public function test_an_empty_first_answer_is_retried_instead_of_falling_back(): void
+    {
+        // Un post real de Josean (30-ago): el modelo gastó todo el
+        // presupuesto de tokens "pensando" y no dejó nada para la respuesta
+        // visible — quedó un post con el texto de repuesto genérico y sin
+        // hashtags, mientras que el post de un minuto antes y el de un
+        // minuto después salieron perfectos. Un solo reintento alcanza.
+        Http::fake(['*' => Http::sequence()
+            ->push(['choices' => [['message' => ['content' => '']]]])
+            ->push(['choices' => [['message' => ['content' => implode("\n", [
+                'TITULAR: BALAYAGE | 120',
+                'DESCRIPCION: Hoy me quedé enamorada de este balayage.',
+                'HASHTAGS: #hair #balayage',
+            ])]]]])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertSame('Hoy me quedé enamorada de este balayage.', $post->caption);
+        $this->assertSame(['#hair', '#balayage'], $post->hashtags);
+    }
+
+    public function test_two_empty_answers_in_a_row_fall_back_instead_of_looping(): void
+    {
+        Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => '']]]])]);
+
+        $provider = Provider::factory()->published()->create(['public_name' => 'Josean']);
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertStringContainsString('Josean — nuevo trabajo', $post->caption);
+        Http::assertSentCount(2);
+    }
+
     public function test_a_collage_uses_every_photo_even_when_they_dont_form_a_rectangle(): void
     {
         // Cinco no forman un rectángulo, y aun así entran las cinco: la
