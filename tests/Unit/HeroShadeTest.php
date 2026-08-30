@@ -23,7 +23,8 @@ class HeroShadeTest extends TestCase
 
         $build = app(BuildHero::class);
         $ref = new ReflectionMethod($build, 'shade');
-        $ref->invoke($build, $canvas);
+        // Sin plan de titular: la sombra de siempre, pegada abajo.
+        $ref->invoke($build, $canvas, null);
 
         // Una muestra cada 8px bajando por el degradado: con las 40 tiras de
         // antes, tramos de 14px enteros compartían exactamente el mismo

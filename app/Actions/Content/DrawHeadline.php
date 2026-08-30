@@ -21,10 +21,17 @@ use Intervention\Image\Typography\FontFactory;
  *
  * Con un solo motor, la ficha leída de su referencia manda igual en los dos
  * formatos.
+ *
+ * **Decidir y dibujar están separados** (`plan()` y `draw()`): el formato de
+ * foto grande necesita saber DÓNDE va a caer el texto antes de pintarlo,
+ * para poner la sombra ahí y no en otro lado. Ver BuildHero::shade().
  */
 class DrawHeadline
 {
     /**
+     * Decide y dibuja de una. Es lo que usa el collage, que no necesita
+     * saber de antemano dónde cae el texto.
+     *
      * @param  list<string>  $lines  hasta 3 líneas
      * @param  array<string, mixed>|null  $style  la ficha leída de su referencia
      * @param  int  $bottomGuard  alto reservado abajo (pie de contacto, sello)
@@ -37,10 +44,37 @@ class DrawHeadline
         int $canvasSize = 1080,
         int $bottomGuard = 210,
     ): void {
+        $plan = $this->plan($lines, $category, $style, $canvasSize, $bottomGuard);
+
+        if ($plan === null) {
+            return;
+        }
+
+        $this->draw($canvas, $plan, $canvasSize);
+    }
+
+    /**
+     * Todas las decisiones de este titular, sin tocar el lienzo.
+     *
+     * Se sortea acá una sola vez: si se sorteara de nuevo al dibujar, la
+     * sombra que el formato de foto grande pone según este plan terminaría
+     * en un lado y el texto en otro.
+     *
+     * @param  list<string>  $lines
+     * @param  array<string, mixed>|null  $style
+     * @return array<string, mixed>|null  null si no queda nada que dibujar
+     */
+    public function plan(
+        array $lines,
+        ?BusinessCategory $category,
+        ?array $style = null,
+        int $canvasSize = 1080,
+        int $bottomGuard = 210,
+    ): ?array {
         $lines = self::cleanLines($lines);
 
         if ($lines === []) {
-            return;
+            return null;
         }
 
         // El estilo se sortea, pero solo entre los que le pegan al rubro: una
@@ -64,21 +98,6 @@ class DrawHeadline
         // normal de una letra: con el mismo aire de siempre, su cola tocaba
         // la línea de abajo cuando le tocaba ir arriba.
         $lineHeight = (int) round($size * ($look === 'cursiva' ? 1.42 : 1.22));
-        $padX = 26;
-        $padY = 12;
-
-        // 'cursiva': una línea en letra script y el resto en la gruesa
-        // condensada, apiladas — la tendencia que ella pidió imitar («una
-        // montada sobre otra, arriba cursiva y abajo grueso, o al revés»).
-        // Cuál línea es la script se sortea, así sale a veces arriba y a
-        // veces abajo, como en sus referencias.
-        $scriptLine = $look === 'cursiva' ? array_rand($lines) : null;
-
-        // 'resaltado': una línea con la última palabra en el color de acento
-        // y el resto en blanco. Otra referencia de video que ella señaló
-        // directo — el mismo recurso se repetía en varios de sus subtítulos:
-        // texto blanco grueso con una sola palabra o frase resaltada.
-        $highlightLine = $look === 'resaltado' ? array_rand($lines) : null;
 
         $blockHeight = count($lines) * $lineHeight;
 
@@ -92,9 +111,88 @@ class DrawHeadline
         // titular. No va con 'blocks' — sobre bloques de color apilados no
         // tiene dónde apoyarse y queda flotando.
         $eyebrows = BrandStyle::eyebrows($category);
+        $eyebrow = ($look !== 'blocks' && $eyebrows !== [] && random_int(0, 1) === 1)
+            ? $eyebrows[array_rand($eyebrows)]
+            : null;
 
-        if ($look !== 'blocks' && $eyebrows !== [] && random_int(0, 1) === 1) {
-            $canvas->text($eyebrows[array_rand($eyebrows)], (int) round($canvasSize / 2), $top - 34, function (FontFactory $f) use ($colors): void {
+        return [
+            'lines' => $lines,
+            'look' => $look,
+            'colors' => $colors,
+            'font' => $font,
+            'spot' => $spot,
+            'size' => $size,
+            'lineHeight' => $lineHeight,
+            'top' => $top,
+            'blockHeight' => $blockHeight,
+            'eyebrow' => $eyebrow,
+            // 'cursiva': una línea en letra script y el resto en la gruesa
+            // condensada, apiladas — la tendencia que ella pidió imitar
+            // («una montada sobre otra, arriba cursiva y abajo grueso, o al
+            // revés»). Cuál línea es la script se sortea, así sale a veces
+            // arriba y a veces abajo, como en sus referencias.
+            'scriptLine' => $look === 'cursiva' ? array_rand($lines) : null,
+            // 'resaltado': una línea con la última palabra en el color de
+            // acento y el resto en blanco. Otra referencia de video que ella
+            // señaló directo — el mismo recurso se repetía en varios de sus
+            // subtítulos: texto blanco grueso con una palabra resaltada.
+            'highlightLine' => $look === 'resaltado' ? array_rand($lines) : null,
+            // Y a veces la última línea va en el color de acento en vez de
+            // blanca: es el truco de su referencia («que SIEMPRE quisiste» en
+            // dorado). 'cursiva' y 'resaltado' quedan afuera: los dos ya
+            // tienen su propio acento de color y sumar este encima carga.
+            'accentLast' => ! in_array($look, ['blocks', 'cursiva', 'resaltado'], true) && random_int(0, 1) === 1,
+        ];
+    }
+
+    /**
+     * ¿Este tratamiento trae su propio fondo, o el texto va suelto sobre la
+     * foto?
+     *
+     * Los que van sueltos necesitan que quien dibuja de fondo les ponga una
+     * sombra debajo — si no, el texto blanco cae sobre unas uñas claras y no
+     * se lee. Ver BuildHero::shade().
+     *
+     * @param  array<string, mixed>  $plan
+     */
+    public static function needsScrim(array $plan): bool
+    {
+        return in_array($plan['look'], ['clean', 'cursiva', 'resaltado'], true);
+    }
+
+    /**
+     * La franja vertical que ocupa el titular, contando el antetítulo.
+     *
+     * @param  array<string, mixed>  $plan
+     * @return array{0: int, 1: int}  [arriba, alto]
+     */
+    public static function band(array $plan): array
+    {
+        $top = $plan['top'] - ($plan['eyebrow'] !== null ? 56 : 0);
+
+        return [$top, $plan['blockHeight'] + ($plan['eyebrow'] !== null ? 56 : 0)];
+    }
+
+    /**
+     * Pinta el titular ya decidido.
+     *
+     * @param  array<string, mixed>  $plan
+     */
+    public function draw(ImageInterface $canvas, array $plan, int $canvasSize = 1080): void
+    {
+        [
+            'lines' => $lines, 'look' => $look, 'colors' => $colors, 'font' => $font,
+            'size' => $size, 'lineHeight' => $lineHeight, 'top' => $top,
+            'blockHeight' => $blockHeight, 'eyebrow' => $eyebrow,
+            'scriptLine' => $scriptLine, 'highlightLine' => $highlightLine,
+            'accentLast' => $accentLast,
+        ] = $plan;
+
+        $padX = 26;
+        $padY = 12;
+
+        if ($eyebrow !== null) {
+            $canvas->text($eyebrow, (int) round($canvasSize / 2), $top - 34, function (FontFactory $f) use ($colors): void {
                 $f->filename(resource_path('fonts/Manrope.ttf'));
                 $f->size(20);
                 $f->color($colors[1]);
@@ -102,12 +200,6 @@ class DrawHeadline
                 $f->valign('middle');
             });
         }
-
-        // Y a veces la última línea va en el color de acento en vez de blanca:
-        // es el truco de su referencia («que SIEMPRE quisiste» en dorado).
-        // 'cursiva' y 'resaltado' quedan afuera: los dos ya tienen su propio
-        // acento de color en otro lado, y sumar este encima queda cargado.
-        $accentLast = ! in_array($look, ['blocks', 'cursiva', 'resaltado'], true) && random_int(0, 1) === 1;
 
         // La franja va de una sola pieza, antes del texto: dibujar una por
         // línea dejaba rayas de foto entre medio y se veía descuidado.
