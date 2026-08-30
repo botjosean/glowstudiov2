@@ -110,6 +110,110 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->references()->count());
     }
 
+    public function test_the_colour_of_the_work_is_proposed_so_she_can_correct_it(): void
+    {
+        // Mirando los píxeles no se puede: las uñas son una parte chica del
+        // cuadro y gana la ropa del fondo — comprobado contra fotos reales,
+        // donde unas uñas rosa daban "negro". Lo lee el modelo y ella lo
+        // corrige, que es lo que ella misma pidió.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => '{"nombre": "rosa degradado a blanco", "hex": "#F2D5D5"}']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('unas.jpg')],
+        ]);
+
+        $response->assertSessionHas('colorSuggestion');
+        $sugerencia = $response->getSession()->get('colorSuggestion');
+
+        $this->assertSame('rosa degradado a blanco', $sugerencia['name']);
+        $this->assertSame('#F2D5D5', $sugerencia['hex']);
+
+        // Y queda guardado ya, sin esperar a que ella confirme: si cierra la
+        // hoja sin tocar nada, el color propuesto igual sirve.
+        $upload = ContentUpload::query()->where('provider_id', $provider->id)->sole();
+        $this->assertSame('rosa degradado a blanco', $upload->color_name);
+        $this->assertSame('#F2D5D5', $upload->color_hex);
+    }
+
+    public function test_her_words_win_over_the_model(): void
+    {
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => '{"nombre": "rosa palo", "hex": "#F2D5D5"}']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('unas.jpg')],
+        ]);
+
+        $id = ContentUpload::query()->where('provider_id', $provider->id)->sole()->id;
+
+        $this->actingAs($provider->user)
+            ->patch('/admin/contenido/fotos/color', [
+                'uploadIds' => [$id],
+                'name' => 'nude con glitter',
+                'hex' => '#e8d5c4',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $upload = ContentUpload::find($id);
+        $this->assertSame('nude con glitter', $upload->color_name);
+        // Guardado en mayúsculas, como lo devuelve el modelo, para que las
+        // comparaciones no dependan de cómo lo escribió ella.
+        $this->assertSame('#E8D5C4', $upload->color_hex);
+    }
+
+    public function test_a_provider_cannot_set_the_colour_of_another_providers_photo(): void
+    {
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $upload = ContentUpload::create([
+            'provider_id' => $hers->id,
+            'path' => "providers/{$hers->id}/gallery/x.webp",
+            'kind' => 'image',
+            'purpose' => 'edit',
+        ]);
+
+        $this->actingAs($mine->user)->patch('/admin/contenido/fotos/color', [
+            'uploadIds' => [$upload->id],
+            'name' => 'hackeado',
+            'hex' => '#000000',
+        ]);
+
+        $this->assertNull($upload->fresh()->color_name);
+    }
+
+    public function test_a_broken_colour_answer_does_not_stop_the_upload(): void
+    {
+        // Si el modelo contesta cualquier cosa, la foto igual se sube: el
+        // color es un extra, no un requisito.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => 'no tengo idea']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('unas.jpg')],
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionMissing('colorSuggestion');
+        $this->assertSame(1, ContentUpload::query()->where('provider_id', $provider->id)->count());
+    }
+
     public function test_a_photo_that_already_has_a_design_on_it_gets_a_warning(): void
     {
         // Un flyer ya terminado —título, precio, contacto ya impresos—

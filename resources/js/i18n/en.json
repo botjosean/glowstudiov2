@@ -587,7 +587,8 @@
         "pmSoon": "Soon",
         "pmTapSoonHint": "Soon you will be able to take card, Apple Pay or Google Pay right from your phone, with no reader.",
         "leadsOrderHint": "Longest waiting first. Today’s are marked in green.",
-        "leadToday": "Today"
+        "leadToday": "Today",
+        "contentColorSaved": "Color saved"
     },
     "nav": {
         "appointments": "Appointments",
@@ -664,7 +665,13 @@
         "noteSuggested": "This was written by looking at your photos. Fix it if it is not what you like — the more it sounds like you, the better your posts come out.",
         "saveNote": "Save",
         "skipNote": "Leave it without a note",
-        "togglePhoto": "Add to or remove from the next post"
+        "togglePhoto": "Add to or remove from the next post",
+        "colorTitle": "I detected this color",
+        "colorHint": "What would you call it? Change it if it is wrong.",
+        "colorLabel": "This work's color",
+        "colorWhy": "With this I can paint the post background and add the color name, like in the templates you like.",
+        "colorSave": "Save",
+        "colorSkip": "Leave it as is"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

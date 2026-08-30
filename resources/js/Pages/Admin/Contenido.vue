@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
 import Textarea from '../../Components/ui/Textarea.vue';
+import OutlinedInput from '../../Components/ui/OutlinedInput.vue';
 import UploadOverlay from '../../Components/ui/UploadOverlay.vue';
 import { useHaptics } from '../../composables/useHaptics';
 
@@ -266,12 +267,41 @@ function copyCaption(post) {
 watch(() => page.props.flash, (flash) => {
     const sugerencia = flash?.noteSuggestion;
 
-    if (!sugerencia) return;
+    if (sugerencia) {
+        noteForm.uploadIds = sugerencia.uploadIds ?? [];
+        noteForm.note = sugerencia.text ?? '';
+        noteOpen.value = true;
+    }
 
-    noteForm.uploadIds = sugerencia.uploadIds ?? [];
-    noteForm.note = sugerencia.text ?? '';
-    noteOpen.value = true;
+    // Y lo mismo con el color del trabajo: el sistema propone lo que ve y
+    // ella lo corrige. Mirando los píxeles no se puede —las uñas son una
+    // parte chica del cuadro y gana la ropa del fondo—, así que lo lee el
+    // modelo, pero la palabra final es la de ella.
+    const color = flash?.colorSuggestion;
+
+    if (color) {
+        colorForm.uploadIds = color.uploadIds ?? [];
+        colorForm.name = color.name ?? '';
+        colorForm.hex = color.hex ?? '';
+        colorOpen.value = true;
+    }
 }, { deep: true });
+
+const colorOpen = ref(false);
+const colorForm = useForm({ uploadIds: [], name: '', hex: '' });
+
+function saveColor() {
+    if (colorForm.processing) return;
+
+    colorForm.patch('/admin/contenido/fotos/color', {
+        preserveScroll: true,
+        onSuccess: () => {
+            haptics.success();
+            colorOpen.value = false;
+            colorForm.reset();
+        },
+    });
+}
 
 function saveNote() {
     if (noteForm.processing) return;
@@ -853,6 +883,52 @@ const busyLabel = computed(() => {
                 @click="noteOpen = false"
             >
                 {{ $t('content.skipNote') }}
+            </button>
+        </BottomSheet>
+
+        <!-- ¿De qué color quedó? El sistema propone, ella corrige. -->
+        <BottomSheet v-model="colorOpen">
+            <div class="mb-4 flex items-center gap-3">
+                <span
+                    class="h-12 w-12 shrink-0 rounded-xl border border-[var(--border-strong)]"
+                    :style="{ background: colorForm.hex || '#eee' }"
+                />
+                <div class="min-w-0">
+                    <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
+                        {{ $t('content.colorTitle') }}
+                    </div>
+                    <p class="mt-0.5 text-[13px] font-normal text-[var(--text-mute)]">
+                        {{ $t('content.colorHint') }}
+                    </p>
+                </div>
+            </div>
+
+            <OutlinedInput
+                id="content-color-name"
+                v-model="colorForm.name"
+                :label="$t('content.colorLabel')"
+                clearable
+            />
+
+            <p class="mt-2 text-[12px] font-normal leading-relaxed text-[var(--text-faint)]">
+                {{ $t('content.colorWhy') }}
+            </p>
+
+            <button
+                type="button"
+                :disabled="colorForm.processing"
+                class="mt-4 w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-60"
+                @click="saveColor"
+            >
+                {{ colorForm.processing ? $t('common.saving') : $t('content.colorSave') }}
+            </button>
+
+            <button
+                type="button"
+                class="mt-2 w-full py-2 text-[13px] font-medium text-[var(--text-mute)] hover:underline"
+                @click="colorOpen = false"
+            >
+                {{ $t('content.colorSkip') }}
             </button>
         </BottomSheet>
 

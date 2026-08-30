@@ -183,6 +183,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->middleware('throttle:10,60')->name('contenido.estilo');
     Route::patch('/contenido/referencias/nota', [ContentController::class, 'updateNote'])
         ->name('contenido.referencias.nota');
+    Route::patch('/contenido/fotos/color', [ContentController::class, 'updateColor'])
+        ->name('contenido.fotos.color');
     // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');

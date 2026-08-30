@@ -587,7 +587,8 @@
         "pmSoon": "Pronto",
         "pmTapSoonHint": "Pronto vas a poder cobrar con tarjeta, Apple Pay o Google Pay desde el mismo teléfono, sin lector.",
         "leadsOrderHint": "Primero las que más esperaron. Las de hoy van marcadas en verde.",
-        "leadToday": "Hoy"
+        "leadToday": "Hoy",
+        "contentColorSaved": "Color guardado"
     },
     "nav": {
         "appointments": "Citas",
@@ -664,7 +665,13 @@
         "noteSuggested": "Esto lo escribió el sistema mirando tus fotos. Corregilo si no es lo que te gusta — mientras más tuyo sea, mejor te salen los posts.",
         "saveNote": "Guardar",
         "skipNote": "Dejarlo sin nota",
-        "togglePhoto": "Meter o sacar del próximo post"
+        "togglePhoto": "Meter o sacar del próximo post",
+        "colorTitle": "Detecté este color",
+        "colorHint": "¿Vos cómo lo llamarías? Cambialo si no es.",
+        "colorLabel": "El color de este trabajo",
+        "colorWhy": "Con esto puedo pintar el fondo del post y ponerle el nombre del color, como en las plantillas que te gustan.",
+        "colorSave": "Guardar",
+        "colorSkip": "Dejarlo así"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

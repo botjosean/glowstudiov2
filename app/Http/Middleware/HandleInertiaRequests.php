@@ -72,6 +72,9 @@ class HandleInertiaRequests extends Middleware
                 // La nota que el sistema le propone tras guardar referencias,
                 // con los ids de la tanda. Ver ContentController::store().
                 'noteSuggestion' => fn () => $request->session()->get('noteSuggestion'),
+                // El color que el sistema leyó de la foto, para que ella lo
+                // corrija con sus palabras. Ver ContentController::store().
+                'colorSuggestion' => fn () => $request->session()->get('colorSuggestion'),
                 // Whether AppointmentStatusController auto-sent the WhatsApp
                 // notice via Kapso — the frontend skips its own manual prompt
                 // only when this is true, never on a static "bot connected" flag.

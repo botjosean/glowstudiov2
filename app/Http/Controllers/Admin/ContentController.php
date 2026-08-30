@@ -6,6 +6,7 @@ use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
 use App\Actions\Content\DetectDesignedPhoto;
+use App\Actions\Content\ReadPhotoColor;
 use App\Actions\Content\ReadReferenceStyle;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\SuggestReferenceNote;
@@ -49,6 +50,7 @@ class ContentController extends Controller
         private readonly SuggestReferenceNote $noteSuggestions,
         private readonly WriteCaption $caption,
         private readonly DetectDesignedPhoto $detectDesigned,
+        private readonly ReadPhotoColor $photoColor,
     ) {}
 
     public function index(Request $request): Response
@@ -217,6 +219,31 @@ class ContentController extends Controller
             $redirect->with('warning', 'admin.contentPhotoAlreadyDesigned');
         }
 
+        // Y de qué color es el trabajo, para las plantillas que pintan el
+        // fondo o ponen la tarjeta con el nombre del color.
+        //
+        // Se lo propone el modelo y ELLA lo corrige: mirando los píxeles no
+        // se puede —las uñas son una parte chica del cuadro y gana la ropa
+        // del fondo, comprobado con sus fotos reales—. Ella misma pidió que
+        // fuera así: «yo detecto tal cosa, ¿puedes decirnos algo más de los
+        // colores como tú lo ves, con tu propia palabra?».
+        if ($purpose === ContentPurpose::Edit && $request->boolean('first') && $primeraImagen !== null) {
+            $color = $this->photoColor->handle($primeraImagen);
+
+            if ($color !== null) {
+                $primeraImagen->update([
+                    'color_name' => $color['nombre'],
+                    'color_hex' => $color['hex'],
+                ]);
+
+                $redirect->with('colorSuggestion', [
+                    'uploadIds' => $creadas->pluck('id')->all(),
+                    'name' => $color['nombre'],
+                    'hex' => $color['hex'],
+                ]);
+            }
+        }
+
         return $redirect;
     }
 
@@ -341,6 +368,41 @@ class ContentController extends Controller
         $primera?->update(['note' => $validated['note'] ?: null]);
 
         return to_route('admin.contenido')->with('success', 'admin.contentReferenceSaved');
+    }
+
+    /**
+     * Guardar el color del trabajo con las palabras de ella.
+     *
+     * El modelo lo propuso al subir; acá manda lo que ella escribió. Si lo
+     * deja vacío se borra: prefiere no decir nada antes que dejar puesto algo
+     * que no es.
+     */
+    public function updateColor(Request $request): RedirectResponse
+    {
+        $provider = $request->user()->provider;
+
+        $validated = $request->validate([
+            'uploadIds' => ['required', 'array'],
+            'uploadIds.*' => ['integer'],
+            'name' => ['nullable', 'string', 'max:60'],
+            'hex' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        // Reconsultado con el provider_id del servidor: unos ids inventados no
+        // alcanzan las fotos de otra profesional.
+        $primera = ContentUpload::query()
+            ->where('provider_id', $provider->id)
+            ->where('purpose', ContentPurpose::Edit->value)
+            ->whereIn('id', $validated['uploadIds'])
+            ->oldest()
+            ->first();
+
+        $primera?->update([
+            'color_name' => $validated['name'] ?: null,
+            'color_hex' => isset($validated['hex']) ? strtoupper($validated['hex']) : null,
+        ]);
+
+        return to_route('admin.contenido')->with('success', 'admin.contentColorSaved');
     }
 
     /**
