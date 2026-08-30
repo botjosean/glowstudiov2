@@ -228,6 +228,7 @@
         "confirmRejectBody": "The client is left without an appointment at that time. This action cannot be undone.",
         "photoUpdated": "Photo updated",
         "contentUploaded": "Photos uploaded",
+        "contentPhotoAlreadyDesigned": "One of these photos already looks like it has text or design on it. If you use it to build a post, the system will add another headline on top and it may end up cluttered.",
         "contentReferenceSaved": "Reference saved",
         "contentPostReady": "Your post is ready",
         "contentRated": "Thanks, I'll keep it in mind",

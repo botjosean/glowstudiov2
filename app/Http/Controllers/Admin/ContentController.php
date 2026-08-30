@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
+use App\Actions\Content\DetectDesignedPhoto;
 use App\Actions\Content\ReadReferenceStyle;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\SuggestReferenceNote;
@@ -47,6 +48,7 @@ class ContentController extends Controller
         private readonly ReadReferenceStyle $style,
         private readonly SuggestReferenceNote $noteSuggestions,
         private readonly WriteCaption $caption,
+        private readonly DetectDesignedPhoto $detectDesigned,
     ) {}
 
     public function index(Request $request): Response
@@ -161,6 +163,17 @@ class ContentController extends Controller
                 'uploadIds' => $creadas->pluck('id')->all(),
                 'text' => $this->noteSuggestions->handle($creadas),
             ]);
+        }
+
+        // Solo la primera foto de la primera tanda: si YA es un flyer
+        // terminado —título, precio, contacto ya impresos—, el sistema le va
+        // a montar SU propio titular arriba y queda ilegible. Visto en una
+        // generación real de Josean. Es un aviso, nunca bloquea la subida.
+        $primeraImagen = $creadas->first(fn (ContentUpload $u): bool => $u->kind === UploadKind::Image);
+
+        if ($purpose === ContentPurpose::Edit && $request->boolean('first') && $primeraImagen !== null
+            && $this->detectDesigned->handle($primeraImagen)) {
+            $redirect->with('warning', 'admin.contentPhotoAlreadyDesigned');
         }
 
         return $redirect;

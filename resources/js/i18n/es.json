@@ -228,6 +228,7 @@
         "confirmRejectBody": "El cliente queda sin cita en ese horario. Esta acción no se puede deshacer.",
         "photoUpdated": "Foto actualizada",
         "contentUploaded": "Fotos subidas",
+        "contentPhotoAlreadyDesigned": "Una de estas fotos ya parece tener texto o diseño encima. Si la usás para armar un post, el sistema le va a agregar otro título arriba y puede quedar amontonado.",
         "contentReferenceSaved": "Referencia guardada",
         "contentPostReady": "Tu post está listo",
         "contentRated": "Gracias, lo tengo en cuenta",

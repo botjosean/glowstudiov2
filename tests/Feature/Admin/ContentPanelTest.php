@@ -106,6 +106,79 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->references()->count());
     }
 
+    public function test_a_photo_that_already_has_a_design_on_it_gets_a_warning(): void
+    {
+        // Un flyer ya terminado —título, precio, contacto ya impresos—
+        // subido como material crudo: el sistema le monta SU propio titular
+        // arriba y queda ilegible. Visto en una generación real de Josean.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => 'SI']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('flyer.jpg')],
+        ]);
+
+        $response->assertSessionHas('warning', 'admin.contentPhotoAlreadyDesigned');
+    }
+
+    public function test_a_plain_work_photo_gets_no_warning(): void
+    {
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => 'NO']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('trabajo.jpg')],
+        ]);
+
+        $response->assertSessionMissing('warning');
+    }
+
+    public function test_the_design_check_only_runs_on_the_first_batch(): void
+    {
+        // Las tandas siguientes son las mismas fotos partidas para
+        // Cloudflare; preguntarle al modelo en cada una pagaría lo mismo
+        // varias veces por la misma selección.
+        Http::fake();
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'first' => '0',
+            'photos' => [UploadedFile::fake()->image('otra.jpg')],
+        ]);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_the_design_check_does_not_run_on_references(): void
+    {
+        // Una referencia nunca arma un post: no hay nada de qué avisar.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => 'sugerencia genérica']]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $response = $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'reference',
+            'first' => '1',
+            'photos' => [UploadedFile::fake()->image('ref.jpg')],
+        ]);
+
+        $response->assertSessionMissing('warning');
+    }
+
     public function test_a_reference_keeps_what_she_said_about_it(): void
     {
         $provider = Provider::factory()->published()->create();
