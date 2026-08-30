@@ -100,6 +100,10 @@ class SuggestReferenceNote
         No describas a la persona ni el servicio de la foto. Fijate en cómo está
         armada la publicación, no en qué muestra.
 
+        Si la imagen es una captura de pantalla del teléfono, ignorá la barra de
+        estado, la hora, la batería y cualquier borde del teléfono — eso no es
+        parte del diseño del post, es solo cómo se guardó la captura.
+
         Dos frases como mucho, en español natural y sencillo. Sin comillas, sin
         títulos, sin viñetas. Ejemplo del tono:
         "Me gusta el fondo oscuro con las letras doradas y que el texto vaya abajo.
