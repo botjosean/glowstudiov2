@@ -60,4 +60,18 @@ class BrandStyleTest extends TestCase
             $this->assertFileExists(BrandStyle::headlineFont($category), $category->value.' apunta a una fuente que no existe');
         }
     }
+
+    public function test_resaltado_fits_every_rubro_including_the_hard_brand_ones(): void
+    {
+        // A diferencia de 'cursiva' —que sí se deja afuera de barbería y
+        // tatuajes por blanda— 'resaltado' es solo texto grueso con una
+        // palabra en color: le entra a cualquier rubro.
+        foreach ([...BusinessCategory::cases(), null] as $category) {
+            $this->assertContains(
+                'resaltado',
+                BrandStyle::headlineStyles($category),
+                ($category?->value ?? 'sin rubro').' no ofrece resaltado',
+            );
+        }
+    }
 }

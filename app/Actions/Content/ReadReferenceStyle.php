@@ -179,7 +179,7 @@ class ReadReferenceStyle
           "colores": ["#RRGGBB", "#RRGGBB", "#RRGGBB"],
           "posicion_texto": "arriba" | "centro" | "abajo",
           "tipografia": "serif" | "condensada",
-          "estilo_titular": "bloques" | "franja" | "limpio" | "cursiva",
+          "estilo_titular": "bloques" | "franja" | "limpio" | "cursiva" | "resaltado",
           "lleva_precio": true | false
         }
 
@@ -190,7 +190,10 @@ class ReadReferenceStyle
         "franja" si hay una banda de lado a lado, "limpio" si el texto va suelto sobre
         la foto sin fondo, "cursiva" si hay dos palabras apiladas y UNA de ellas está en
         letra script/manuscrita (inclinada, con trazos que se conectan) mientras la otra
-        va en mayúsculas gruesas de molde — no importa cuál de las dos va arriba.
+        va en mayúsculas gruesas de molde — no importa cuál de las dos va arriba,
+        "resaltado" si el texto es blanco/una sola tinta y SOLO una palabra o frase
+        corta, dentro de esa misma línea, está en un color distinto y más vivo que el
+        resto — sin recuadro de fondo detrás de esa palabra, solo el color de la letra.
         TXT;
     }
 
@@ -226,7 +229,7 @@ class ReadReferenceStyle
             'colores' => array_slice($colores, 0, 3),
             'posicion_texto' => $this->oneOf($decoded['posicion_texto'] ?? null, ['arriba', 'centro', 'abajo']),
             'tipografia' => $this->oneOf($decoded['tipografia'] ?? null, ['serif', 'condensada']),
-            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio', 'cursiva']),
+            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio', 'cursiva', 'resaltado']),
             'lleva_precio' => (bool) ($decoded['lleva_precio'] ?? false),
         ];
     }

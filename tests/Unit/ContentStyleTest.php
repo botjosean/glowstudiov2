@@ -99,6 +99,17 @@ class ContentStyleTest extends TestCase
         $this->assertNotContains('cursiva', BrandStyle::headlineStyles(BusinessCategory::TattooPiercing));
     }
 
+    public function test_a_read_resaltado_style_is_honoured(): void
+    {
+        // Texto blanco con una palabra en color de acento, sin recuadro —
+        // la otra tendencia de video que ella señaló. Ver
+        // BuildCollage::highlightedLine().
+        $this->assertSame(
+            ['resaltado'],
+            BrandStyle::headlineStylesFor(BusinessCategory::Nails, $this->ficha(['estilo_titular' => 'resaltado'])),
+        );
+    }
+
     public function test_a_half_broken_card_falls_back_field_by_field(): void
     {
         // El modelo puede acertar los colores y no la tipografía. Cada campo

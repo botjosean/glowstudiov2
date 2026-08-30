@@ -66,6 +66,7 @@ class BrandStyle
             'franja' => 'band',
             'limpio' => 'clean',
             'cursiva' => 'cursiva',
+            'resaltado' => 'resaltado',
             default => null,
         };
 
@@ -298,16 +299,18 @@ class BrandStyle
      * 'cursiva' —script apilada con la condensada, la tendencia que ella
      * pidió imitar— se deja afuera de barbería y tatuajes: son rubros de
      * marca dura, y una script ahí desentona con lo que ellos mismos
-     * publicarían.
+     * publicarían. 'resaltado' —una palabra en color de acento sobre el
+     * resto en blanco, la otra tendencia de video que señaló— sí les entra:
+     * no es blando, es solo texto grueso con un golpe de color.
      *
      * @return list<string>
      */
     public static function headlineStyles(?BusinessCategory $category): array
     {
         return match ($category) {
-            BusinessCategory::Barbershop, BusinessCategory::TattooPiercing => ['band', 'clean'],
-            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band', 'cursiva'],
-            default => ['blocks', 'band', 'clean', 'cursiva'],
+            BusinessCategory::Barbershop, BusinessCategory::TattooPiercing => ['band', 'clean', 'resaltado'],
+            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band', 'cursiva', 'resaltado'],
+            default => ['blocks', 'band', 'clean', 'cursiva', 'resaltado'],
         };
     }
 }

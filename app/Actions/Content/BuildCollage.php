@@ -145,7 +145,7 @@ class BuildCollage
         $spots = ['center', 'bottom', 'top'];
         $spot = BrandStyle::headlineSpotFor($style) ?? $spots[array_rand($spots)];
 
-        $size = in_array($look, ['clean', 'cursiva'], true) ? 104 : 96;
+        $size = in_array($look, ['clean', 'cursiva', 'resaltado'], true) ? 104 : 96;
         // La script agranda la línea y sus trazos vuelan más allá de la caja
         // normal de una letra: con el mismo aire de siempre, su cola tocaba
         // la línea de abajo cuando le tocaba ir arriba.
@@ -159,6 +159,12 @@ class BuildCollage
         // Cuál línea es la script se sortea, así sale a veces arriba y a
         // veces abajo, como en sus referencias.
         $scriptLine = $look === 'cursiva' ? array_rand($lines) : null;
+
+        // 'resaltado': una línea con la última palabra en el color de acento
+        // y el resto en blanco. Otra referencia de video que ella señaló
+        // directo — el mismo recurso se repetía en varios de sus subtítulos:
+        // texto blanco grueso con una sola palabra o frase resaltada.
+        $highlightLine = $look === 'resaltado' ? array_rand($lines) : null;
 
         $blockHeight = count($lines) * $lineHeight;
 
@@ -185,9 +191,9 @@ class BuildCollage
 
         // Y a veces la última línea va en el color de acento en vez de blanca:
         // es el truco de su referencia («que SIEMPRE quisiste» en dorado).
-        // 'cursiva' queda afuera: sus referencias de este estilo son siempre
-        // blancas, sin acento de color.
-        $accentLast = ! in_array($look, ['blocks', 'cursiva'], true) && random_int(0, 1) === 1;
+        // 'cursiva' y 'resaltado' quedan afuera: los dos ya tienen su propio
+        // acento de color en otro lado, y sumar este encima queda cargado.
+        $accentLast = ! in_array($look, ['blocks', 'cursiva', 'resaltado'], true) && random_int(0, 1) === 1;
 
         // La franja va de una sola pieza, antes del texto: dibujar una por
         // línea dejaba rayas de foto entre medio y se veía descuidado.
@@ -248,14 +254,68 @@ class BuildCollage
                 default => '#ffffff',
             };
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($lineSize, $lineFont, $textColor): void {
-                $f->filename($lineFont);
-                $f->size($lineSize);
-                $f->color($textColor);
+            if ($look === 'resaltado' && $i === $highlightLine) {
+                $this->highlightedLine($canvas, $line, $centerY, $lineSize, $lineFont, $colors[1]);
+            } else {
+                $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($lineSize, $lineFont, $textColor): void {
+                    $f->filename($lineFont);
+                    $f->size($lineSize);
+                    $f->color($textColor);
+                    $f->align('center');
+                    $f->valign('middle');
+                });
+            }
+        }
+    }
+
+    /**
+     * Una línea con la última palabra en el color de acento y el resto en
+     * blanco, sin correr el conjunto del centro.
+     *
+     * Imagick no dibuja dos colores en un solo `text()`, así que se mide
+     * cada parte por separado con textWidth() y se arma desde el borde
+     * izquierdo del total — el mismo truco que ya usa el pie de contacto
+     * para medir texto de verdad en vez de estimarlo.
+     */
+    private function highlightedLine(ImageInterface $canvas, string $line, int $centerY, int $size, string $font, string $accent): void
+    {
+        $words = preg_split('/\s+/u', trim($line)) ?: [$line];
+
+        if (count($words) < 2) {
+            // Una sola palabra: no queda "resto" en blanco, va entera en acento.
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $accent): void {
+                $f->filename($font);
+                $f->size($size);
+                $f->color($accent);
                 $f->align('center');
                 $f->valign('middle');
             });
+
+            return;
         }
+
+        $highlight = array_pop($words);
+        $before = implode(' ', $words).' ';
+
+        $totalWidth = $this->textWidth($line, $size, $font);
+        $beforeWidth = $this->textWidth($before, $size, $font);
+        $left = (int) round((self::CANVAS - $totalWidth) / 2);
+
+        $canvas->text($before, $left, $centerY, function (FontFactory $f) use ($size, $font): void {
+            $f->filename($font);
+            $f->size($size);
+            $f->color('#ffffff');
+            $f->align('left');
+            $f->valign('middle');
+        });
+
+        $canvas->text($highlight, $left + $beforeWidth, $centerY, function (FontFactory $f) use ($size, $font, $accent): void {
+            $f->filename($font);
+            $f->size($size);
+            $f->color($accent);
+            $f->align('left');
+            $f->valign('middle');
+        });
     }
 
     /**
