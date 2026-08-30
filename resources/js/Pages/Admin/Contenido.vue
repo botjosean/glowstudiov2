@@ -41,7 +41,7 @@ const noteOpen = ref(false);
 
 const uploadForm = useForm({ purpose: '', note: '', first: false, photos: [] });
 const noteForm = useForm({ uploadIds: [], note: '' });
-const generateForm = useForm({ layout: 'collage_4', uploadIds: [] });
+const generateForm = useForm({ layout: 'collage_4', uploadIds: [], templateUploadId: null });
 const rateForm = useForm({ rating: '', note: '' });
 
 const ratingPost = ref(null);
@@ -187,11 +187,39 @@ function chooseReference() {
 // que no cuadra solo produce un error después de haber esperado.
 const usableLayouts = computed(() => props.layouts.filter((l) => l.fits));
 
+// Elegido el diseño, falta el "¿como cuál de tus referencias?" — ella lo
+// pidió directo: en vez de que el sistema mezcle todas sus referencias en
+// un estilo promedio, poder elegir UNA puntual para copiar esa.
+const templateOpen = ref(false);
+const pendingLayout = ref(null);
+
 function build(layout) {
     if (generateForm.processing) return;
 
+    pendingLayout.value = layout;
+
+    // Sin referencias guardadas no hay nada entre qué elegir: se arma
+    // directo, como antes.
+    if (props.references.length === 0) {
+        generate(layout, null);
+
+        return;
+    }
+
+    templateOpen.value = true;
+}
+
+function chooseTemplate(templateId) {
+    if (!pendingLayout.value) return;
+
+    templateOpen.value = false;
+    generate(pendingLayout.value, templateId);
+}
+
+function generate(layout, templateId) {
     generateForm.layout = layout.value;
     generateForm.uploadIds = props.waiting.slice(0, layout.uses).map((item) => item.id);
+    generateForm.templateUploadId = templateId;
 
     generateForm.post('/admin/contenido/generar', {
         preserveScroll: true,
@@ -749,6 +777,54 @@ const busyLabel = computed(() => {
                         <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.purposeReferenceHint') }}</span>
                     </span>
                     <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                </button>
+            </div>
+        </BottomSheet>
+
+        <!-- ¿Como cuál de tus referencias? Ella lo pidió directo: en vez de
+             que el sistema mezcle todas sus referencias en un estilo
+             promedio, poder elegir UNA puntual para copiar esa. -->
+        <BottomSheet v-model="templateOpen">
+            <div class="mb-5">
+                <div class="text-[20px] font-bold leading-tight tracking-tight text-[var(--text-strong)]">
+                    {{ $t('content.templateTitle') }}
+                </div>
+                <p class="mt-1 text-[13px] font-normal text-[var(--text-mute)]">{{ $t('content.templateHint') }}</p>
+            </div>
+
+            <button
+                type="button"
+                :disabled="generateForm.processing"
+                class="mb-3 flex w-full items-center gap-3.5 rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-soft)] p-4 text-left disabled:opacity-60"
+                @click="chooseTemplate(null)"
+            >
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)]">
+                    <Sparkles :size="19" class="text-[var(--gold)]" />
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-[15px] font-bold text-[var(--text-strong)]">{{ $t('content.templateSurprise') }}</span>
+                    <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.templateSurpriseHint') }}</span>
+                </span>
+            </button>
+
+            <div class="grid grid-cols-4 gap-1.5">
+                <button
+                    v-for="ref in references"
+                    :key="ref.id"
+                    type="button"
+                    :disabled="generateForm.processing"
+                    class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)] disabled:opacity-60"
+                    :aria-label="$t('content.useAsTemplate')"
+                    @click="chooseTemplate(ref.id)"
+                >
+                    <video v-if="ref.kind === 'video'" :src="ref.url" muted playsinline preload="metadata" class="h-full w-full object-cover" />
+                    <img v-else :src="ref.url" alt="" class="h-full w-full object-cover" />
+                    <span
+                        v-if="ref.kind === 'video'"
+                        class="absolute inset-0 flex items-center justify-center bg-black/30"
+                    >
+                        <Clapperboard :size="15" class="text-white" />
+                    </span>
                 </button>
             </div>
         </BottomSheet>

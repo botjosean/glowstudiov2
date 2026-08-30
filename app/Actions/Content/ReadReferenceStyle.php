@@ -104,6 +104,86 @@ class ReadReferenceStyle
             return ['ok' => false, 'error' => 'admin.contentStyleNoReferences'];
         }
 
+        $result = $this->readFromUrls($urls, $provider->slug);
+
+        if ($result['ok']) {
+            $result['style']['referencias'] = count($urls);
+        }
+
+        return $result;
+    }
+
+    /**
+     * La ficha de UNA sola referencia puntual — la que ella elige como
+     * "plantilla" al armar un post, en vez de la mezcla de todas.
+     *
+     * En caché en la propia fila: es la misma foto la próxima vez que la
+     * elija, y volver a pagar la llamada de visión por algo que no cambió
+     * sería tirar la plata.
+     *
+     * @return array{ok: true, style: array<string, mixed>}|array{ok: false, error: string}
+     */
+    public function handleForUpload(ContentUpload $upload): array
+    {
+        if ($upload->purpose !== ContentPurpose::Reference) {
+            return ['ok' => false, 'error' => 'admin.contentStyleUnavailable'];
+        }
+
+        if (is_array($upload->learned_style)) {
+            return ['ok' => true, 'style' => $upload->learned_style];
+        }
+
+        $url = $upload->kind === UploadKind::Video
+            ? $this->videoFrameDataUrl($upload->path)
+            : MediaUrl::resolve($upload->path);
+
+        if ($url === null) {
+            return ['ok' => false, 'error' => 'admin.contentStyleUnreadable'];
+        }
+
+        $result = $this->readFromUrls([$url], $upload->provider_id);
+
+        if ($result['ok']) {
+            $upload->update([
+                'learned_style' => $result['style'],
+                'learned_style_at' => now(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Un fotograma de un video de referencia, ya como data URL — mismo
+     * recurso que en handle().
+     */
+    private function videoFrameDataUrl(string $path): ?string
+    {
+        try {
+            $binary = Storage::disk('r2')->get($path);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($binary === null) {
+            return null;
+        }
+
+        $frame = $this->extractFrame->handle($binary);
+
+        return $frame === null ? null : 'data:image/jpeg;base64,'.base64_encode($frame);
+    }
+
+    /**
+     * La llamada al modelo de visión y el parseo, compartidos entre leer
+     * TODAS las referencias mezcladas y leer una sola.
+     *
+     * @param  list<string>  $urls
+     * @param  int|string  $quien  provider slug o id, solo para el log
+     * @return array{ok: true, style: array<string, mixed>}|array{ok: false, error: string}
+     */
+    private function readFromUrls(array $urls, int|string $quien): array
+    {
         $config = config('services.assistant');
         $key = $config['api_key'] ?? null;
 
@@ -130,7 +210,7 @@ class ReadReferenceStyle
                 ]);
         } catch (ConnectionException $exception) {
             Log::warning('El modelo de visión no respondió al leer las referencias.', [
-                'provider' => $provider->slug,
+                'quien' => $quien,
                 'reason' => $exception->getMessage(),
             ]);
 
@@ -139,7 +219,7 @@ class ReadReferenceStyle
 
         if ($response->failed()) {
             Log::warning('El modelo de visión rechazó la lectura de referencias.', [
-                'provider' => $provider->slug,
+                'quien' => $quien,
                 'status' => $response->status(),
             ]);
 
@@ -150,13 +230,11 @@ class ReadReferenceStyle
 
         if ($style === null) {
             Log::warning('La ficha de estilo vino en un formato que no se pudo leer.', [
-                'provider' => $provider->slug,
+                'quien' => $quien,
             ]);
 
             return ['ok' => false, 'error' => 'admin.contentStyleUnreadable'];
         }
-
-        $style['referencias'] = count($urls);
 
         return ['ok' => true, 'style' => $style];
     }

@@ -226,9 +226,33 @@ class ContentController extends Controller
             'layout' => ['required', Rule::enum(PostLayout::class)],
             'uploadIds' => ['required', 'array'],
             'uploadIds.*' => ['integer'],
+            // "¿Como cuál de tus referencias?" — ella lo pidió directo: en vez
+            // de que el sistema mezcle todas sus referencias en un estilo
+            // promedio, poder elegir UNA puntual para que el post salga
+            // parecido a esa, no a un promedio de todas.
+            'templateUploadId' => ['nullable', 'integer'],
         ]);
 
         $layout = PostLayout::from($validated['layout']);
+
+        if (! empty($validated['templateUploadId'])) {
+            $template = ContentUpload::query()
+                ->where('provider_id', $provider->id)
+                ->references()
+                ->find($validated['templateUploadId']);
+
+            if ($template !== null) {
+                $resultado = $this->style->handleForUpload($template);
+
+                // Se pisa en memoria y no se guarda: es la plantilla de ESTE
+                // post, no la ficha general de la cuenta. Si falla la
+                // lectura, sigue con lo de siempre — nunca por esto se queda
+                // sin post.
+                if ($resultado['ok']) {
+                    $provider->content_style = $resultado['style'];
+                }
+            }
+        }
 
         // Reconsultado con el provider_id puesto por el servidor: unos ids
         // inventados no alcanzan las fotos de otra profesional.

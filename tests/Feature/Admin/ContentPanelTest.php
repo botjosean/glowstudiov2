@@ -239,6 +239,137 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
+    public function test_generating_with_a_template_reads_and_caches_that_references_style(): void
+    {
+        // Ella lo pidió directo: "¿por qué no ofrece: mira, están estas
+        // plantillas disponibles, cómo lo quiere?" — en vez de mezclar todas
+        // sus referencias en un estilo promedio, elegir UNA puntual.
+        Http::fake(['*' => Http::sequence()
+            ->push(['choices' => [['message' => ['content' => json_encode([
+                'colores' => ['#0b0f19', '#c9a227', '#ffffff'],
+                'posicion_texto' => 'centro',
+                'tipografia' => 'condensada',
+                'estilo_titular' => 'resaltado',
+                'lleva_precio' => false,
+            ])]]]])
+            ->push(['choices' => [['message' => ['content' => implode("\n", [
+                'TITULAR: CITAS ABIERTAS | ESTA SEMANA',
+                'DESCRIPCION: Un texto cualquiera.',
+                'HASHTAGS: #hair #beauty',
+            ])]]]])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $template = ContentUpload::create([
+            'provider_id' => $provider->id,
+            'path' => "providers/{$provider->id}/gallery/ref.webp",
+            'kind' => 'image',
+            'purpose' => 'reference',
+        ]);
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', [
+                'layout' => 'collage',
+                'uploadIds' => $ids,
+                'templateUploadId' => $template->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('resaltado', $template->fresh()->learned_style['estilo_titular']);
+        $this->assertNotNull($template->fresh()->learned_style_at);
+        Http::assertSentCount(2);
+    }
+
+    public function test_a_cached_template_style_is_not_read_twice(): void
+    {
+        Http::fake(['*' => Http::sequence()
+            ->push(['choices' => [['message' => ['content' => json_encode([
+                'colores' => ['#0b0f19', '#c9a227', '#ffffff'],
+                'estilo_titular' => 'limpio',
+            ])]]]])
+            ->whenEmpty(Http::response(['choices' => [['message' => ['content' => implode("\n", [
+                'TITULAR: A | B',
+                'DESCRIPCION: texto',
+                'HASHTAGS: #a',
+            ])]]]]))]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $template = ContentUpload::create([
+            'provider_id' => $provider->id,
+            'path' => "providers/{$provider->id}/gallery/ref.webp",
+            'kind' => 'image',
+            'purpose' => 'reference',
+        ]);
+
+        foreach (range(1, 2) as $tanda) {
+            $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+                'purpose' => 'edit',
+                'photos' => [UploadedFile::fake()->image("f{$tanda}.jpg")],
+            ]);
+        }
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        foreach ($ids as $id) {
+            $this->actingAs($provider->user)->post('/admin/contenido/generar', [
+                'layout' => 'hero',
+                'uploadIds' => [$id],
+                'templateUploadId' => $template->id,
+            ]);
+        }
+
+        // Una sola lectura de la ficha (la primera vez) + una descripción por
+        // cada post armado: pagar la visión de nuevo por la misma foto sería
+        // tirar la plata.
+        Http::assertSentCount(3);
+    }
+
+    public function test_a_template_from_another_provider_is_ignored(): void
+    {
+        Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => implode("\n", [
+            'TITULAR: A | B',
+            'DESCRIPCION: texto',
+            'HASHTAGS: #a',
+        ])]]]])]);
+
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $herTemplate = ContentUpload::create([
+            'provider_id' => $hers->id,
+            'path' => "providers/{$hers->id}/gallery/ref.webp",
+            'kind' => 'image',
+            'purpose' => 'reference',
+        ]);
+
+        $this->actingAs($mine->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => [UploadedFile::fake()->image('f.jpg')],
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $mine->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($mine->user)
+            ->post('/admin/contenido/generar', [
+                'layout' => 'hero',
+                'uploadIds' => $ids,
+                'templateUploadId' => $herTemplate->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($herTemplate->fresh()->learned_style);
+        // Solo la del caption: la ficha ajena ni se intenta leer.
+        Http::assertSentCount(1);
+    }
+
     public function test_the_description_label_does_not_leak_into_the_caption_when_the_model_writes_it_with_an_accent(): void
     {
         // Se le pide el formato "DESCRIPCION:" sin tilde, pero el modelo
