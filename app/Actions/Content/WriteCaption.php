@@ -77,12 +77,21 @@ class WriteCaption
 
         Devuelves tres cosas:
 
-        1. TITULAR: 2 o 3 palabras, UNA POR LÍNEA, que van impresas GRANDES sobre la
-           foto. Es lo que hace que alguien pare de deslizar. Cortas y con gancho, como
-           "TRENDING / NAILS / VERANO" o "CITAS / ABIERTAS / YA".
-           SOLO letras y espacios. Ni un emoji, ni un asterisco, ni un guion suelto:
-           la tipografía del cartel no los dibuja y dejan un hueco de color vacío.
-           Si no se te ocurre una tercera palabra, manda dos y ya.
+        1. TITULAR: 2 o 3 líneas cortas que van impresas GRANDES sobre la foto. Es lo
+           que hace que alguien pare de deslizar.
+
+           Cuando tengas los servicios y precios de ella, USA UNO DE VERDAD: el nombre
+           del servicio en una línea y el precio en otra, como
+           "ACRILICAS / DESDE 65" o "BALAYAGE / 200". Un titular con un servicio y un
+           precio vende; uno que dice "NUEVOS" no dice nada.
+           Nunca inventes un precio ni cambies el de la lista.
+
+           Si no hay servicios en la lista, usá 2 o 3 palabras con gancho, como
+           "TRENDING / NAILS / VERANO".
+
+           SOLO letras, números y espacios. Ni un emoji, ni un símbolo de dólar, ni un
+           asterisco: la tipografía del cartel no los dibuja y dejan un hueco de color
+           vacío. Escribí el precio en números pelados: 65, no $65.
         2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
         3. HASHTAGS: entre 5 y 8, cada uno empezando por #.
@@ -117,6 +126,23 @@ class WriteCaption
 
         if (($provider->bio ?? '') !== '') {
             $lines[] = 'Cómo se describe: '.$provider->bio;
+        }
+
+        // Sus servicios con precio de verdad. Es la diferencia entre un
+        // titular que dice "NUEVOS" y uno que dice "ACRÍLICAS $65", que es
+        // justo lo que separa sus referencias de lo que salía antes.
+        $services = $provider->services()
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->limit(10)
+            ->get(['name', 'price']);
+
+        if ($services->isNotEmpty()) {
+            $lines[] = 'Sus servicios y precios reales:';
+
+            foreach ($services as $service) {
+                $lines[] = "- {$service->name}: \${$service->price}";
+            }
         }
 
         // unique() y no solo limit(): antes la nota se copiaba en cada foto de

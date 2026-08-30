@@ -63,6 +63,55 @@ class BrandStyle
     }
 
     /**
+     * El pie del post: dónde queda y cómo la llaman.
+     *
+     * Sale de sus propias referencias, que llevan "PLAZA FIESTA · ATLANTA ·
+     * 404-451-8022" abajo. Es lo que convierte una foto bonita en un anuncio:
+     * sin esto, quien la ve no sabe adónde ir.
+     *
+     * Devuelve cadena vacía cuando no hay nada que poner — un pie con un
+     * separador suelto se ve peor que ninguno.
+     */
+    public static function contactLine(?string $address, ?string $phone): string
+    {
+        $partes = array_values(array_filter([
+            self::shortAddress($address),
+            self::prettyPhone($phone),
+        ], static fn (?string $p): bool => $p !== null && $p !== ''));
+
+        return implode('  ·  ', $partes);
+    }
+
+    /**
+     * La dirección recortada a lo que cabe: calle y ciudad, sin el código
+     * postal. Una dirección entera no entra a lo ancho del cuadrado.
+     */
+    private static function shortAddress(?string $address): ?string
+    {
+        if ($address === null || trim($address) === '') {
+            return null;
+        }
+
+        $partes = array_map('trim', explode(',', $address));
+        // Se descartan los trozos que son solo números: el código postal.
+        $partes = array_values(array_filter($partes, static fn (string $p): bool => $p !== '' && preg_match('/^\d+$/', $p) !== 1));
+
+        return mb_strtoupper(implode(', ', array_slice($partes, 0, 2)));
+    }
+
+    /** Los diez dígitos como los lee alguien: (470) 886-7197. */
+    private static function prettyPhone(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone) ?? '';
+
+        if (strlen($digits) !== 10) {
+            return $digits === '' ? null : $digits;
+        }
+
+        return sprintf('(%s) %s-%s', substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6));
+    }
+
+    /**
      * El color de acento del rubro: el que lleva la última línea del titular
      * cuando toca destacarla.
      *

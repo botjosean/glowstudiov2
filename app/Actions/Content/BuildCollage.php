@@ -96,7 +96,10 @@ class BuildCollage
             $this->headline($canvas, $headline, $provider->business_category);
         }
 
-        $this->badge($canvas, $provider);
+        // El pie primero: devuelve cuánto alto ocupó, para que el sello se
+        // apoye encima y no quede montado sobre el texto de contacto.
+        $footer = $this->contactFooter($canvas, $provider);
+        $this->badge($canvas, $provider, $footer);
 
         $key = sprintf('providers/%d/content/%s.jpg', $provider->id, (string) Str::ulid());
 
@@ -218,6 +221,62 @@ class BuildCollage
     }
 
     /**
+     * Dónde queda y cómo la llaman, en una franja al pie.
+     *
+     * Es lo que sus referencias llevan abajo y lo que faltaba: sin esto la
+     * foto es bonita pero nadie sabe adónde ir. La franja oscura no es
+     * adorno — sobre una foto clara el texto chico desaparece.
+     *
+     * El sello va a la derecha, así que el texto se corre a la izquierda
+     * para no quedar debajo.
+     */
+    private function contactFooter(ImageInterface $canvas, Provider $provider): int
+    {
+        $linea = BrandStyle::contactLine($provider->address_line, $provider->loadMissing('user')->user?->phone);
+
+        if ($linea === '') {
+            return 0;
+        }
+
+        $alto = 74;
+        $y = self::CANVAS - $alto;
+
+        $canvas->drawRectangle(0, $y, function ($rect) use ($alto): void {
+            $rect->size(self::CANVAS, $alto);
+            $rect->background('rgba(8, 10, 16, 0.82)');
+        });
+
+        // Se centra y se encoge hasta que entre. Antes iba espaciado y
+        // alineado a la izquierda, y con una dirección larga el teléfono
+        // quedaba cortado contra el borde — visto en una prueba real.
+        $margen = 40;
+        $disponible = self::CANVAS - ($margen * 2);
+        $fuente = resource_path('fonts/Manrope.ttf');
+
+        $size = 21;
+
+        while ($size > 13 && $this->textWidth($linea, $size, $fuente) > $disponible) {
+            $size -= 1;
+        }
+
+        // Si ni al tamaño mínimo entra, se sacrifica la dirección y se deja
+        // el teléfono, que es lo accionable.
+        if ($this->textWidth($linea, $size, $fuente) > $disponible) {
+            $linea = trim((string) strrchr($linea, '·'), '· ');
+        }
+
+        $canvas->text($linea, (int) round(self::CANVAS / 2), $y + (int) round($alto / 2), function (FontFactory $f) use ($size, $fuente): void {
+            $f->filename($fuente);
+            $f->size($size);
+            $f->color('#f1f5f9');
+            $f->align('center');
+            $f->valign('middle');
+        });
+
+        return $alto;
+    }
+
+    /**
      * Las etiquetas ANTES y DESPUÉS, una en cada mitad.
      *
      * Van abajo y no al centro para no taparle la cara al trabajo, que es
@@ -311,28 +370,28 @@ class BuildCollage
      * Si todavía no cargó foto de perfil, cae al nombre — un sello vacío
      * sería peor que uno con letras.
      */
-    private function badge(ImageInterface $canvas, Provider $provider): void
+    private function badge(ImageInterface $canvas, Provider $provider, int $footer = 0): void
     {
         $logo = $provider->avatar_photo_url;
 
         if ($logo !== null && $logo !== '') {
-            $this->logoBadge($canvas, $logo);
+            $this->logoBadge($canvas, $logo, $footer);
 
             return;
         }
 
-        $this->nameBadge($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME);
+        $this->nameBadge($canvas, $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME, $footer);
     }
 
     /**
      * Su foto de perfil recortada en círculo, con un aro blanco que la
      * despega de la foto de abajo.
      */
-    private function logoBadge(ImageInterface $canvas, string $key): void
+    private function logoBadge(ImageInterface $canvas, string $key, int $footer = 0): void
     {
         $radius = 70;
         $centerX = self::CANVAS - $radius - 32;
-        $centerY = self::CANVAS - $radius - 32;
+        $centerY = self::CANVAS - $footer - $radius - 26;
 
         // El aro blanco primero, un poco más grande que el logo.
         $canvas->drawCircle($centerX, $centerY, function ($circle) use ($radius): void {
@@ -378,14 +437,14 @@ class BuildCollage
         return $logo->getImageBlob();
     }
 
-    private function nameBadge(ImageInterface $canvas, string $name): void
+    private function nameBadge(ImageInterface $canvas, string $name, int $footer = 0): void
     {
         // Abajo a la derecha y no al centro: centrado caía justo sobre la
         // unión entre dos fotos y quedaba partido por la junta blanca. En una
         // esquina siempre se apoya dentro de una sola foto.
         $radius = 70;
         $centerX = self::CANVAS - $radius - 32;
-        $centerY = self::CANVAS - $radius - 32;
+        $centerY = self::CANVAS - $footer - $radius - 26;
 
         $canvas->drawCircle($centerX, $centerY, function ($circle) use ($radius): void {
             $circle->radius($radius);
