@@ -585,7 +585,9 @@
         "contentPhotoUnqueued": "Took it out of the next post",
         "pmTap": "Card or tap",
         "pmSoon": "Soon",
-        "pmTapSoonHint": "Soon you will be able to take card, Apple Pay or Google Pay right from your phone, with no reader."
+        "pmTapSoonHint": "Soon you will be able to take card, Apple Pay or Google Pay right from your phone, with no reader.",
+        "leadsOrderHint": "Longest waiting first. Today’s are marked in green.",
+        "leadToday": "Today"
     },
     "nav": {
         "appointments": "Appointments",

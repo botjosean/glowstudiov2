@@ -177,17 +177,27 @@ class WriteCaption
 
         1. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
-        2. HASHTAGS: entre 5 y 8, cada uno empezando por #. Tienen que ser del rubro
-           de ella si te lo doy más abajo (uñas, cabello, cejas, barbería, lo que
-           sea) — nunca de un rubro distinto. Si no te doy el rubro, usá solo
-           hashtags genéricos de belleza/negocio local (#beauty #localbusiness), sin
-           inventar uno de uñas ni de ningún servicio puntual.
+
+           TERMINÁ SIEMPRE pidiendo una de estas dos cosas, con sus palabras y sin
+           sonar a anuncio: que GUARDE el post para su próxima cita, o que se lo
+           MANDE a una amiga. Variá entre las dos; no uses siempre la misma.
+           Ejemplos del tono: "Guardá este para tu próxima cita" · "Mandáselo a esa
+           amiga que hace rato quiere cambiar".
+
+        2. HASHTAGS: exactamente 5, cada uno empezando por #.
+           - Los dos primeros, del rubro de ella si te lo doy más abajo (uñas,
+             cabello, cejas, barbería, lo que sea) — nunca de un rubro distinto.
+           - Los otros tres, DE SU ZONA: la ciudad y el área que te doy abajo, en el
+             formato que busca la gente (#chamblee #atlantanails #atl).
+           Si no te doy ni rubro ni ciudad, usá genéricos de belleza y negocio local.
+           Cinco y no ocho: para un salón, los que sirven son los de zona; el resto
+           solo alarga el texto.
 
         Nunca inventes precios ni cuánto dura un servicio. Nunca digas que lo hizo una IA.
 
         Responde EXACTAMENTE en este formato y nada más:
         DESCRIPCION: <el texto>
-        HASHTAGS: #uno #dos #tres
+        HASHTAGS: #uno #dos #tres #cuatro #cinco
         TXT;
     }
 
@@ -212,6 +222,14 @@ class WriteCaption
 
         if (($provider->bio ?? '') !== '') {
             $lines[] = 'Cómo se describe: '.$provider->bio;
+        }
+
+        // Su zona, para los hashtags locales — que para un salón son los que
+        // de verdad traen clientas. Antes no se le pasaba, así que salían
+        // #chamblee y #atlantanails por pura casualidad, cuando el modelo se
+        // acordaba de haberlos visto en otra parte del texto.
+        if (($provider->address_line ?? '') !== '') {
+            $lines[] = 'Dónde atiende (para los hashtags de zona): '.$provider->address_line;
         }
 
         // Sus servicios con precio de verdad. Es la diferencia entre un
@@ -303,7 +321,10 @@ class WriteCaption
 
         return [
             'caption' => $caption,
-            'hashtags' => array_slice($hashtags, 0, 8),
+            // Cinco y no ocho: Instagram ya casi no usa los hashtags para
+            // alcance, y para un salón los únicos que traen gente son los de
+            // zona. Ocho genéricos solo alargan el texto.
+            'hashtags' => array_slice($hashtags, 0, 5),
             'headline' => $headline,
         ];
     }

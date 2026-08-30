@@ -380,6 +380,15 @@ function waitedSince(iso) {
     return t('admin.leadWaitedDays', { count: Math.floor(minutes / (60 * 24)) });
 }
 
+/**
+ * ¿Escribió hoy? La lista va de la que más esperó a la más reciente, así que
+ * las de hoy quedan al final — y ahí se pierden. Marcadas en verde se ven de
+ * un vistazo sin romper el orden de la cola.
+ */
+function wroteToday(iso) {
+    return new Date(iso).toDateString() === new Date().toDateString();
+}
+
 // A phone was captured → offer to notify her by WhatsApp right away, same
 // flow as confirming a pending appointment. Without a phone the prompt
 // guard drops it silently.
@@ -711,11 +720,20 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                      pending appointment is already in the book, this is
                      somebody who is not in it yet. -->
                 <template v-if="activeTab === 'pending' && leads.length > 0">
-                    <div class="flex items-center gap-1.5 px-1 min-[700px]:break-inside-avoid">
-                        <MessageCircle :size="14" class="text-[var(--text-mute)]" />
-                        <span class="text-[11px] font-bold uppercase tracking-wide text-[var(--text-mute)]">
-                            {{ $t('admin.leadsTitle') }} · {{ leads.length }}
-                        </span>
+                    <div class="px-1 min-[700px]:break-inside-avoid">
+                        <div class="flex items-center gap-1.5">
+                            <MessageCircle :size="14" class="text-[var(--text-mute)]" />
+                            <span class="text-[11px] font-bold uppercase tracking-wide text-[var(--text-mute)]">
+                                {{ $t('admin.leadsTitle') }} · {{ leads.length }}
+                            </span>
+                        </div>
+                        <!-- Sin esta línea la lista parece congelada: arriba
+                             sale quien escribió hace dos semanas y ella
+                             concluyó que WhatsApp estaba caído, cuando en
+                             realidad los de hoy estaban al final. -->
+                        <p class="mt-1 text-[12px] font-normal text-[var(--text-faint)]">
+                            {{ $t('admin.leadsOrderHint') }}
+                        </p>
                     </div>
                     <div
                         v-for="lead in leads"
@@ -731,8 +749,13 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                                     {{ lead.phone }}
                                 </div>
                             </div>
-                            <span class="shrink-0 text-[11px] font-medium text-[var(--text-faint)]">
-                                {{ waitedSince(lead.firstContactAt) }}
+                            <span
+                                class="shrink-0 text-[11px] font-medium"
+                                :class="wroteToday(lead.firstContactAt)
+                                    ? 'rounded-full bg-[var(--green-soft)] px-2 py-0.5 font-bold uppercase tracking-wide text-[var(--green-text)]'
+                                    : 'text-[var(--text-faint)]'"
+                            >
+                                {{ wroteToday(lead.firstContactAt) ? $t('admin.leadToday') : waitedSince(lead.firstContactAt) }}
                             </span>
                         </div>
                         <p

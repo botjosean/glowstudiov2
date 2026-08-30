@@ -585,7 +585,9 @@
         "contentPhotoUnqueued": "La saqué del próximo post",
         "pmTap": "Tarjeta o tap",
         "pmSoon": "Pronto",
-        "pmTapSoonHint": "Pronto vas a poder cobrar con tarjeta, Apple Pay o Google Pay desde el mismo teléfono, sin lector."
+        "pmTapSoonHint": "Pronto vas a poder cobrar con tarjeta, Apple Pay o Google Pay desde el mismo teléfono, sin lector.",
+        "leadsOrderHint": "Primero las que más esperaron. Las de hoy van marcadas en verde.",
+        "leadToday": "Hoy"
     },
     "nav": {
         "appointments": "Citas",
