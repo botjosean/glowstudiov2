@@ -18,4 +18,15 @@ class ContentUploadPolicy
 
         return $upload->provider_id === $user->provider?->id;
     }
+
+    /**
+     * Poner de nuevo en la cola una foto que ya se usó en un post. Misma
+     * comprobación de dueño que borrar una referencia.
+     */
+    public function update(User $user, ContentUpload $upload): bool
+    {
+        $user->loadMissing('provider');
+
+        return $upload->provider_id === $user->provider?->id;
+    }
 }

@@ -733,6 +733,55 @@ class ContentPanelTest extends TestCase
         $this->assertSame('El marco tapa mucho.', $post->rating_note);
     }
 
+    public function test_a_used_photo_can_be_put_back_in_the_queue_by_hand(): void
+    {
+        // Antes, una vez usada, una foto "para editar" no volvía a
+        // aparecer en ningún lado salvo subiéndola de nuevo. Ella lo
+        // señaló directo: «no hay como para ver la foto reciente, para
+        // volver a hacer el contenido con las fotos».
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids]);
+
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/fotos/{$ids[0]}/reusar")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+        $this->assertNull(ContentUpload::find($ids[0])->used_at);
+        $this->assertNotNull(ContentUpload::find($ids[1])->used_at);
+    }
+
+    public function test_a_provider_cannot_reuse_another_providers_photo(): void
+    {
+        $mine = Provider::factory()->published()->create();
+        $hers = Provider::factory()->published()->create();
+
+        $upload = ContentUpload::create([
+            'provider_id' => $hers->id,
+            'path' => 'providers/2/gallery/x.webp',
+            'kind' => 'image',
+            'purpose' => 'edit',
+            'used_at' => now(),
+        ]);
+
+        $this->actingAs($mine->user)
+            ->patch("/admin/contenido/fotos/{$upload->id}/reusar")
+            ->assertForbidden();
+
+        $this->assertNotNull($upload->fresh()->used_at);
+    }
+
     public function test_a_downvote_frees_the_photos_to_try_again(): void
     {
         // Antes, un post que no le gustó dejaba las mismas fotos marcadas

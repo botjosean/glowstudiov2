@@ -74,6 +74,24 @@ class ContentController extends Controller
                     'id' => $upload->id,
                     'url' => MediaUrl::resolve($upload->path),
                 ])->values()->all(),
+            // Las últimas fotos "para editar", usadas o no. Antes, apenas una
+            // foto se usaba en un post, desaparecía de la pantalla sin dejar
+            // rastro — no había forma de volver a intentar con ella salvo
+            // subiéndola de nuevo desde el teléfono. Ella lo señaló directo:
+            // «no hay como para ver la foto reciente, para volver a hacer el
+            // contenido con las fotos».
+            'recentEdits' => ContentUpload::query()
+                ->where('provider_id', $provider->id)
+                ->where('purpose', ContentPurpose::Edit->value)
+                ->where('kind', UploadKind::Image->value)
+                ->latest()
+                ->limit(24)
+                ->get()
+                ->map(fn (ContentUpload $upload): array => [
+                    'id' => $upload->id,
+                    'url' => MediaUrl::resolve($upload->path),
+                    'used' => $upload->used_at !== null,
+                ])->values()->all(),
             // La lista entera, no solo el conteo: sin verlas no hay forma de
             // saber si lo que subió llegó bien, ni de quitar una equivocada.
             'references' => ContentUpload::query()
@@ -332,6 +350,20 @@ class ContentController extends Controller
         $upload->delete();
 
         return to_route('admin.contenido')->with('success', 'admin.contentReferenceRemoved');
+    }
+
+    /**
+     * Poner de nuevo en la cola una foto "para editar" que ya se usó en un
+     * post. Antes, una vez usada, no había manera de recuperarla salvo
+     * subirla de nuevo.
+     */
+    public function reuseUpload(ContentUpload $upload): RedirectResponse
+    {
+        if ($upload->purpose === ContentPurpose::Edit) {
+            $upload->update(['used_at' => null]);
+        }
+
+        return to_route('admin.contenido')->with('success', 'admin.contentPhotoReused');
     }
 
     /**

@@ -188,6 +188,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');
     Route::delete('/contenido/referencias/{upload}', [ContentController::class, 'destroyReference'])
         ->can('delete', 'upload')->whereNumber('upload')->name('contenido.referencias.destroy');
+    Route::patch('/contenido/fotos/{upload}/reusar', [ContentController::class, 'reuseUpload'])
+        ->can('update', 'upload')->whereNumber('upload')->name('contenido.fotos.reusar');
 
     Route::get('/perfil', [DashboardController::class, 'perfil'])->name('perfil');
     // La vitrina y su formulario viven separados, como en Booksy: /perfil
