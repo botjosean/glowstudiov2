@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { Contact, X } from '@lucide/vue';
+import { Contact, CreditCard, X } from '@lucide/vue';
 import BottomSheet from '../ui/BottomSheet.vue';
 import ClientPicker from './ClientPicker.vue';
 import OutlinedInput from '../ui/OutlinedInput.vue';
@@ -283,7 +283,25 @@ function submit() {
                 >
                     {{ $t(methodKey[method] ?? 'admin.pmOther') }}
                 </Chip>
+
+                <!-- Cobrar con el teléfono todavía no existe. Se muestra
+                     apagado y con su etiqueta, no seleccionable: es un aviso
+                     de lo que viene, no un método que se pueda elegir hoy. -->
+                <span
+                    class="inline-flex shrink-0 cursor-default items-center gap-1.5 rounded-full border border-dashed border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-2 text-[13px] font-medium text-[var(--text-faint)]"
+                    :title="$t('admin.pmTapSoonHint')"
+                >
+                    <CreditCard :size="14" />
+                    {{ $t('admin.pmTap') }}
+                    <span class="rounded-full bg-[var(--gold-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--gold-text)]">
+                        {{ $t('admin.pmSoon') }}
+                    </span>
+                </span>
             </div>
+
+            <p class="mt-2 text-[12px] font-normal leading-relaxed text-[var(--text-faint)]">
+                {{ $t('admin.pmTapSoonHint') }}
+            </p>
             <p v-if="form.errors.paymentMethod" class="mt-1.5 text-[13px] font-normal text-[var(--danger)]">
                 {{ form.errors.paymentMethod }}
             </p>

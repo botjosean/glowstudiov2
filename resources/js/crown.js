@@ -12,9 +12,14 @@
  * 24-ago pasó a ser una trenza de dos hilos con tres piedras. El 25-ago el
  * dueño mandó una foto de referencia —«el definitivo»— y el 26-ago, tras ver
  * dieciséis variantes y varias animaciones, confirmó esta: cinco perlas de
- * alambre sobre cuatro arcos, con dos hojas en los valles internos y dos colas
- * que cuelgan de las perlas de las puntas. Es la que más se parece a la foto
- * que mandó.
+ * alambre sobre cuatro arcos, con dos colas que cuelgan de las perlas de las
+ * puntas.
+ *
+ * **Sin las hojas** (30-ago). Tenía además dos hojas colgando bajo la segunda
+ * y la cuarta perla, y a tamaño real no se leían como hojas sino como dos
+ * rayas rectas que rompían la curva. Ella lo vio así: «esas dos rayas que van
+ * hacia abajo rectas, quitalas de todo el logo, que quede bien simple». Todo
+ * lo demás es curvo, así que dos aristas rectas desentonaban.
  *
  * **Por qué ahora son DOS listas y no una.** Las dos coronas anteriores eran
  * puro trazo —`fill: none` en el grupo entero, en los tres consumidores—
@@ -60,26 +65,23 @@ export const CROWN_STROKES = [
 ];
 
 /**
- * Las dos hojas de los valles internos y las cinco perlas, sólidas — no son
- * trazo. Un círculo se escribe como dos semicírculos (`A r r 0 1 0 …` dos
- * veces) porque este archivo solo exporta strings de `d`, para que cada
- * consumidor los pinte igual que los de arriba, con un `v-for` y nada más.
+ * Las cinco perlas, sólidas — no son trazo. Un círculo se escribe como dos
+ * semicírculos (`A r r 0 1 0 …` dos veces) porque este archivo solo exporta
+ * strings de `d`, para que cada consumidor los pinte igual que los de arriba,
+ * con un `v-for` y nada más.
  *
  * **De izquierda a derecha**, en el mismo orden en que el punto de luz las
  * va a encontrar en su camino —CROWN_SPARK_PATH recorre la corona en ese
- * sentido—: primero la perla de la punta izquierda, después la de en medio
- * a ese lado y la hoja pegada a ella, la del centro cuando el punto pasa por
- * arriba, y así en espejo hacia la derecha. No es "del centro hacia los
- * lados": ese orden tenía sentido con las tres piedras de la corona
- * anterior, que se dibujaban todas a la vez; esta se enciende sola, siguiendo
- * a la luz.
+ * sentido—: primero la perla de la punta izquierda, después la de en medio a
+ * ese lado, la del centro cuando el punto pasa por arriba, y así en espejo
+ * hacia la derecha. No es "del centro hacia los lados": ese orden tenía
+ * sentido con las tres piedras de la corona anterior, que se dibujaban todas
+ * a la vez; esta se enciende sola, siguiendo a la luz.
  */
 export const CROWN_FILLS = [
     'M 6 39 A 6 6 0 1 0 18 39 A 6 6 0 1 0 6 39 Z',           // perla, punta izquierda
     'M 43.5 27 A 6.5 6.5 0 1 0 56.5 27 A 6.5 6.5 0 1 0 43.5 27 Z', // perla, medio izquierda
-    'M 54 32 L 59 33 L 65 71 L 61 71 Z',                      // hoja izquierda
     'M 92 9 A 8 8 0 1 0 108 9 A 8 8 0 1 0 92 9 Z',            // perla del centro
-    'M 146 32 L 141 33 L 135 71 L 139 71 Z',                  // hoja derecha
     'M 143.5 27 A 6.5 6.5 0 1 0 156.5 27 A 6.5 6.5 0 1 0 143.5 27 Z', // perla, medio derecha
     'M 182 39 A 6 6 0 1 0 194 39 A 6 6 0 1 0 182 39 Z',       // perla, punta derecha
 ];

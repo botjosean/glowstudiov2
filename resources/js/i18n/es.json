@@ -525,7 +525,7 @@
         "saleTipCustom": "Otra",
         "saleMethod": "Método de pago",
         "saleClient": "Clienta (opcional)",
-        "saleClientNone": "Sin clienta",
+        "saleClientNone": "Añadir clienta",
         "saleClientOther": "+ Añadir clienta nueva",
         "saleClientOtherName": "Nombre de la persona",
         "saleClientFromContacts": "Elegir de contactos",
@@ -582,7 +582,10 @@
         "importHelp": "¿Cómo saco ese archivo?",
         "importHelpBody": "En el iPhone: Contactos → Listas → mantené apretado el grupo → Exportar. En Android: Contactos → menú → Administrar contactos → Importar o exportar → Exportar a archivo. Te queda un archivo .vcf que subís acá.",
         "contentPhotoQueued": "Entra en el próximo post",
-        "contentPhotoUnqueued": "La saqué del próximo post"
+        "contentPhotoUnqueued": "La saqué del próximo post",
+        "pmTap": "Tarjeta o tap",
+        "pmSoon": "Pronto",
+        "pmTapSoonHint": "Pronto vas a poder cobrar con tarjeta, Apple Pay o Google Pay desde el mismo teléfono, sin lector."
     },
     "nav": {
         "appointments": "Citas",

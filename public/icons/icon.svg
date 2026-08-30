@@ -10,11 +10,16 @@
     trazo es más grueso que el de la marca de la barra a propósito: a 16px, que
     es como lo enseña el navegador, el trazo fino se convierte en una mancha.
 
-    Tercera corona (26-ago-2026): cinco perlas de alambre sobre cuatro arcos,
-    con dos hojas y dos colas — la que más se parece a la foto que mandó el
-    dueño. A diferencia de las dos anteriores, esta SÍ tiene relleno: las
-    perlas y las hojas son sólidas, no un contorno, así que hacen falta dos
-    grupos donde antes bastaba uno.
+    Tercera corona (26-ago-2026): cinco perlas de alambre sobre cuatro arcos
+    con dos colas — la que más se parece a la foto que mandó el dueño. A
+    diferencia de las dos anteriores, esta SÍ tiene relleno: las perlas son
+    sólidas, no un contorno, así que hacen falta dos grupos donde antes
+    bastaba uno.
+
+    Las dos hojas que colgaban de los valles internos se quitaron el 30-ago:
+    a tamaño real no se leían como hojas sino como dos rayas rectas que
+    rompían la curva. Si se vuelve a tocar el dibujo, hay que REEXPORTAR los
+    PNG de esta carpeta — no se generan solos.
 
     Y a diferencia de las dos anteriores, esta corona ocupa casi todo el ancho
     de su propio lienzo (192 de 200 unidades) en vez de dejar margen de sobra,
@@ -57,10 +62,10 @@
         </g>
 
         <g fill="url(#gold)">
-            <!-- Las dos hojas -->
-            <path d="M 54 32 L 59 33 L 65 71 L 61 71 Z" />
-            <path d="M 146 32 L 141 33 L 135 71 L 139 71 Z" />
-            <!-- Las cinco perlas -->
+            <!-- Las cinco perlas. Las dos hojas se quitaron el 30-ago: a
+                 tamaño real se leían como dos rayas rectas colgando bajo la
+                 segunda y la cuarta perla, y rompían la curva de todo lo
+                 demás. Ver resources/js/crown.js. -->
             <circle cx="100" cy="9" r="8" />
             <circle cx="50" cy="27" r="6.5" />
             <circle cx="150" cy="27" r="6.5" />

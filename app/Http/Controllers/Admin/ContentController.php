@@ -85,7 +85,12 @@ class ContentController extends Controller
                 ->where('purpose', ContentPurpose::Edit->value)
                 ->where('kind', UploadKind::Image->value)
                 ->latest()
-                ->limit(24)
+                // Diez y no veinticuatro: con todas, la cuadrícula ocupaba
+                // cinco filas de miniaturas diminutas y empujaba el resto de
+                // la pantalla fuera de vista. Ella lo pidió así mirándolo:
+                // «con 10 cuadrículas es suficiente para que todo se vaya
+                // acomodando y se vea más bonito».
+                ->limit(10)
                 ->get()
                 ->map(fn (ContentUpload $upload): array => [
                     'id' => $upload->id,

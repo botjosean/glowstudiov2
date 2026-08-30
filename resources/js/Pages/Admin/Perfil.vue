@@ -1,7 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Ban, Camera, ChevronRight, Eye, MessageCircle, Plus, Settings, Share2 } from '@lucide/vue';
+// Pencil faltaba y el botón de cambiar la portada salía como un cuadrado
+// oscuro vacío: Vue no dibuja un componente que no existe, y en producción
+// ni siquiera avisa. Ella lo vio antes que nadie: «o sí funciona pero no se
+// ve».
+import { Ban, Camera, ChevronRight, Eye, MessageCircle, Pencil, Plus, Settings, Share2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import ConfirmDialog from '../../Components/ui/ConfirmDialog.vue';

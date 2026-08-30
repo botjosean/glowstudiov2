@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { Bell, ChevronDown, Clock, MessageCircle, Plus, X } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
@@ -54,11 +54,49 @@ const activeTab = ref('agenda');
 const selectedDate = ref(new Date());
 const selectedKey = computed(() => selectedDate.value.toDateString());
 
+const DAY_MS = 86400000;
+
+function atMidnight(date) {
+    const copy = new Date(date);
+    copy.setHours(0, 0, 0, 0);
+
+    return copy;
+}
+
+/**
+ * Dónde arranca la tira.
+ *
+ * Normalmente en hoy, como siempre. Pero si el día elegido en el calendario
+ * cae fuera de esas dos semanas, la tira se re-ancla a su alrededor: antes
+ * estaba clavada en hoy, así que al elegir el 12 de agosto desde el mes la
+ * cabecera cambiaba y la tira seguía mostrando del 30 en adelante — el día
+ * elegido no aparecía por ningún lado. Ella lo vio así: «selecciono el día,
+ * en la pantalla principal no me lo selecciona, queda en 30».
+ *
+ * Tres días de contexto hacia atrás para que el elegido no quede pegado al
+ * borde izquierdo.
+ */
+const stripStart = computed(() => {
+    const today = atMidnight(new Date());
+    const selected = atMidnight(selectedDate.value);
+    const offset = Math.round((selected - today) / DAY_MS);
+
+    if (offset >= 0 && offset < 14) {
+        return today;
+    }
+
+    const start = new Date(selected);
+    start.setDate(start.getDate() - 3);
+
+    return atMidnight(start);
+});
+
 const stripDays = computed(() => {
     const jsLocale = locale.value === 'es' ? 'es-ES' : 'en-US';
+    const todayKey = new Date().toDateString();
 
     return Array.from({ length: 14 }, (_, i) => {
-        const date = new Date();
+        const date = new Date(stripStart.value);
         date.setDate(date.getDate() + i);
 
         return {
@@ -66,7 +104,8 @@ const stripDays = computed(() => {
             key: date.toDateString(),
             dow: date.toLocaleDateString(jsLocale, { weekday: 'short' }).replace('.', ''),
             num: date.getDate(),
-            isToday: i === 0,
+            // Por fecha y no por posición: la tira ya no siempre empieza hoy.
+            isToday: date.toDateString() === todayKey,
         };
     });
 });
@@ -164,6 +203,24 @@ const headerRange = computed(() => {
 });
 
 const monthOpen = ref(false);
+
+// Para poder correr la tira hasta el día elegido: sin esto, con un día fuera
+// de la vista quedaba seleccionado pero sin verse.
+const stripRefs = new Map();
+
+function setStripRef(key, el) {
+    if (el) {
+        stripRefs.set(key, el);
+    } else {
+        stripRefs.delete(key);
+    }
+}
+
+watch(selectedKey, (key) => {
+    nextTick(() => {
+        stripRefs.get(key)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    });
+});
 
 function pickDate(date) {
     selectedDate.value = date;
@@ -614,6 +671,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', warnIfActionInFligh
                 <button
                     v-for="day in stripDays"
                     :key="day.key"
+                    :ref="(el) => setStripRef(day.key, el)"
                     type="button"
                     class="flex w-11 shrink-0 flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors"
                     :class="selectedKey === day.key

@@ -937,6 +937,27 @@ class ContentPanelTest extends TestCase
         $this->assertSame('El marco tapa mucho.', $post->rating_note);
     }
 
+    public function test_only_the_ten_most_recent_photos_are_shown(): void
+    {
+        // Con todas, la cuadrícula ocupaba cinco filas de miniaturas
+        // diminutas y empujaba el resto de la pantalla fuera de vista. Ella
+        // lo pidió mirándolo: «con 10 cuadrículas es suficiente».
+        $provider = Provider::factory()->published()->create();
+
+        foreach (range(1, 14) as $n) {
+            ContentUpload::create([
+                'provider_id' => $provider->id,
+                'path' => "providers/{$provider->id}/gallery/f{$n}.webp",
+                'kind' => 'image',
+                'purpose' => 'edit',
+            ]);
+        }
+
+        $this->actingAs($provider->user)->get('/admin/contenido')->assertInertia(
+            fn (Assert $page) => $page->has('recentEdits', 10),
+        );
+    }
+
     public function test_a_photo_can_be_put_into_and_taken_out_of_the_queue(): void
     {
         // Antes solo se podía METER: las fotos que ya estaban en la cola no
