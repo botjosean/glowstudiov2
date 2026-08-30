@@ -86,15 +86,21 @@ class WriteCaption
            precio vende; uno que dice "NUEVOS" no dice nada.
            Nunca inventes un precio ni cambies el de la lista.
 
-           Si no hay servicios en la lista, usá 2 o 3 palabras con gancho, como
-           "TRENDING / NAILS / VERANO".
+           Si no hay servicios en la lista, usá 2 o 3 palabras con gancho que
+           sirvan para CUALQUIER rubro de belleza, como "CITAS ABIERTAS / ESTA
+           SEMANA". Nunca asumas uñas, cabello ni ningún servicio puntual si
+           el rubro no viene indicado más abajo.
 
            SOLO letras, números y espacios. Ni un emoji, ni un símbolo de dólar, ni un
            asterisco: la tipografía del cartel no los dibuja y dejan un hueco de color
            vacío. Escribí el precio en números pelados: 65, no $65.
         2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
-        3. HASHTAGS: entre 5 y 8, cada uno empezando por #.
+        3. HASHTAGS: entre 5 y 8, cada uno empezando por #. Tienen que ser del rubro
+           de ella si te lo doy más abajo (uñas, cabello, cejas, barbería, lo que
+           sea) — nunca de un rubro distinto. Si no te doy el rubro, usá solo
+           hashtags genéricos de belleza/negocio local (#beauty #localbusiness), sin
+           inventar uno de uñas ni de ningún servicio puntual.
 
         Nunca inventes precios ni cuánto dura un servicio. Nunca digas que lo hizo una IA.
 

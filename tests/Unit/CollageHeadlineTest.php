@@ -45,4 +45,21 @@ class CollageHeadlineTest extends TestCase
     {
         $this->assertSame([], BuildCollage::cleanLines(['✨', '🔥', '···']));
     }
+
+    /**
+     * Reproduce un post real de Josean (29-ago): su ficha de estilo trae
+     * blanco como uno de los tres colores, y el texto de 'blocks' se pintaba
+     * siempre blanco — un bloque en blanco sin letra visible encima.
+     */
+    public function test_dark_text_on_a_light_block_so_it_stays_readable(): void
+    {
+        $this->assertSame('#111827', BuildCollage::textColorFor('#FFFFFF'));
+        $this->assertSame('#111827', BuildCollage::textColorFor('#DCC9B7'));
+    }
+
+    public function test_white_text_on_a_dark_block_as_before(): void
+    {
+        $this->assertSame('#ffffff', BuildCollage::textColorFor('#000000'));
+        $this->assertSame('#ffffff', BuildCollage::textColorFor('#111827'));
+    }
 }

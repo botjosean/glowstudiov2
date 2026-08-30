@@ -189,14 +189,15 @@ class BuildCollage
         foreach ($lines as $i => $line) {
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
             $width = $this->textWidth($line, $size, $font);
+            $blockColor = $colors[$i % count($colors)];
 
             if ($look === 'blocks') {
                 $canvas->drawRectangle(
                     (int) round((self::CANVAS - $width) / 2) - $padX,
                     $centerY - (int) round($size / 2) - $padY,
-                    function ($rect) use ($width, $size, $padX, $padY, $i, $colors): void {
+                    function ($rect) use ($width, $size, $padX, $padY, $blockColor): void {
                         $rect->size($width + ($padX * 2), $size + ($padY * 2));
-                        $rect->background($colors[$i % count($colors)]);
+                        $rect->background($blockColor);
                     },
                 );
             } elseif ($look !== 'band') {
@@ -213,10 +214,21 @@ class BuildCollage
 
             $isLast = $i === count($lines) - 1;
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $accentLast, $isLast, $colors): void {
+            // En 'blocks' el texto va siempre SOBRE SU PROPIO bloque: si la
+            // ficha trae un color claro (blanco, crema) entre los tres, el
+            // texto blanco de siempre quedaba invisible sobre su propio
+            // fondo — un bloque en blanco sin letra, visto en un post real
+            // de Josean. Se decide por contraste, no a ciegas.
+            $textColor = match (true) {
+                $look === 'blocks' => self::textColorFor($blockColor),
+                $accentLast && $isLast => $colors[1],
+                default => '#ffffff',
+            };
+
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $textColor): void {
                 $f->filename($font);
                 $f->size($size);
-                $f->color($accentLast && $isLast ? $colors[1] : '#ffffff');
+                $f->color($textColor);
                 $f->align('center');
                 $f->valign('middle');
             });
@@ -360,6 +372,26 @@ class BuildCollage
         $metrics = (new \Imagick)->queryFontMetrics($draw, $text);
 
         return (int) round($metrics['textWidth']);
+    }
+
+    /**
+     * Blanco o casi-negro según qué tan clara sea la sombra que recibe: el
+     * mismo criterio que usa cualquier lector de contraste (fórmula YIQ),
+     * sin traer una librería aparte para una cuenta de tres líneas.
+     */
+    public static function textColorFor(string $hex): string
+    {
+        $hex = ltrim($hex, '#');
+
+        if (strlen($hex) !== 6) {
+            return '#ffffff';
+        }
+
+        [$r, $g, $b] = array_map(static fn (string $c): int => hexdec($c), str_split($hex, 2));
+
+        $brightness = ($r * 299 + $g * 587 + $b * 114) / 1000;
+
+        return $brightness > 150 ? '#111827' : '#ffffff';
     }
 
     /**
