@@ -319,6 +319,12 @@ class ContentController extends Controller
     /**
      * El pulgar arriba o abajo, y sobre todo el motivo: un "no me gusta"
      * suelto no sirve para ajustar nada, el motivo escrito sí.
+     *
+     * Un "no me gusta" también libera las fotos que armaron ese post: sin
+     * esto, un post que no le gustó dejaba las mismas fotos marcadas como
+     * usadas para siempre, y para volver a intentar tenía que subirlas de
+     * nuevo desde el teléfono. Ella lo dijo directo: «esa foto deberían
+     * quedar ahí lista, para volverlas a seleccionar».
      */
     public function rate(Request $request, ContentPost $post): RedirectResponse
     {
@@ -327,10 +333,27 @@ class ContentController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        // Solo en el momento en que pasa a "no me gusta", nunca de nuevo: si
+        // ya estaba en "no me gusta" y esas mismas fotos se volvieron a usar
+        // en un post distinto, repetir la liberación se las robaría a ese
+        // post nuevo.
+        $yaEstabaDescartado = $post->rating === ContentPost::RATING_DOWN;
+
         $post->update([
             'rating' => $validated['rating'],
             'rating_note' => $validated['note'] ?? null,
         ]);
+
+        if ($validated['rating'] === ContentPost::RATING_DOWN && ! $yaEstabaDescartado) {
+            ContentUpload::query()
+                ->where('provider_id', $post->provider_id)
+                ->whereIn('path', $post->source_paths ?? [])
+                ->update(['used_at' => null]);
+
+            // Mensaje distinto y no el genérico: es la parte que a ella le
+            // molestaba no saber — que esas fotos no se perdieron.
+            return to_route('admin.contenido')->with('success', 'admin.contentRatedDownFreedPhotos');
+        }
 
         return to_route('admin.contenido')->with('success', 'admin.contentRated');
     }

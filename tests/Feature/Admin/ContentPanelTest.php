@@ -703,6 +703,93 @@ class ContentPanelTest extends TestCase
         $this->assertSame('El marco tapa mucho.', $post->rating_note);
     }
 
+    public function test_a_downvote_frees_the_photos_to_try_again(): void
+    {
+        // Antes, un post que no le gustó dejaba las mismas fotos marcadas
+        // como usadas para siempre — para volver a intentar tenía que
+        // subirlas de nuevo desde el teléfono. Ella lo señaló directo: «esa
+        // foto deberían quedar ahí lista, para volverlas a seleccionar».
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids]);
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/{$post->id}/calificar", ['rating' => 'down', 'note' => 'No me gustó el recorte.'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'admin.contentRatedDownFreedPhotos');
+
+        $this->assertSame(2, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+    }
+
+    public function test_an_upvote_does_not_free_the_photos(): void
+    {
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids]);
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/{$post->id}/calificar", ['rating' => 'up']);
+
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+    }
+
+    public function test_downvoting_twice_does_not_steal_photos_a_new_post_already_reused(): void
+    {
+        // Sin esta protección: rechazar A libera sus fotos, ella las usa
+        // para armar B, y si vuelve a guardar el motivo de A (mismo "no me
+        // gusta" de antes), esas fotos se le soltarían de B por segunda vez.
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids]);
+
+        $postA = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/{$postA->id}/calificar", ['rating' => 'down', 'note' => 'primer intento']);
+
+        // Las mismas fotos, reusadas en un post B.
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids]);
+
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+
+        // Vuelve a guardar el "no me gusta" de A (edita el motivo, por ejemplo).
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/{$postA->id}/calificar", ['rating' => 'down', 'note' => 'motivo editado']);
+
+        // Las fotos de B siguen usadas: no se las robó el segundo guardado de A.
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
+    }
+
     public function test_a_provider_cannot_rate_another_providers_post(): void
     {
         $mine = Provider::factory()->published()->create();
