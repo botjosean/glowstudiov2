@@ -165,6 +165,38 @@ class ContentPanelTest extends TestCase
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
     }
 
+    public function test_the_description_label_does_not_leak_into_the_caption_when_the_model_writes_it_with_an_accent(): void
+    {
+        // Se le pide el formato "DESCRIPCION:" sin tilde, pero el modelo
+        // escribe español de verdad y a veces contesta "DESCRIPCIÓN:" — visto
+        // en una generación real para Josean donde la etiqueta quedó pegada
+        // al principio del texto del post.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => implode("\n", [
+                'TITULAR: CITAS ABIERTAS | ESTA SEMANA',
+                'DESCRIPCIÓN: Hoy estuve creando magia en el salón.',
+                'HASHTAGS: #hair #hairstylist',
+            ])]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => collect(range(1, 2))->map(fn (int $n) => UploadedFile::fake()->image("f{$n}.jpg"))->all(),
+        ]);
+
+        $ids = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->pluck('id')->all();
+
+        $this->actingAs($provider->user)
+            ->post('/admin/contenido/generar', ['layout' => 'collage', 'uploadIds' => $ids])
+            ->assertSessionHasNoErrors();
+
+        $post = ContentPost::query()->where('provider_id', $provider->id)->sole();
+
+        $this->assertSame('Hoy estuve creando magia en el salón.', $post->caption);
+    }
+
     public function test_a_collage_uses_every_photo_even_when_they_dont_form_a_rectangle(): void
     {
         // Cinco no forman un rectángulo, y aun así entran las cinco: la

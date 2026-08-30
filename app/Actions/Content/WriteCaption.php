@@ -198,7 +198,11 @@ class WriteCaption
             $headline = array_slice($headline, 0, 3);
         }
 
-        if (preg_match('/DESCRIPCION:\s*(.+?)(?=\n\s*HASHTAGS:|$)/su', $answer, $match) === 1) {
+        // Con tilde o sin ella: el formato pedido va sin acento pero el
+        // modelo, escribiendo español de verdad, a veces contesta
+        // "DESCRIPCIÓN" — y sin este acento suelto la etiqueta se colaba
+        // dentro del texto del post, visto en una generación real de Josean.
+        if (preg_match('/DESCRIPCI[OÓ]N:\s*(.+?)(?=\n\s*HASHTAGS:|$)/su', $answer, $match) === 1) {
             $caption = trim($match[1]);
         }
 
