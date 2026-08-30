@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Actions\Content\HeadlinePhrases;
+use App\Actions\Content\WriteCaption;
+use App\Enums\BusinessCategory;
 use App\Models\ContentPost;
 use App\Models\ContentUpload;
 use App\Models\Provider;
@@ -237,6 +240,76 @@ class ContentPanelTest extends TestCase
 
         // Ya no vuelven a ofrecerse para armar otro post.
         $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
+    }
+
+    public function test_the_headline_comes_from_the_trade_library_not_from_the_model(): void
+    {
+        // El modelo contesta solo el pie del post. Antes también inventaba el
+        // titular y salía «UÑAS DE HOY / GLOW STUDIOS» — el nombre del
+        // negocio gastando una línea que el sello ya muestra.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => implode("\n", [
+                'TITULAR: ESTE TITULAR | NO SE USA',
+                'DESCRIPCION: Un texto cualquiera.',
+                'HASHTAGS: #nails',
+            ])]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create([
+            'business_category' => 'nails',
+            'content_style' => ['colores' => ['#111827', '#e11d63'], 'lleva_precio' => false],
+        ]);
+
+        $written = app(WriteCaption::class)->handle($provider);
+
+        $this->assertCount(2, $written['headline']);
+        $this->assertContains(
+            $written['headline'],
+            HeadlinePhrases::forCategory(BusinessCategory::Nails),
+            'El titular no salió de la biblioteca del rubro.',
+        );
+    }
+
+    public function test_with_a_price_the_headline_uses_one_of_her_real_services(): void
+    {
+        // Nunca uno inventado: sale de su propia lista de servicios.
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => "DESCRIPCION: texto\nHASHTAGS: #nails"]]],
+        ])]);
+
+        $provider = Provider::factory()->published()->create([
+            'business_category' => 'nails',
+            'content_style' => ['colores' => ['#111827', '#e11d63'], 'lleva_precio' => true],
+        ]);
+
+        $provider->services()->create([
+            'name' => 'Acrílicas',
+            'price' => 65,
+            'duration_minutes' => 90,
+            'category' => 'nails',
+            'position' => 1,
+            'is_active' => true,
+        ]);
+
+        $written = app(WriteCaption::class)->handle($provider);
+
+        $this->assertSame(['ACRÍLICAS', 'desde 65'], $written['headline']);
+    }
+
+    public function test_the_headline_survives_a_model_that_never_answers(): void
+    {
+        // No lo escribe el modelo, así que un fallo de red no puede dejar el
+        // post sin nada encima — que es como quedaba antes.
+        Http::fake(['*' => Http::response([], 500)]);
+
+        $provider = Provider::factory()->published()->create([
+            'business_category' => 'hair',
+            'content_style' => ['colores' => ['#111827', '#e11d63'], 'lleva_precio' => false],
+        ]);
+
+        $written = app(WriteCaption::class)->handle($provider);
+
+        $this->assertCount(2, $written['headline']);
     }
 
     public function test_generating_with_a_template_reads_and_caches_that_references_style(): void

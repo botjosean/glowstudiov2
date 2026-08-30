@@ -7,6 +7,7 @@ use App\Models\Provider;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Escribe la descripción y los hashtags del post.
@@ -26,11 +27,18 @@ class WriteCaption
      */
     public function handle(Provider $provider): array
     {
+        // El titular NO lo escribe el modelo. Sale de sus servicios reales o
+        // de la biblioteca de frases del oficio — ver headline(). Así el
+        // texto grande de la foto no depende de que la llamada salga bien, y
+        // no puede aparecer un emoji que la tipografía no dibuja ni el
+        // nombre del negocio gastando una línea que el sello ya muestra.
+        $headline = $this->headline($provider);
+
         $config = config('services.assistant');
         $apiKey = $config['api_key'] ?? null;
 
         if (! is_string($apiKey) || $apiKey === '') {
-            return $this->fallback($provider);
+            return $this->fallback($provider, $headline);
         }
 
         // Un reintento y no más: es lo que hace falta para un vacío
@@ -42,11 +50,11 @@ class WriteCaption
             if ($texto === null) {
                 // Sin respuesta o rechazada: reintentar no cambia nada, ya
                 // quedó registrado en ask().
-                return $this->fallback($provider);
+                return $this->fallback($provider, $headline);
             }
 
             if (trim($texto) !== '') {
-                return $this->parse($texto, $provider);
+                return $this->parse($texto, $provider, $headline);
             }
 
             Log::warning('El modelo devolvió una respuesta vacía al escribir la descripción.', [
@@ -55,7 +63,32 @@ class WriteCaption
             ]);
         }
 
-        return $this->fallback($provider);
+        return $this->fallback($provider, $headline);
+    }
+
+    /**
+     * El texto grande de la foto, sin pasar por el modelo.
+     *
+     * Con precio: un servicio suyo de verdad, tomado de su lista — nunca uno
+     * inventado. Sin precio: una frase del oficio, de las que ella misma
+     * escribiría. Ver HeadlinePhrases.
+     *
+     * @return list<string>
+     */
+    private function headline(Provider $provider): array
+    {
+        if ($this->wantsPrice($provider)) {
+            $service = $provider->services()
+                ->where('is_active', true)
+                ->inRandomOrder()
+                ->first(['name', 'price']);
+
+            if ($service !== null) {
+                return [Str::upper($service->name), 'desde '.$service->price];
+            }
+        }
+
+        return HeadlinePhrases::pick($provider->business_category);
     }
 
     /**
@@ -84,7 +117,7 @@ class WriteCaption
                     // contestar. 'low' salvo que se configure otra cosa.
                     'reasoning' => ['effort' => $config['reasoning_effort'] ?: 'low'],
                     'messages' => [
-                        ['role' => 'system', 'content' => $this->instructions($this->wantsPrice($provider))],
+                        ['role' => 'system', 'content' => $this->instructions()],
                         ['role' => 'user', 'content' => $this->brief($provider)],
                     ],
                 ]);
@@ -128,52 +161,23 @@ class WriteCaption
     }
 
     /**
-     * Qué se le pide al modelo.
+     * Qué se le pide al modelo: solo el pie del post.
      *
-     * El precio no va siempre. Antes se le ordenaba usar SIEMPRE un servicio
-     * con su precio, y todos los posts salían con el mismo "ACRILICAS DESDE
-     * 65" encima — ella lo señaló directo: «siempre pone el precio desde 65».
-     * Ahora manda lo que dicen sus propias referencias (`lleva_precio` de la
-     * ficha, que se leía pero no se usaba en ningún lado), y sin ficha se
-     * sortea, para que no sean todos iguales.
+     * El titular ya NO se le pide — lo arma headline() con sus servicios
+     * reales o con la biblioteca de frases del oficio. Antes se le ordenaba
+     * usar siempre un servicio con su precio y todos los posts salían con el
+     * mismo «ACRILICAS DESDE 65» encima, que ella señaló directo.
      */
-    private function instructions(bool $conPrecio): string
+    private function instructions(): string
     {
-        $reglaPrecio = $conPrecio
-            ? <<<'PRECIO'
-               USA UN SERVICIO Y SU PRECIO DE VERDAD de la lista de abajo: el nombre
-               del servicio en una línea y el precio en otra, como
-               "ACRILICAS / DESDE 65" o "BALAYAGE / 200".
-               Nunca inventes un precio ni cambies el de la lista. Si no hay lista de
-               servicios, usá 2 o 3 palabras con gancho y ningún número.
-            PRECIO
-            : <<<'PRECIO'
-               NO PONGAS NINGÚN PRECIO ni número de dinero en el titular, aunque
-               tengas la lista de servicios abajo. Usá 2 o 3 palabras con gancho:
-               el nombre del servicio ("ACRILICAS / NUEVO SET"), una invitación
-               ("CITAS ABIERTAS / ESTA SEMANA") o el resultado ("TRANSFORMACIÓN /
-               REAL"). Variá: no uses siempre la misma fórmula.
-            PRECIO;
-
-        return <<<TXT
+        return <<<'TXT'
         Escribes posts de Instagram para profesionales de belleza en Estados Unidos.
 
-        Devuelves tres cosas:
+        Devuelves dos cosas:
 
-        1. TITULAR: 2 o 3 líneas cortas que van impresas GRANDES sobre la foto. Es lo
-           que hace que alguien pare de deslizar.
-
-        {$reglaPrecio}
-
-           Nunca asumas uñas, cabello ni ningún servicio puntual si el rubro no
-           viene indicado más abajo.
-
-           SOLO letras, números y espacios. Ni un emoji, ni un símbolo de dólar, ni un
-           asterisco: la tipografía del cartel no los dibuja y dejan un hueco de color
-           vacío. Escribí el precio en números pelados: 65, no \$65.
-        2. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
+        1. DESCRIPCION: 1 a 3 frases, español natural y cercano, como habla una
            manicurista o peluquera con sus clientas.
-        3. HASHTAGS: entre 5 y 8, cada uno empezando por #. Tienen que ser del rubro
+        2. HASHTAGS: entre 5 y 8, cada uno empezando por #. Tienen que ser del rubro
            de ella si te lo doy más abajo (uñas, cabello, cejas, barbería, lo que
            sea) — nunca de un rubro distinto. Si no te doy el rubro, usá solo
            hashtags genéricos de belleza/negocio local (#beauty #localbusiness), sin
@@ -182,7 +186,6 @@ class WriteCaption
         Nunca inventes precios ni cuánto dura un servicio. Nunca digas que lo hizo una IA.
 
         Responde EXACTAMENTE en este formato y nada más:
-        TITULAR: palabra1 | palabra2 | palabra3
         DESCRIPCION: <el texto>
         HASHTAGS: #uno #dos #tres
         TXT;
@@ -259,21 +262,13 @@ class WriteCaption
     }
 
     /**
+     * @param  list<string>  $headline  ya armado, no viene del modelo
      * @return array{caption: string, hashtags: list<string>, headline: list<string>}
      */
-    private function parse(string $answer, Provider $provider): array
+    private function parse(string $answer, Provider $provider, array $headline): array
     {
-        $headline = [];
         $caption = '';
         $hashtags = [];
-
-        if (preg_match('/TITULAR:\s*(.+)/u', $answer, $match) === 1) {
-            $headline = array_values(array_filter(array_map(
-                static fn (string $word): string => trim($word),
-                preg_split('/[|\n\/]+/u', $match[1]) ?: [],
-            )));
-            $headline = array_slice($headline, 0, 3);
-        }
 
         // Con tilde o sin ella: el formato pedido va sin acento pero el
         // modelo, escribiendo español de verdad, a veces contesta
@@ -302,7 +297,7 @@ class WriteCaption
                     'muestra' => mb_substr($answer, 0, 200),
                 ]);
 
-                return $this->fallback($provider);
+                return $this->fallback($provider, $headline);
             }
         }
 
@@ -314,16 +309,18 @@ class WriteCaption
     }
 
     /**
+     * @param  list<string>  $headline
      * @return array{caption: string, hashtags: list<string>, headline: list<string>}
      */
-    private function fallback(Provider $provider): array
+    private function fallback(Provider $provider, array $headline): array
     {
         return [
             'caption' => trim(($provider->public_name ?? '').' — nuevo trabajo. Escribí acá tu descripción y agendá por el enlace de mi perfil.'),
             'hashtags' => [],
-            // Sin titular inventado: un bloque de texto grande con una frase
-            // de relleno encima de su trabajo es peor que ninguno.
-            'headline' => [],
+            // El titular SÍ va, aunque el modelo haya fallado: no lo escribió
+            // él, sale de sus servicios o de la biblioteca de frases. Antes
+            // acá quedaba vacío y el post salía sin nada encima.
+            'headline' => $headline,
         ];
     }
 }
