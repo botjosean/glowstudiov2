@@ -257,7 +257,7 @@ class ReadReferenceStyle
           "colores": ["#RRGGBB", "#RRGGBB", "#RRGGBB"],
           "posicion_texto": "arriba" | "centro" | "abajo",
           "tipografia": "serif" | "condensada",
-          "estilo_titular": "bloques" | "franja" | "limpio" | "cursiva" | "resaltado",
+          "estilo_titular": "bloques" | "franja" | "limpio" | "cursiva" | "resaltado" | "mixto",
           "lleva_precio": true | false
         }
 
@@ -271,7 +271,11 @@ class ReadReferenceStyle
         va en mayúsculas gruesas de molde — no importa cuál de las dos va arriba,
         "resaltado" si el texto es blanco/una sola tinta y SOLO una palabra o frase
         corta, dentro de esa misma línea, está en un color distinto y más vivo que el
-        resto — sin recuadro de fondo detrás de esa palabra, solo el color de la letra.
+        resto — sin recuadro de fondo detrás de esa palabra, solo el color de la letra,
+        "mixto" si hay dos líneas apiladas y una es MUCHO más gruesa y grande que la
+        otra, las dos en letra de molde (sin script): la fina suele ir espaciada y
+        parece un antetítulo. Es distinto de "cursiva", donde una de las dos SÍ es
+        manuscrita.
         TXT;
     }
 
@@ -307,7 +311,7 @@ class ReadReferenceStyle
             'colores' => array_slice($colores, 0, 3),
             'posicion_texto' => $this->oneOf($decoded['posicion_texto'] ?? null, ['arriba', 'centro', 'abajo']),
             'tipografia' => $this->oneOf($decoded['tipografia'] ?? null, ['serif', 'condensada']),
-            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio', 'cursiva', 'resaltado']),
+            'estilo_titular' => $this->oneOf($decoded['estilo_titular'] ?? null, ['bloques', 'franja', 'limpio', 'cursiva', 'resaltado', 'mixto']),
             'lleva_precio' => (bool) ($decoded['lleva_precio'] ?? false),
         ];
     }

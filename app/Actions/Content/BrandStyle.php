@@ -67,6 +67,7 @@ class BrandStyle
             'limpio' => 'clean',
             'cursiva' => 'cursiva',
             'resaltado' => 'resaltado',
+            'mixto' => 'mixto',
             default => null,
         };
 
@@ -317,9 +318,12 @@ class BrandStyle
     public static function headlineStyles(?BusinessCategory $category): array
     {
         return match ($category) {
-            BusinessCategory::Barbershop, BusinessCategory::TattooPiercing => ['band', 'clean', 'resaltado'],
-            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band', 'cursiva', 'resaltado'],
-            default => ['blocks', 'band', 'clean', 'cursiva', 'resaltado'],
+            // 'mixto' entra en todos los rubros, barbería incluida: no lleva
+            // letra script, solo una línea fina sobre una gruesa, y eso le
+            // sirve igual a una marca dura.
+            BusinessCategory::Barbershop, BusinessCategory::TattooPiercing => ['band', 'clean', 'resaltado', 'mixto'],
+            BusinessCategory::Hair, BusinessCategory::SpaMassage, BusinessCategory::Aesthetics => ['clean', 'band', 'cursiva', 'resaltado', 'mixto'],
+            default => ['blocks', 'band', 'clean', 'cursiva', 'resaltado', 'mixto'],
         };
     }
 }

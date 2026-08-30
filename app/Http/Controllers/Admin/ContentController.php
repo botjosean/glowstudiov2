@@ -356,18 +356,45 @@ class ContentController extends Controller
         }
 
         // La combinación es lo opuesto: necesita DOS colores distintos, uno
-        // por foto. Si las dos fotos elegidas resultan del mismo color —o
-        // sin color leído todavía—, no hay combinación que mostrar.
+        // por foto.
         $combo = null;
 
         if ($layout === PostLayout::ColorCombo) {
             [$primera, $segunda] = [$uploads->get(0), $uploads->get(1)];
 
-            $listas = $primera !== null && $segunda !== null
-                && $primera->color_hex !== null && $segunda->color_hex !== null
+            if ($primera === null || $segunda === null) {
+                throw ValidationException::withMessages([
+                    'uploadIds' => __('admin.contentNeedsTwoColors'),
+                ]);
+            }
+
+            // Acá el color se lee POR FOTO, no por tanda.
+            //
+            // Al subir se lee una sola vez, de la primera, y se copia a todas
+            // las de la tanda: son fotos del mismo trabajo y así "Fondo de
+            // color" no se mezcla. Pero para una combinación eso lo rompía
+            // todo — dos fotos subidas juntas salían siempre del mismo color
+            // y la plantilla se rechazaba sola, sin forma de usarla nunca.
+            // Ella lo probó y lo dijo: «el modo combinación todavía no
+            // funciona».
+            //
+            // Son dos llamadas baratas y solo cuando ella elige esta
+            // plantilla, así que no encarece el resto del taller.
+            foreach ([$primera, $segunda] as $foto) {
+                $leido = $this->photoColor->handle($foto);
+
+                if ($leido !== null) {
+                    $foto->update(['color_name' => $leido['nombre'], 'color_hex' => $leido['hex']]);
+                }
+            }
+
+            $primera->refresh();
+            $segunda->refresh();
+
+            $listos = $primera->color_hex !== null && $segunda->color_hex !== null
                 && ColorNames::farApart($primera->color_hex, $segunda->color_hex);
 
-            if (! $listas) {
+            if (! $listos) {
                 throw ValidationException::withMessages([
                     'uploadIds' => __('admin.contentNeedsTwoColors'),
                 ]);

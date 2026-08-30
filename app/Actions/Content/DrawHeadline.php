@@ -93,7 +93,7 @@ class DrawHeadline
         $spots = ['center', 'bottom', 'top'];
         $spot = BrandStyle::headlineSpotFor($style) ?? $spots[array_rand($spots)];
 
-        $size = in_array($look, ['clean', 'cursiva', 'resaltado'], true) ? 104 : 96;
+        $size = in_array($look, ['clean', 'cursiva', 'resaltado', 'mixto'], true) ? 104 : 96;
         // La script agranda la línea y sus trazos vuelan más allá de la caja
         // normal de una letra: con el mismo aire de siempre, su cola tocaba
         // la línea de abajo cuando le tocaba ir arriba.
@@ -137,11 +137,20 @@ class DrawHeadline
             // señaló directo — el mismo recurso se repetía en varios de sus
             // subtítulos: texto blanco grueso con una palabra resaltada.
             'highlightLine' => $look === 'resaltado' ? array_rand($lines) : null,
+            // 'mixto': una línea fina y espaciada sobre una gruesa
+            // condensada, sin letra script de por medio. Es lo que ella
+            // viene describiendo desde el principio y volvió a decir
+            // mirando los resultados: «una va arriba de otra, una gruesa,
+            // una fina». 'cursiva' ya hacía algo parecido pero con Pacifico,
+            // que no es lo que pedía — pedía contraste de PESO, no de estilo
+            // caligráfico. Cuál de las dos es la gruesa se sortea, así sale
+            // a veces arriba y a veces abajo.
+            'thickLine' => $look === 'mixto' ? array_rand($lines) : null,
             // Y a veces la última línea va en el color de acento en vez de
             // blanca: es el truco de su referencia («que SIEMPRE quisiste» en
             // dorado). 'cursiva' y 'resaltado' quedan afuera: los dos ya
             // tienen su propio acento de color y sumar este encima carga.
-            'accentLast' => ! in_array($look, ['blocks', 'cursiva', 'resaltado'], true) && random_int(0, 1) === 1,
+            'accentLast' => ! in_array($look, ['blocks', 'cursiva', 'resaltado', 'mixto'], true) && random_int(0, 1) === 1,
         ];
     }
 
@@ -157,7 +166,7 @@ class DrawHeadline
      */
     public static function needsScrim(array $plan): bool
     {
-        return in_array($plan['look'], ['clean', 'cursiva', 'resaltado'], true);
+        return in_array($plan['look'], ['clean', 'cursiva', 'resaltado', 'mixto'], true);
     }
 
     /**
@@ -188,6 +197,8 @@ class DrawHeadline
             'accentLast' => $accentLast,
         ] = $plan;
 
+        $thickLine = $plan['thickLine'] ?? null;
+
         $padX = 26;
         $padY = 12;
 
@@ -216,12 +227,32 @@ class DrawHeadline
             // La script se lee más chica que la condensada al mismo tamaño de
             // punto por sus trazos finos — se agranda para que pese igual.
             $isScriptLine = $look === 'cursiva' && $i === $scriptLine;
+
+            // 'mixto': la gruesa va en condensada a tamaño pleno; la otra en
+            // serif fina, más chica y con aire entre letras. El contraste de
+            // PESO entre las dos líneas es todo el recurso.
+            $isThick = $look === 'mixto' && $i === $thickLine;
+            $isThin = $look === 'mixto' && $i !== $thickLine;
+
             $lineFont = match (true) {
                 $isScriptLine => resource_path('fonts/Pacifico.ttf'),
                 $look === 'cursiva' => resource_path('fonts/Anton.ttf'),
+                $isThick => resource_path('fonts/Anton.ttf'),
+                $isThin => resource_path('fonts/Playfair.ttf'),
                 default => $font,
             };
-            $lineSize = $isScriptLine ? (int) round($size * 1.3) : $size;
+            $lineSize = match (true) {
+                $isScriptLine => (int) round($size * 1.3),
+                $isThick => (int) round($size * 1.15),
+                $isThin => (int) round($size * 0.58),
+                default => $size,
+            };
+
+            // La fina va espaciada, como en sus referencias: es lo que la
+            // hace leer como antetítulo y no como una línea a medio tamaño.
+            if ($isThin) {
+                $line = implode("\u{2009}", mb_str_split($line));
+            }
 
             $width = self::textWidth($line, $lineSize, $lineFont);
             $blockColor = $colors[$i % count($colors)];

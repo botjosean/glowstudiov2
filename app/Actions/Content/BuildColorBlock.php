@@ -32,18 +32,22 @@ class BuildColorBlock
     private const CANVAS = 1080;
 
     /**
-     * Cuánto ocupa cada foto de esquina, sobre el lado del lienzo.
+     * Cuánto ocupa de alto cada franja de fotos, sobre el lado del lienzo.
      *
-     * 0.36 y no más: con 0.46 las cuatro fotos casi se tocaban y el fondo
-     * quedaba en una cruz fina, con el texto montado encima de las uñas.
-     * Acá dos esquinas suman 0.72, así que queda una franja libre de casi un
-     * tercio del alto para el nombre — que es la proporción que tienen sus
-     * referencias.
+     * **Franjas de borde a borde, no cuatro cuadraditos en las esquinas.**
+     * Antes eran esquinas y dejaban una cruz de fondo vacío cruzando todo el
+     * post. Ella lo vio de una: «hay muchos espacios de blanco en la cruz en
+     * el medio y así no es, mirá la referencia». Tenía razón — en Mimosa las
+     * fotos llenan el ancho completo arriba y abajo, y el color solo se ve en
+     * la banda del medio donde va el nombre.
      */
-    private const CORNER = 0.36;
+    private const STRIP = 0.38;
 
     /** La franja del medio que queda libre, en píxeles. */
-    private const BAND = (int) (self::CANVAS * (1 - 2 * self::CORNER));
+    private const BAND = (int) (self::CANVAS * (1 - 2 * self::STRIP));
+
+    /** Dónde empieza esa franja. Todo el texto se ubica respecto a acá. */
+    private const BAND_TOP = (int) (self::CANVAS * self::STRIP);
 
     public function __construct(
         private readonly FindOrCreateColorProp $props,
@@ -62,7 +66,7 @@ class BuildColorBlock
 
         $canvas = $manager->create(self::CANVAS, self::CANVAS)->fill($fondo);
 
-        $this->corners($canvas, $manager, array_values($paths), $provider, $colorName, $colorHex);
+        $this->strips($canvas, $manager, array_values($paths), $provider, $colorName, $colorHex);
         $this->name($canvas, $colorName, $tinta);
         $this->wordmark($canvas, $provider, $tinta);
 
@@ -77,51 +81,81 @@ class BuildColorBlock
     }
 
     /**
-     * Las fotos en las esquinas, sangrando por el borde.
+     * Las fotos en dos franjas de borde a borde: una arriba y otra abajo,
+     * con la banda de color libre en el medio para el nombre.
      *
-     * En las esquinas y no en una rejilla a propósito: así queda libre la
-     * franja del medio, que es donde va el nombre. Con dos fotos van en
-     * diagonal —arriba a la izquierda y abajo a la derecha— para que el
-     * cuadro no quede desbalanceado.
+     * Es la estructura de sus referencias de Mimosa —«Butter yellow»,
+     * «Strawberry Red», «Stripes»— donde las fotos llegan hasta los cuatro
+     * bordes y el color solo respira en la banda del centro. Antes esto eran
+     * cuatro cuadrados en las esquinas y dejaba una cruz de fondo vacío
+     * cruzando el post entero; ella lo señaló mirando el resultado: «hay
+     * muchos espacios de blanco en la cruz en el medio y así no es».
      *
-     * Si sobran esquinas —ella eligió dos o tres fotos, no cuatro— las que
-     * quedan libres se llenan con una foto decorativa a juego con el color
-     * en vez de dejarse en blanco: es lo que hace Mimosa Studio con el limón
-     * de "Butter yellow" y la fresa de "Strawberry Red". Nunca es el trabajo
-     * real —eso sigue siendo siempre una foto de verdad, nunca generada—.
+     * Si sobra lugar en una franja —eligió dos fotos, no cuatro— se rellena
+     * con una foto decorativa a juego con el color, como el limón de "Butter
+     * yellow". Nunca es el trabajo real: eso sigue siendo siempre una foto de
+     * verdad, la que ella subió.
      *
      * @param  list<string>  $paths
      */
-    private function corners(ImageInterface $canvas, ImageManager $manager, array $paths, Provider $provider, string $colorName, string $colorHex): void
+    private function strips(ImageInterface $canvas, ImageManager $manager, array $paths, Provider $provider, string $colorName, string $colorHex): void
     {
-        $lado = (int) round(self::CANVAS * self::CORNER);
+        $alto = (int) round(self::CANVAS * self::STRIP);
+        $usables = array_slice($paths, 0, 4);
+        $total = count($usables);
 
-        // Orden de llenado: diagonal primero, después las otras dos.
-        $esquinas = ['top-left', 'bottom-right', 'bottom-left', 'top-right'];
-        $reales = array_slice($paths, 0, 4);
+        // Con una sola foto de verdad se estira arriba y la decorativa va
+        // abajo; con dos, una en cada franja; con tres o cuatro, se reparten
+        // mitad y mitad.
+        $arriba = $total <= 1 ? $total : (int) ceil($total / 2);
 
-        foreach ($reales as $i => $path) {
-            $foto = $manager->read(Storage::disk('r2')->get($path))->cover($lado, $lado);
+        $filas = [
+            ['fotos' => array_slice($usables, 0, $arriba), 'y' => 0],
+            ['fotos' => array_slice($usables, $arriba), 'y' => self::CANVAS - $alto],
+        ];
 
-            $canvas->place($foto, $esquinas[$i], 0, 0);
+        // La decorativa se pide UNA vez y se reusa en los huecos que queden,
+        // en vez de una llamada por hueco.
+        $decoracion = null;
+        $faltan = array_sum(array_map(static fn (array $f): int => $f['fotos'] === [] ? 1 : 0, $filas));
+
+        if ($faltan > 0 && $provider->business_category !== null) {
+            $prop = $this->props->handle($provider->business_category, $colorName, $colorHex);
+
+            if ($prop !== null) {
+                $decoracion = Storage::disk('r2')->get($prop);
+            }
         }
 
-        $faltan = array_slice($esquinas, count($reales));
+        foreach ($filas as $fila) {
+            $fotos = $fila['fotos'];
 
-        if ($faltan === [] || $provider->business_category === null) {
-            return;
-        }
+            // Una franja sin fotos de trabajo se llena con la decorativa a
+            // todo el ancho; si tampoco hay, queda el fondo de color liso.
+            if ($fotos === []) {
+                if ($decoracion === null) {
+                    continue;
+                }
 
-        $prop = $this->props->handle($provider->business_category, $colorName, $colorHex);
+                $canvas->place(
+                    $manager->read($decoracion)->cover(self::CANVAS, $alto),
+                    'top-left',
+                    0,
+                    $fila['y'],
+                );
 
-        if ($prop === null) {
-            return;
-        }
+                continue;
+            }
 
-        $decoracion = $manager->read(Storage::disk('r2')->get($prop))->cover($lado, $lado);
+            // Se reparten el ancho completo entre las que tocan: sin huecos
+            // y sin bordes de fondo asomando entre foto y foto.
+            $ancho = (int) ceil(self::CANVAS / count($fotos));
 
-        foreach ($faltan as $esquina) {
-            $canvas->place($decoracion, $esquina, 0, 0);
+            foreach ($fotos as $i => $path) {
+                $foto = $manager->read(Storage::disk('r2')->get($path))->cover($ancho, $alto);
+
+                $canvas->place($foto, 'top-left', $i * $ancho, $fila['y']);
+            }
         }
     }
 
@@ -152,12 +186,13 @@ class BuildColorBlock
         $fuente = resource_path('fonts/Anton.ttf');
         $suave = resource_path('fonts/Manrope.ttf');
 
-        // Todo tiene que caber en la franja libre del medio, y no solo a lo
-        // ancho: si se pasa de alto, el texto termina sobre las uñas. De ahí
-        // que el cuerpo salga de la franja y no de un número fijo.
-        $grande = $this->fits($arriba, min(126, (int) round(self::BAND * 0.46)), 900, $fuente);
+        // Las tres piezas se apoyan en el borde de arriba de la banda, no en
+        // el centro del lienzo: con el centro, la marca del negocio quedaba
+        // pisada por el titular apenas el nombre del color era largo.
+        $grande = $this->fits($arriba, min(104, (int) round(self::BAND * 0.40)), 900, $fuente);
+        $yGrande = self::BAND_TOP + ($abajo === '' ? (int) round(self::BAND / 2) : 108);
 
-        $canvas->text($arriba, $centro, $abajo === '' ? $centro : $centro - (int) round($grande * 0.34), function (FontFactory $f) use ($grande, $fuente, $tinta): void {
+        $canvas->text($arriba, $centro, $yGrande, function (FontFactory $f) use ($grande, $fuente, $tinta): void {
             $f->filename($fuente);
             $f->size($grande);
             $f->color($tinta);
@@ -171,7 +206,7 @@ class BuildColorBlock
 
         $chico = $this->fits($abajo, (int) round($grande * 0.42), 880, $suave);
 
-        $canvas->text($abajo, $centro, $centro + (int) round($grande * 0.46), function (FontFactory $f) use ($chico, $suave, $tinta): void {
+        $canvas->text($abajo, $centro, self::BAND_TOP + 194, function (FontFactory $f) use ($chico, $suave, $tinta): void {
             $f->filename($suave);
             $f->size($chico);
             $f->color($tinta);
@@ -181,10 +216,11 @@ class BuildColorBlock
     }
 
     /**
-     * El nombre del negocio, chico y espaciado, dentro de la franja libre.
+     * El nombre del negocio, chico y espaciado, arriba de la franja libre.
      *
-     * Arriba del todo no: ahí están las fotos de las esquinas y quedaba
-     * escrito sobre unas uñas.
+     * Arriba del todo no: ahí van las fotos y quedaba escrito sobre unas
+     * uñas. Pegado al borde de arriba de la banda, para no chocar con el
+     * titular cuando el nombre del color es largo.
      */
     private function wordmark(ImageInterface $canvas, Provider $provider, string $tinta): void
     {
@@ -197,7 +233,7 @@ class BuildColorBlock
         $canvas->text(
             implode("\u{2009}", mb_str_split(Str::upper($nombre))),
             (int) round(self::CANVAS / 2),
-            (int) round(self::CANVAS / 2 - self::BAND * 0.36),
+            self::BAND_TOP + 32,
             function (FontFactory $f) use ($tinta): void {
                 $f->filename(resource_path('fonts/Manrope.ttf'));
                 $f->size(19);
