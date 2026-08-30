@@ -20,6 +20,76 @@ use App\Enums\BusinessCategory;
 class BrandStyle
 {
     /**
+     * La ficha de estilo leída de sus referencias manda sobre lo que dicta el
+     * rubro.
+     *
+     * El rubro es una suposición razonable —una barbería suele ir de negro y
+     * dorado—; la ficha es lo que ella de verdad guardó como "así me gusta".
+     * Cuando existe, gana. Ver ReadReferenceStyle.
+     *
+     * @param  array<string, mixed>|null  $style
+     * @return list<string>
+     */
+    public static function blockColorsFor(?BusinessCategory $category, ?array $style): array
+    {
+        $colores = $style['colores'] ?? null;
+
+        if (is_array($colores) && count($colores) >= 2) {
+            // Se completa a tres repitiendo el primero: el titular alterna
+            // entre tres y con dos quedaría un patrón raro.
+            return array_slice([...$colores, $colores[0]], 0, 3);
+        }
+
+        return self::blockColors($category);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $style
+     */
+    public static function headlineFontFor(?BusinessCategory $category, ?array $style): string
+    {
+        return match ($style['tipografia'] ?? null) {
+            'serif' => resource_path('fonts/Playfair.ttf'),
+            'condensada' => resource_path('fonts/Anton.ttf'),
+            default => self::headlineFont($category),
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $style
+     * @return list<string>
+     */
+    public static function headlineStylesFor(?BusinessCategory $category, ?array $style): array
+    {
+        $leido = match ($style['estilo_titular'] ?? null) {
+            'bloques' => 'blocks',
+            'franja' => 'band',
+            'limpio' => 'clean',
+            default => null,
+        };
+
+        // Se devuelve UNO solo cuando se leyó de sus referencias: si ella usa
+        // bloques, sortear entre tres estilos le devolvería dos de cada tres
+        // posts que no se parecen a lo suyo.
+        return $leido !== null ? [$leido] : self::headlineStyles($category);
+    }
+
+    /**
+     * Dónde cae el titular. null = se sortea, como antes.
+     *
+     * @param  array<string, mixed>|null  $style
+     */
+    public static function headlineSpotFor(?array $style): ?string
+    {
+        return match ($style['posicion_texto'] ?? null) {
+            'arriba' => 'top',
+            'centro' => 'center',
+            'abajo' => 'bottom',
+            default => null,
+        };
+    }
+
+    /**
      * Los colores de los bloques del titular, en orden de aparición.
      *
      * @return list<string>

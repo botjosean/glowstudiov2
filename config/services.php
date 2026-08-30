@@ -18,6 +18,11 @@ return [
         'api_key' => env('ASSISTANT_API_KEY'),
         'base_url' => env('ASSISTANT_BASE_URL', 'https://openrouter.ai/api/v1'),
         'model' => env('ASSISTANT_MODEL', 'openai/gpt-oss-120b'),
+        // Un modelo aparte, que sí ve imágenes: lo usa ReadReferenceStyle para
+        // sacar la ficha de estilo de las referencias. Comprobado contra las
+        // referencias reales de una proveedora — acertó la paleta y la
+        // tipografía donde gpt-4o-mini se equivocó en las dos.
+        'vision_model' => env('ASSISTANT_VISION_MODEL', 'google/gemini-2.5-flash'),
         'timeout' => env('ASSISTANT_TIMEOUT', 30),
         'temperature' => env('ASSISTANT_TEMPERATURE', 0.3),
         'max_completion_tokens' => env('ASSISTANT_MAX_COMPLETION_TOKENS', 1024),

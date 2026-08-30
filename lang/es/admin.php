@@ -12,6 +12,9 @@ return [
     'contentVideoTooBig' => 'El video pesa demasiado. Recortalo o bajale la calidad — el máximo son 50 MB.',
     'contentPhotoTooBig' => 'Alguna foto pesa demasiado. El máximo son 25 MB por foto.',
     'contentBatchTooBig' => 'Todas juntas pesan demasiado. Subí menos fotos a la vez y repetí con el resto.',
+    'contentStyleNoReferences' => 'Primero guardá algunas fotos como referencia; de ahí sale tu estilo.',
+    'contentStyleUnavailable' => 'No se pudo leer tus referencias ahora mismo. Probá de nuevo en un rato.',
+    'contentStyleUnreadable' => 'No se pudo sacar un estilo claro de esas referencias. Probá guardando fotos de publicaciones con texto encima.',
     'contentUploadFailed' => 'La subida se cortó antes de terminar. Probá de nuevo, y si es un video, que pese menos de 50 MB.',
     // Se guarda como motivo del bloqueo, así que la ve la profesional en su lista.
     'timeOffPauseReason' => 'Agenda cerrada',

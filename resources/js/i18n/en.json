@@ -573,7 +573,8 @@
         "importContacts": "Import from your contacts",
         "clientsImported": "Contacts imported to your book.",
         "botHours": "When it replies",
-        "botHoursHint": "Outside these hours it says nothing, but the request still reaches your panel."
+        "botHoursHint": "Outside these hours it says nothing, but the request still reaches your panel.",
+        "contentStyleLearned": "Style learned from your references"
     },
     "nav": {
         "appointments": "Appointments",
@@ -635,7 +636,11 @@
         "chooseLayout": "Pick a model",
         "layoutHint_hero": "One photo with a headline",
         "layoutHint_collage": "Several in one image",
-        "layoutHint_carousel": "Cover, collages and closing"
+        "layoutHint_carousel": "Cover, collages and closing",
+        "learnStyle": "Learn from my references",
+        "learning": "Looking at your references…",
+        "styleNotYet": "It hasn't learned from your references yet. Tap it and it will look at your saved photos to pick up your colors and lettering.",
+        "styleLearnedFrom": "Learned from 1 reference | Learned from 1 reference | Learned from {count} references"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

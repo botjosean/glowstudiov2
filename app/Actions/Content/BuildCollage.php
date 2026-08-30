@@ -93,7 +93,7 @@ class BuildCollage
         } else {
             // El titular se salta en antes/después: las dos etiquetas ya son
             // el mensaje, y un titular encima tapa justo lo que se compara.
-            $this->headline($canvas, $headline, $provider->business_category);
+            $this->headline($canvas, $headline, $provider->business_category, $provider->content_style);
         }
 
         // El pie primero: devuelve cuánto alto ocupó, para que el sello se
@@ -121,7 +121,7 @@ class BuildCollage
      *
      * @param  list<string>  $lines
      */
-    private function headline(ImageInterface $canvas, array $lines, ?BusinessCategory $category): void
+    private function headline(ImageInterface $canvas, array $lines, ?BusinessCategory $category, ?array $style = null): void
     {
         $lines = self::cleanLines($lines);
 
@@ -132,17 +132,20 @@ class BuildCollage
         // El estilo se sortea, pero solo entre los que le pegan al rubro: una
         // barbería con bloques rosa de revista es justo el post que no se
         // publica. Ver BrandStyle.
-        $styles = BrandStyle::headlineStyles($category);
-        $style = $styles[array_rand($styles)];
+        // $style es la FICHA leída de sus referencias; $look es el tratamiento
+        // elegido para este post. Nombres distintos a propósito: mezclarlos
+        // pisaba la ficha con una cadena y todo lo de abajo dejaba de verla.
+        $styles = BrandStyle::headlineStylesFor($category, $style);
+        $look = $styles[array_rand($styles)];
 
-        $colors = BrandStyle::blockColors($category);
-        $font = BrandStyle::headlineFont($category);
+        $colors = BrandStyle::blockColorsFor($category, $style);
+        $font = BrandStyle::headlineFontFor($category, $style);
 
-        // Y dónde cae: al centro, abajo o arriba.
+        // Y dónde cae: lo que digan sus referencias, o sorteado si no hay ficha.
         $spots = ['center', 'bottom', 'top'];
-        $spot = $spots[array_rand($spots)];
+        $spot = BrandStyle::headlineSpotFor($style) ?? $spots[array_rand($spots)];
 
-        $size = $style === 'clean' ? 104 : 96;
+        $size = $look === 'clean' ? 104 : 96;
         $lineHeight = (int) round($size * 1.22);
         $padX = 26;
         $padY = 12;
@@ -160,11 +163,11 @@ class BuildCollage
         // tiene dónde apoyarse y queda flotando.
         $eyebrows = BrandStyle::eyebrows($category);
 
-        if ($style !== 'blocks' && $eyebrows !== [] && random_int(0, 1) === 1) {
-            $canvas->text($eyebrows[array_rand($eyebrows)], (int) round(self::CANVAS / 2), $top - 34, function (FontFactory $f) use ($category): void {
+        if ($look !== 'blocks' && $eyebrows !== [] && random_int(0, 1) === 1) {
+            $canvas->text($eyebrows[array_rand($eyebrows)], (int) round(self::CANVAS / 2), $top - 34, function (FontFactory $f) use ($colors): void {
                 $f->filename(resource_path('fonts/Manrope.ttf'));
                 $f->size(20);
-                $f->color(BrandStyle::accent($category));
+                $f->color($colors[1]);
                 $f->align('center');
                 $f->valign('middle');
             });
@@ -172,11 +175,11 @@ class BuildCollage
 
         // Y a veces la última línea va en el color de acento en vez de blanca:
         // es el truco de su referencia («que SIEMPRE quisiste» en dorado).
-        $accentLast = $style !== 'blocks' && random_int(0, 1) === 1;
+        $accentLast = $look !== 'blocks' && random_int(0, 1) === 1;
 
         // La franja va de una sola pieza, antes del texto: dibujar una por
         // línea dejaba rayas de foto entre medio y se veía descuidado.
-        if ($style === 'band') {
+        if ($look === 'band') {
             $canvas->drawRectangle(0, $top - $padY, function ($rect) use ($blockHeight, $padY): void {
                 $rect->size(self::CANVAS, $blockHeight + ($padY * 2));
                 $rect->background('rgba(10, 12, 18, 0.72)');
@@ -187,7 +190,7 @@ class BuildCollage
             $centerY = $top + ($i * $lineHeight) + (int) round($lineHeight / 2);
             $width = $this->textWidth($line, $size, $font);
 
-            if ($style === 'blocks') {
+            if ($look === 'blocks') {
                 $canvas->drawRectangle(
                     (int) round((self::CANVAS - $width) / 2) - $padX,
                     $centerY - (int) round($size / 2) - $padY,
@@ -196,7 +199,7 @@ class BuildCollage
                         $rect->background($colors[$i % count($colors)]);
                     },
                 );
-            } elseif ($style !== 'band') {
+            } elseif ($look !== 'band') {
                 // 'clean': sin fondo. Una sombra suave detrás para que sobreviva
                 // sobre una foto clara, que en belleza son la mitad.
                 $canvas->text($line, (int) round(self::CANVAS / 2) + 3, $centerY + 3, function (FontFactory $f) use ($size, $font): void {
@@ -210,10 +213,10 @@ class BuildCollage
 
             $isLast = $i === count($lines) - 1;
 
-            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $accentLast, $isLast, $category): void {
+            $canvas->text($line, (int) round(self::CANVAS / 2), $centerY, function (FontFactory $f) use ($size, $font, $accentLast, $isLast, $colors): void {
                 $f->filename($font);
                 $f->size($size);
-                $f->color($accentLast && $isLast ? BrandStyle::accent($category) : '#ffffff');
+                $f->color($accentLast && $isLast ? $colors[1] : '#ffffff');
                 $f->align('center');
                 $f->valign('middle');
             });

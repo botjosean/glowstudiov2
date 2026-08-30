@@ -12,6 +12,9 @@ return [
     'contentVideoTooBig' => 'That video is too heavy. Trim it or lower the quality — 50 MB is the limit.',
     'contentPhotoTooBig' => 'One of the photos is too heavy. The limit is 25 MB per photo.',
     'contentBatchTooBig' => 'Together they are too heavy. Upload fewer photos at a time and repeat with the rest.',
+    'contentStyleNoReferences' => 'Save a few photos as references first; that is where your style comes from.',
+    'contentStyleUnavailable' => 'Your references could not be read right now. Try again in a bit.',
+    'contentStyleUnreadable' => 'No clear style could be read from those references. Try saving photos of posts that have text on them.',
     'contentUploadFailed' => 'The upload was cut off before it finished. Try again, and if it is a video, keep it under 50 MB.',
     // Stored as the block's reason, so the provider sees it in their list.
     'timeOffPauseReason' => 'Agenda closed',

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
-import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2 } from '@lucide/vue';
+import { Sparkles, Pin, ChevronRight, Check, Download, Clapperboard, Trash2, Wand } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import BottomSheet from '../../Components/ui/BottomSheet.vue';
@@ -22,6 +22,8 @@ const props = defineProps({
     avatarPhoto: { type: String, default: '' },
     waiting: { type: Array, required: true }, // [{ id, url }] subidas sin usar
     references: { type: Array, required: true }, // [{ id, url, kind, note }]
+    // La ficha leída de sus referencias, o null si todavía no la generó.
+    contentStyle: { type: Object, default: null },
     posts: { type: Array, required: true }, // [{ id, url, caption, hashtags, rating }]
     layouts: { type: Array, required: true }, // [{ value, counts, uses, fits }]
 });
@@ -221,6 +223,20 @@ function copyCaption(post) {
     navigator.clipboard?.writeText(text).then(() => haptics.success()).catch(() => {});
 }
 
+// Leer las referencias y quedarse con su estilo. Es lo que conecta lo que
+// ella guarda con cómo se ven los posts — hasta ahora solo alimentaba el texto.
+const styleForm = useForm({});
+
+function learnStyle() {
+    if (styleForm.processing) return;
+
+    styleForm.post('/admin/contenido/estilo', {
+        preserveScroll: true,
+        onSuccess: () => haptics.success(),
+        onError: () => haptics.error(),
+    });
+}
+
 // Lo recién armado va entero y arriba; lo anterior, en miniaturas. Con todos
 // a tamaño completo había que desplazarse muchísimo para ver lo que acababa
 // de salir, que es justo lo que viene a mirar.
@@ -406,6 +422,41 @@ const busyLabel = computed(() => {
                             {{ $t('content.referencesHint') }}
                         </div>
                     </div>
+                </div>
+
+                <!-- Aprender el estilo de las referencias: es lo que conecta lo
+                     que ella guardó con cómo se ven los posts. -->
+                <div v-if="references.length > 0" class="mt-3.5">
+                    <button
+                        type="button"
+                        :disabled="styleForm.processing"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold-border)] bg-[var(--gold-soft)] py-3 text-[14px] font-semibold text-[var(--gold-text)] hover:brightness-[0.97] disabled:opacity-60"
+                        @click="learnStyle"
+                    >
+                        <Wand :size="15" />
+                        {{ styleForm.processing ? $t('content.learning') : $t('content.learnStyle') }}
+                    </button>
+
+                    <p v-if="styleForm.errors.style" class="mt-2 text-[13px] font-normal text-[var(--danger)]">
+                        {{ styleForm.errors.style }}
+                    </p>
+
+                    <div v-else-if="contentStyle" class="mt-2.5 flex items-center gap-2.5 rounded-xl bg-[var(--surface-alt)] px-3 py-2.5">
+                        <span class="flex gap-1">
+                            <span
+                                v-for="c in contentStyle.colores"
+                                :key="c"
+                                class="h-4 w-4 rounded-full border border-[var(--border-strong)]"
+                                :style="{ background: c }"
+                            />
+                        </span>
+                        <span class="text-[12px] font-normal text-[var(--text-mute)]">
+                            {{ $t('content.styleLearnedFrom', contentStyle.referencias) }}
+                        </span>
+                    </div>
+                    <p v-else class="mt-2 text-[12px] font-normal text-[var(--text-faint)]">
+                        {{ $t('content.styleNotYet') }}
+                    </p>
                 </div>
 
                 <div v-if="references.length > 0" class="mt-3.5 grid grid-cols-4 gap-1.5">

@@ -573,7 +573,8 @@
         "importContacts": "Importar de tus contactos",
         "clientsImported": "Contactos importados a tu libro.",
         "botHours": "A qué horas contesta",
-        "botHoursHint": "Fuera de este horario no responde nada, pero la solicitud igual te llega al panel."
+        "botHoursHint": "Fuera de este horario no responde nada, pero la solicitud igual te llega al panel.",
+        "contentStyleLearned": "Estilo aprendido de tus referencias"
     },
     "nav": {
         "appointments": "Citas",
@@ -635,7 +636,11 @@
         "chooseLayout": "Elegí el modelo",
         "layoutHint_hero": "Una sola, con titular encima",
         "layoutHint_collage": "Varias en una imagen",
-        "layoutHint_carousel": "Portada, collages y cierre"
+        "layoutHint_carousel": "Portada, collages y cierre",
+        "learnStyle": "Aprender de mis referencias",
+        "learning": "Mirando tus referencias…",
+        "styleNotYet": "Todavía no aprendió de tus referencias. Tocalo y mira tus fotos guardadas para sacar tus colores y tu tipo de letra.",
+        "styleLearnedFrom": "Aprendido de 1 referencia | Aprendido de 1 referencia | Aprendido de {count} referencias"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Content\BuildCarousel;
 use App\Actions\Content\BuildCollage;
 use App\Actions\Content\BuildHero;
+use App\Actions\Content\ReadReferenceStyle;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\WriteCaption;
 use App\Actions\Media\DeleteProviderImage;
@@ -42,6 +43,7 @@ class ContentController extends Controller
         private readonly BuildCollage $collage,
         private readonly BuildHero $hero,
         private readonly BuildCarousel $carousel,
+        private readonly ReadReferenceStyle $style,
         private readonly WriteCaption $caption,
     ) {}
 
@@ -57,6 +59,7 @@ class ContentController extends Controller
         return Inertia::render('Admin/Contenido', [
             'providerName' => $provider->public_name,
             'avatarPhoto' => MediaUrl::resolve($provider->avatar_photo_url),
+            'contentStyle' => $provider->content_style,
             // Las que esperan que ella elija un modelo.
             'waiting' => ContentUpload::query()
                 ->where('provider_id', $provider->id)
@@ -208,6 +211,30 @@ class ContentController extends Controller
         });
 
         return to_route('admin.contenido')->with('success', 'admin.contentPostReady');
+    }
+
+    /**
+     * Leer sus referencias y quedarse con la ficha de estilo.
+     *
+     * Se dispara cuando ella lo pide y no en cada post: es una llamada con
+     * imágenes y no tiene sentido repetirla si las referencias no cambiaron.
+     */
+    public function learnStyle(Request $request): RedirectResponse
+    {
+        $provider = $request->user()->provider;
+
+        $result = $this->style->handle($provider);
+
+        if ($result['ok'] === false) {
+            throw ValidationException::withMessages(['style' => __($result['error'])]);
+        }
+
+        $provider->update([
+            'content_style' => $result['style'],
+            'content_style_at' => now(),
+        ]);
+
+        return to_route('admin.contenido')->with('success', 'admin.contentStyleLearned');
     }
 
     /**

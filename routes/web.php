@@ -177,6 +177,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
     Route::get('/contenido', [ContentController::class, 'index'])->name('contenido');
     Route::post('/contenido/subir', [ContentController::class, 'store'])->name('contenido.subir');
     Route::post('/contenido/generar', [ContentController::class, 'generate'])->name('contenido.generar');
+    // Leer sus referencias con un modelo de visión. Limitado porque cada
+    // llamada manda varias imágenes — ver ReadReferenceStyle.
+    Route::post('/contenido/estilo', [ContentController::class, 'learnStyle'])
+        ->middleware('throttle:10,60')->name('contenido.estilo');
     // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');
