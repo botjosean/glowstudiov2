@@ -337,30 +337,20 @@ function removeReference() {
     });
 }
 
-// Una foto "para editar" ya usada: se puede volver a poner en la cola sin
-// subirla de nuevo. Las que todavía esperan no necesitan esta hoja — ya
-// están disponibles arriba.
-const openedEdit = ref(null);
-const editOpen = ref(false);
-const reuseForm = useForm({});
+// Tocar una foto la mete o la saca de la cola del próximo post. Antes esto
+// era una hoja que SOLO servía para meter: las que ya estaban en la cola no
+// eran tocables y ella se quedó trabada — «yo la selecciono, voy agregando,
+// y después ya no la puedo deseleccionar».
+const queueForm = useForm({});
 
-function openEdit(item) {
-    if (!item.used) return;
+function toggleQueued(item) {
+    if (queueForm.processing) return;
 
-    openedEdit.value = item;
-    editOpen.value = true;
-}
-
-function reuseUpload() {
-    if (!openedEdit.value || reuseForm.processing) return;
-
-    reuseForm.patch(`/admin/contenido/fotos/${openedEdit.value.id}/reusar`, {
+    queueForm.patch(`/admin/contenido/fotos/${item.id}/cola`, {
         preserveScroll: true,
-        onSuccess: () => {
-            haptics.success();
-            editOpen.value = false;
-            openedEdit.value = null;
-        },
+        preserveState: true,
+        onSuccess: () => haptics.success(),
+        onError: () => haptics.error(),
     });
 }
 
@@ -510,24 +500,28 @@ const busyLabel = computed(() => {
                     {{ $t('content.recentEditsHint') }}
                 </div>
 
+                <!-- Un toque mete la foto en la cola, otro la saca. Antes
+                     solo se podía meter y ella se quedaba trabada. -->
                 <div class="mt-3.5 grid grid-cols-5 gap-1.5">
                     <button
                         v-for="item in recentEdits"
                         :key="item.id"
                         type="button"
-                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
-                        :class="!item.used && 'cursor-default'"
-                        :aria-label="item.used ? $t('content.openUsedPhoto') : undefined"
-                        @click="openEdit(item)"
+                        :disabled="queueForm.processing"
+                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)] disabled:opacity-60"
+                        :class="!item.used && 'ring-2 ring-[var(--gold)]'"
+                        :aria-pressed="!item.used"
+                        :aria-label="$t('content.togglePhoto')"
+                        @click="toggleQueued(item)"
                     >
                         <img :src="item.url" alt="" class="h-full w-full object-cover" :class="item.used && 'opacity-45'" />
+
+                        <!-- Marcada = entra en el próximo post. -->
                         <span
-                            v-if="item.used"
-                            class="absolute inset-0 flex items-center justify-center bg-black/10"
+                            v-if="!item.used"
+                            class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold)]"
                         >
-                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90">
-                                <Check :size="13" class="text-[var(--text-strong)]" />
-                            </span>
+                            <Check :size="12" class="text-white" />
                         </span>
                     </button>
                 </div>
@@ -980,27 +974,6 @@ const busyLabel = computed(() => {
                 >
                     <Trash2 :size="15" />
                     {{ removeForm.processing ? $t('common.saving') : $t('content.removeReference') }}
-                </button>
-            </template>
-        </BottomSheet>
-
-        <!-- Una foto ya usada: la opción de volver a ponerla en la cola -->
-        <BottomSheet v-model="editOpen">
-            <template v-if="openedEdit">
-                <img :src="openedEdit.url" alt="" class="mb-4 max-h-[300px] w-full rounded-xl object-contain" />
-
-                <p class="mb-4 text-[13px] font-normal leading-relaxed text-[var(--text-mute)]">
-                    {{ $t('content.photoAlreadyUsed') }}
-                </p>
-
-                <button
-                    type="button"
-                    :disabled="reuseForm.processing"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-60"
-                    @click="reuseUpload"
-                >
-                    <Sparkles :size="15" />
-                    {{ reuseForm.processing ? $t('common.saving') : $t('content.reusePhoto') }}
                 </button>
             </template>
         </BottomSheet>

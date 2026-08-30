@@ -937,12 +937,11 @@ class ContentPanelTest extends TestCase
         $this->assertSame('El marco tapa mucho.', $post->rating_note);
     }
 
-    public function test_a_used_photo_can_be_put_back_in_the_queue_by_hand(): void
+    public function test_a_photo_can_be_put_into_and_taken_out_of_the_queue(): void
     {
-        // Antes, una vez usada, una foto "para editar" no volvía a
-        // aparecer en ningún lado salvo subiéndola de nuevo. Ella lo
-        // señaló directo: «no hay como para ver la foto reciente, para
-        // volver a hacer el contenido con las fotos».
+        // Antes solo se podía METER: las fotos que ya estaban en la cola no
+        // eran tocables, y ella se quedó trabada — «yo la selecciono, voy
+        // agregando, y después ya no la puedo deseleccionar».
         $provider = Provider::factory()->published()->create();
 
         $this->actingAs($provider->user)->post('/admin/contenido/subir', [
@@ -957,16 +956,44 @@ class ContentPanelTest extends TestCase
 
         $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
 
+        // Un toque la mete de nuevo…
         $this->actingAs($provider->user)
-            ->patch("/admin/contenido/fotos/{$ids[0]}/reusar")
+            ->patch("/admin/contenido/fotos/{$ids[0]}/cola")
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(1, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
         $this->assertNull(ContentUpload::find($ids[0])->used_at);
         $this->assertNotNull(ContentUpload::find($ids[1])->used_at);
+
+        // …y otro la vuelve a sacar, que es lo que faltaba.
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/fotos/{$ids[0]}/cola")
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull(ContentUpload::find($ids[0])->used_at);
+        $this->assertSame(0, ContentUpload::query()->whereIn('id', $ids)->waiting()->count());
     }
 
-    public function test_a_provider_cannot_reuse_another_providers_photo(): void
+    public function test_taking_a_never_used_photo_out_of_the_queue_works_too(): void
+    {
+        // Recién subida y todavía sin usar: sacarla tiene que poder hacerse
+        // igual, que es el caso de «voy agregando y me arrepiento».
+        $provider = Provider::factory()->published()->create();
+
+        $this->actingAs($provider->user)->post('/admin/contenido/subir', [
+            'purpose' => 'edit',
+            'photos' => [UploadedFile::fake()->image('f.jpg')],
+        ]);
+
+        $id = ContentUpload::query()->where('provider_id', $provider->id)->waiting()->sole()->id;
+
+        $this->actingAs($provider->user)
+            ->patch("/admin/contenido/fotos/{$id}/cola")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(0, ContentUpload::query()->where('provider_id', $provider->id)->waiting()->count());
+    }
+
+    public function test_a_provider_cannot_touch_another_providers_photo_queue(): void
     {
         $mine = Provider::factory()->published()->create();
         $hers = Provider::factory()->published()->create();
@@ -980,7 +1007,7 @@ class ContentPanelTest extends TestCase
         ]);
 
         $this->actingAs($mine->user)
-            ->patch("/admin/contenido/fotos/{$upload->id}/reusar")
+            ->patch("/admin/contenido/fotos/{$upload->id}/cola")
             ->assertForbidden();
 
         $this->assertNotNull($upload->fresh()->used_at);

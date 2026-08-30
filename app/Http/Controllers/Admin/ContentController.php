@@ -377,17 +377,27 @@ class ContentController extends Controller
     }
 
     /**
-     * Poner de nuevo en la cola una foto "para editar" que ya se usó en un
-     * post. Antes, una vez usada, no había manera de recuperarla salvo
-     * subirla de nuevo.
+     * Meter o sacar una foto de la cola del próximo post.
+     *
+     * Es un interruptor y no dos acciones distintas: antes solo se podía
+     * METER —las que ya estaban en la cola no eran tocables— y ella se quedó
+     * trabada: «yo la selecciono, voy agregando, y después ya no la puedo
+     * deseleccionar».
+     *
+     * `used_at` es lo que decide si una foto espera un post (ver
+     * ContentUpload::waiting). Sacarla de la cola es marcarla como usada,
+     * que es justo lo que significa en la pantalla: ya no la ofrezco.
      */
-    public function reuseUpload(ContentUpload $upload): RedirectResponse
+    public function toggleQueued(ContentUpload $upload): RedirectResponse
     {
         if ($upload->purpose === ContentPurpose::Edit) {
-            $upload->update(['used_at' => null]);
+            $upload->update(['used_at' => $upload->used_at === null ? now() : null]);
         }
 
-        return to_route('admin.contenido')->with('success', 'admin.contentPhotoReused');
+        return to_route('admin.contenido')->with(
+            'success',
+            $upload->used_at === null ? 'admin.contentPhotoQueued' : 'admin.contentPhotoUnqueued',
+        );
     }
 
     /**

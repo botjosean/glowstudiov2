@@ -580,7 +580,9 @@
         "clientsImportFileEmpty": "I couldn't find any contacts in that file. It has to be the .vcf or .csv your phone exports.",
         "importFromFile": "Import from a file",
         "importHelp": "How do I get that file?",
-        "importHelpBody": "On iPhone: Contacts → Lists → press and hold the group → Export. On Android: Contacts → menu → Manage contacts → Import or export → Export to file. You get a .vcf file to upload here."
+        "importHelpBody": "On iPhone: Contacts → Lists → press and hold the group → Export. On Android: Contacts → menu → Manage contacts → Import or export → Export to file. You get a .vcf file to upload here.",
+        "contentPhotoQueued": "It's in the next post",
+        "contentPhotoUnqueued": "Took it out of the next post"
     },
     "nav": {
         "appointments": "Appointments",
@@ -631,11 +633,7 @@
         "noNote": "You saved this one without saying what you like about it. The ones with a note teach far more.",
         "removeReference": "Remove this reference",
         "recentEditsTitle": "Your photos",
-        "recentEditsHint": "The last ones you uploaded to edit. The marked ones were already used in a post — tap one to put it back in the queue.",
-        "openUsedPhoto": "View already-used photo",
-        "photoAlreadyUsed": "This photo was already used in a post. If you want to build another one with it, put it back in the queue.",
-        "reusePhoto": "Use this photo again",
-        "contentPhotoReused": "Done, you can use it again now",
+        "recentEditsHint": "Tap one to add it to or remove it from the next post. The marked ones are the ones going in.",
         "download": "Download",
         "copyText": "Copy text",
         "rateAsk": "How did it turn out?",
@@ -660,7 +658,8 @@
         "styleLearnedFrom": "Learned from 1 reference | Learned from 1 reference | Learned from {count} references",
         "noteSuggested": "This was written by looking at your photos. Fix it if it is not what you like — the more it sounds like you, the better your posts come out.",
         "saveNote": "Save",
-        "skipNote": "Leave it without a note"
+        "skipNote": "Leave it without a note",
+        "togglePhoto": "Add to or remove from the next post"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",
