@@ -55,28 +55,40 @@ class BuildHero
     }
 
     /**
-     * El degradado de abajo, dibujado como tiras de opacidad creciente.
+     * El degradado de abajo, con una máscara de opacidad de verdad.
      *
-     * Intervention no expone degradados, así que se hace a mano. Cuarenta
-     * tiras: menos se ven como escalones sobre un fondo liso, más no aporta
-     * nada visible y solo cuesta tiempo.
+     * Intervention no expone degradados, así que se hace con Imagick a pelo
+     * — mismo recurso que el recorte circular del logo (ver
+     * BuildCollage::circularLogo). La primera versión dibujaba 40 tiras de
+     * 14px con opacidad creciente a mano, y el salto de una a la siguiente
+     * se veía como rayitas horizontales sobre un fondo oscuro — visto en un
+     * post real (30-ago). Componer más tiras no alcanzaba: con cada tira
+     * redondeando su propia opacidad a 8 bits por separado, muchas caían en
+     * el mismo nivel y las rayas seguían ahí.
+     *
+     * Acá el degradado sale de una sola imagen calculada por Imagick de
+     * punta a punta, sin ir componiendo franjas: un degradado lineal en
+     * escala de grises como máscara, elevado al cuadrado para la misma
+     * curva de siempre —arranca casi transparente y se cierra rápido abajo,
+     * que es donde va el texto— y esa máscara controla la opacidad de un
+     * relleno oscuro por COPYOPACITY.
      */
     private function shade(ImageInterface $canvas): void
     {
-        $bands = 40;
-        $height = (int) ceil(self::SHADE / $bands);
+        $mask = new \Imagick;
+        $mask->newPseudoImage(self::CANVAS, self::SHADE, 'gradient:black-white');
+        $mask->evaluateImage(\Imagick::EVALUATE_POW, 2);
+        $mask->evaluateImage(\Imagick::EVALUATE_MULTIPLY, 0.88);
 
-        for ($i = 0; $i < $bands; $i++) {
-            $y = self::CANVAS - self::SHADE + ($i * $height);
-            // Curva cuadrática: arranca casi transparente y se cierra rápido
-            // abajo, que es donde va el texto.
-            $alpha = ($i / $bands) ** 2 * 0.88;
+        $fill = new \Imagick;
+        $fill->newImage(self::CANVAS, self::SHADE, new \ImagickPixel('rgb(8,10,16)'));
+        $fill->setImageAlphaChannel(\Imagick::ALPHACHANNEL_SET);
+        $fill->compositeImage($mask, \Imagick::COMPOSITE_COPYOPACITY, 0, 0);
+        $fill->setImageFormat('png');
 
-            $canvas->drawRectangle(0, $y, function ($rect) use ($height, $alpha): void {
-                $rect->size(self::CANVAS, $height + 1);
-                $rect->background(sprintf('rgba(8, 10, 16, %.3f)', $alpha));
-            });
-        }
+        $overlay = ImageManager::imagick()->read($fill->getImageBlob());
+
+        $canvas->place($overlay, 'bottom-left', 0, 0);
     }
 
     /**
