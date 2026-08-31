@@ -86,6 +86,20 @@ class ColorNames
     }
 
     /**
+     * Todo el catálogo, para recorrerlo entero.
+     *
+     * Lo usa el comando que genera de una todas las fotos decorativas (ver
+     * content:preparar-decorados): con la biblioteca completa en R2, ningún
+     * post vuelve a pagar una generación nunca más.
+     *
+     * @return array<string, array{0: string, 1: string}>  hex => [español, inglés]
+     */
+    public static function all(): array
+    {
+        return self::CATALOG;
+    }
+
+    /**
      * El hex del catálogo más cercano —no el hex exacto que se le pasó—,
      * para agrupar por "cajón" de color. Lo usa FindOrCreateColorProp: con
      * ~26 colores fijos, cachear por el más cercano evita generar de nuevo
