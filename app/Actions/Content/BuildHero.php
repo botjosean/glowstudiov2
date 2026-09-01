@@ -31,7 +31,37 @@ class BuildHero
 
     public function __construct(
         private readonly DrawHeadline $drawHeadline,
+        private readonly StampAsset $stamp,
+        private readonly PickAsset $pick,
     ) {}
+
+    /**
+     * Estampa la frase del pack y avisa si pudo.
+     *
+     * La posición sale de la ficha de ella si la tiene; si no, se sortea —
+     * pero una sola vez, porque la claridad se mide en la MISMA franja donde
+     * va a caer, y sortear de nuevo después dejaría la tinta elegida para un
+     * lado y la frase en otro.
+     */
+    private function stampHeadline(ImageInterface $canvas, Provider $provider, ?string $serviceSlug): bool
+    {
+        if (! $this->pick->hasPack($provider)) {
+            return false;
+        }
+
+        $spot = BrandStyle::headlineSpotFor($provider->content_style)
+            ?? ['center', 'bottom', 'top'][array_rand(['center', 'bottom', 'top'])];
+
+        $elegida = $this->stamp->pick($canvas, $this->pick->phrases($provider, $serviceSlug), $spot);
+
+        if ($elegida === null) {
+            return false;
+        }
+
+        $this->stamp->handle($canvas, $elegida, $spot);
+
+        return true;
+    }
 
     /**
      * La foto sola, al cuadrado, sin una sola letra encima.
@@ -54,12 +84,27 @@ class BuildHero
      * @param  list<string>  $paths  se usa la primera
      * @param  list<string>  $headline  hasta 3 líneas
      */
-    public function handle(Provider $provider, array $paths, array $headline = []): string
+    public function handle(Provider $provider, array $paths, array $headline = [], ?string $serviceSlug = null): string
     {
         $manager = ImageManager::imagick();
 
         $canvas = $manager->read(Storage::disk('r2')->get(array_values($paths)[0]))
             ->cover(self::CANVAS, self::CANVAS);
+
+        // Con el pack cargado, el titular se ESTAMPA en vez de dibujarse.
+        //
+        // Las frases del pack las diseñó una persona; el motor de abajo las
+        // compone con tipografías. Ella comparó los dos resultados sin
+        // saberlo, post tras post, y siempre dijo lo mismo: «no son las
+        // letras, no logras llegar al punto». Cuando hay pack, gana el pack.
+        //
+        // El motor viejo no se borra: sigue siendo el que atiende a los
+        // rubros que el pack no cubre.
+        if ($this->stampHeadline($canvas, $provider, $serviceSlug)) {
+            $this->mark($canvas, $provider);
+
+            return $this->store($provider, $canvas);
+        }
 
         // El MISMO motor de titulares que el collage. Antes acá había una
         // versión propia escrita a mano —serif blanca, abajo a la izquierda,
