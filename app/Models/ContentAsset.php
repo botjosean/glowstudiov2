@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * Una pieza del pack de contenido: una frase, un elemento, un marco, una
  * sombra o un adorno. Ver la migración `create_content_assets_table`.
  */
-#[Fillable(['kind', 'trade', 'path', 'ink', 'text', 'slug', 'box_x', 'box_y', 'box_w', 'box_h'])]
+#[Fillable(['kind', 'trade', 'path', 'ink', 'text', 'slug', 'box_x', 'box_y', 'box_w', 'box_h', 'hue'])]
 class ContentAsset extends Model
 {
     /**

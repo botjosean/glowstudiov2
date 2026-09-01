@@ -8,9 +8,12 @@ use App\Actions\Content\BuildColorBlock;
 use App\Actions\Content\BuildColorCombo;
 use App\Actions\Content\BuildHero;
 use App\Actions\Content\ColorNames;
+use App\Actions\Content\ComposeChosen;
 use App\Actions\Content\DetectDesignedPhoto;
+use App\Actions\Content\PhraseSafety;
 use App\Actions\Content\ReadPhotoColor;
 use App\Actions\Content\ReadReferenceStyle;
+use App\Actions\Content\StickerTrays;
 use App\Actions\Content\StoreReferenceVideo;
 use App\Actions\Content\SuggestReferenceNote;
 use App\Actions\Content\WriteCaption;
@@ -22,6 +25,7 @@ use App\Enums\PostLayout;
 use App\Enums\UploadKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreContentUploadRequest;
+use App\Models\ContentAsset;
 use App\Models\ContentPost;
 use App\Models\ContentUpload;
 use App\Support\MediaUrl;
@@ -56,6 +60,8 @@ class ContentController extends Controller
         private readonly ReadPhotoColor $photoColor,
         private readonly BuildColorBlock $colorBlock,
         private readonly BuildColorCombo $colorCombo,
+        private readonly ComposeChosen $compose,
+        private readonly StickerTrays $trays,
     ) {}
 
     public function index(Request $request): Response
@@ -139,6 +145,13 @@ class ContentController extends Controller
                     'hashtags' => $post->hashtags ?? [],
                     'rating' => $post->rating,
                 ])->values()->all(),
+            // Las piezas para poner a mano, agrupadas en bandejas.
+            //
+            // Existe porque hay algo que la app NO puede saber: si la foto es
+            // el antes, el proceso o el resultado. Ella lo dijo mirando
+            // posts reales — «al otro le pones proceso y de repente no, ya
+            // eso es terminado». Acá elige ella, que sí lo sabe.
+            'trays' => $this->trays->handle($provider),
             // Qué modelos puede armar ahora mismo, según cuántas fotos tiene
             // esperando. Ofrecer uno que no cuadra solo produce un error.
             'layouts' => collect(PostLayout::cases())
@@ -457,6 +470,72 @@ class ContentController extends Controller
             ]);
 
             ContentUpload::query()->whereIn('id', $uploads->pluck('id'))->update(['used_at' => now()]);
+        });
+
+        return to_route('admin.contenido')->with('success', 'admin.contentPostReady');
+    }
+
+    /**
+     * Arma el post con las piezas que eligió ella, a mano.
+     *
+     * Es la salida al problema que ella señaló y que no tiene arreglo
+     * automático: el sistema no sabe si la foto es el antes, el proceso o el
+     * resultado, y estampar «proceso» sobre un trabajo terminado deja un
+     * post que se contradice. Acá elige ella, que sí lo sabe.
+     */
+    public function compose(Request $request): RedirectResponse
+    {
+        $provider = $request->user()->provider;
+
+        $validated = $request->validate([
+            'uploadId' => ['required', 'integer'],
+            'assetIds' => ['required', 'array', 'min:1', 'max:6'],
+            'assetIds.*' => ['integer'],
+        ]);
+
+        // Reconsultada con el provider_id del servidor: un id inventado no
+        // alcanza la foto de otra profesional.
+        $foto = ContentUpload::query()
+            ->where('provider_id', $provider->id)
+            ->where('purpose', ContentPurpose::Edit->value)
+            ->find($validated['uploadId']);
+
+        if ($foto === null) {
+            throw ValidationException::withMessages(['uploadId' => __('admin.contentNeedsPhotos', ['count' => 1])]);
+        }
+
+        // En el orden en que ella las tocó, no en el que vengan de la base:
+        // la última que puso tiene que quedar arriba.
+        $porId = ContentAsset::query()
+            ->whereIn('id', $validated['assetIds'])
+            ->get()
+            ->filter(fn (ContentAsset $a): bool => PhraseSafety::usable($a->slug))
+            ->keyBy('id');
+
+        $piezas = collect($validated['assetIds'])
+            ->map(fn (int $id) => $porId->get($id))
+            ->filter()
+            ->values();
+
+        if ($piezas->isEmpty()) {
+            throw ValidationException::withMessages(['assetIds' => __('admin.contentNeedsSticker')]);
+        }
+
+        $written = $this->caption->handle($provider);
+        $key = $this->compose->handle($provider, $foto->path, $piezas);
+
+        DB::transaction(function () use ($provider, $key, $written, $foto): void {
+            ContentPost::create([
+                'provider_id' => $provider->id,
+                'layout' => PostLayout::Hero->value,
+                'path' => $key,
+                'slides' => [$key],
+                'caption' => $written['caption'],
+                'hashtags' => $written['hashtags'],
+                'source_paths' => [$foto->path],
+            ]);
+
+            $foto->update(['used_at' => now()]);
         });
 
         return to_route('admin.contenido')->with('success', 'admin.contentPostReady');

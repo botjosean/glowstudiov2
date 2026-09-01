@@ -116,6 +116,7 @@ class ImportContentPack extends Command
                 'box_y' => $medida['y'],
                 'box_w' => $medida['w'],
                 'box_h' => $medida['h'],
+                'hue' => $medida['hue'],
             ]);
 
             $subidos++;
@@ -200,7 +201,7 @@ class ImportContentPack extends Command
      * miniatura: en el lienzo entero el 95% son píxeles vacíos y el promedio
      * daría siempre lo mismo.
      *
-     * @return array{x: int, y: int, w: int, h: int, ink: string|null}|null
+     * @return array{x: int, y: int, w: int, h: int, ink: string|null, hue: int|null}|null
      */
     private function medir(string $archivo): ?array
     {
@@ -230,6 +231,11 @@ class ImportContentPack extends Command
 
         $suma = 0.0;
         $saturacion = 0.0;
+        // El tono se promedia como vector y no como número: los grados dan
+        // la vuelta, así que el promedio plano de un rojo a 350 y otro a 10
+        // daría verde en vez de rojo.
+        $hx = 0.0;
+        $hy = 0.0;
         $cuenta = 0;
 
         for ($i = 0, $n = count($pixeles); $i + 3 < $n; $i += 4) {
@@ -249,7 +255,22 @@ class ImportContentPack extends Command
             // de verdad, en el perfil de Patricia.
             $max = max($r, $g, $b);
             $min = min($r, $g, $b);
-            $saturacion += $max === 0 ? 0.0 : ($max - $min) / $max;
+            $sat = $max === 0 ? 0.0 : ($max - $min) / $max;
+            $saturacion += $sat;
+
+            // Solo los píxeles con color de verdad opinan sobre el tono: en
+            // un gris el ángulo es ruido y arrastraría el promedio.
+            if ($sat > 0.15 && $max > $min) {
+                $grados = match (true) {
+                    $max === $r => 60 * fmod(($g - $b) / ($max - $min), 6),
+                    $max === $g => 60 * ((($b - $r) / ($max - $min)) + 2),
+                    default => 60 * ((($r - $g) / ($max - $min)) + 4),
+                };
+
+                $rad = deg2rad($grados);
+                $hx += cos($rad);
+                $hy += sin($rad);
+            }
 
             $cuenta++;
         }
@@ -271,6 +292,14 @@ class ImportContentPack extends Command
             $luz > 0.68 => 'light',
             default => 'color',
         };
+
+        // El tono medio, solo si de verdad tiene color. Un gris no tiene
+        // tono y guardarle uno inventado lo metería en una temporada al azar.
+        $largo = sqrt(($hx * $hx) + ($hy * $hy));
+
+        $caja['hue'] = $largo < 1.0
+            ? null
+            : (int) round(fmod(rad2deg(atan2($hy, $hx)) + 360, 360));
 
         return $caja;
     }

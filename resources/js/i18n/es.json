@@ -591,7 +591,8 @@
         "contentColorSaved": "Color guardado",
         "contentNeedsColor": "Para este modelo necesito saber el color del trabajo. Subí las fotos de nuevo y confirmá el color cuando te lo pregunte.",
         "contentColorMismatch": "Esas fotos no son del mismo color. Elegí fotos de un solo trabajo para esta plantilla.",
-        "contentNeedsTwoColors": "Para esta plantilla necesito dos fotos de colores bien distintos. Elegí otra combinación, o confirmá el color de alguna primero."
+        "contentNeedsTwoColors": "Para esta plantilla necesito dos fotos de colores bien distintos. Elegí otra combinación, o confirmá el color de alguna primero.",
+        "contentNeedsSticker": "Elegí al menos un sticker para armar el post."
     },
     "nav": {
         "appointments": "Citas",
@@ -682,7 +683,16 @@
         "step1": "Subí las fotos de hoy",
         "step2": "Elegí cómo se ve",
         "addMore": "Agregar más",
-        "needsPhotos": "Necesita {n} fotos"
+        "needsPhotos": "Necesita {n} fotos",
+        "editorCta": "Armarlo yo misma",
+        "editorHint": "Elegí los stickers y los ves sobre la foto",
+        "editorEmpty": "Tocá un sticker abajo y aparece sobre la foto.",
+        "editorSave": "Guardar el post",
+        "tray_tecnica": "Lo que hiciste",
+        "tray_momento": "Antes, proceso o después",
+        "tray_agendar": "Para que agenden",
+        "tray_temporada": "Del mes",
+        "tray_otras": "Todas las demás"
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",

@@ -591,7 +591,8 @@
         "contentColorSaved": "Color saved",
         "contentNeedsColor": "For this one I need to know the work's color. Upload the photos again and confirm the color when asked.",
         "contentColorMismatch": "Those photos aren't the same color. Pick photos of a single work for this template.",
-        "contentNeedsTwoColors": "For this one I need two photos of clearly different colors. Pick another combo, or confirm the color on one of them first."
+        "contentNeedsTwoColors": "For this one I need two photos of clearly different colors. Pick another combo, or confirm the color on one of them first.",
+        "contentNeedsSticker": "Pick at least one sticker to build the post."
     },
     "nav": {
         "appointments": "Appointments",
@@ -682,7 +683,16 @@
         "step1": "Upload today's photos",
         "step2": "Pick how it looks",
         "addMore": "Add more",
-        "needsPhotos": "Needs {n} photos"
+        "needsPhotos": "Needs {n} photos",
+        "editorCta": "Build it myself",
+        "editorHint": "Pick stickers and see them on the photo",
+        "editorEmpty": "Tap a sticker below and it appears on the photo.",
+        "editorSave": "Save the post",
+        "tray_tecnica": "What you did",
+        "tray_momento": "Before, during or after",
+        "tray_agendar": "To get bookings",
+        "tray_temporada": "This month",
+        "tray_otras": "Everything else"
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",

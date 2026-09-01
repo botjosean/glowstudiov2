@@ -28,6 +28,8 @@ const props = defineProps({
     contentStyle: { type: Object, default: null },
     posts: { type: Array, required: true }, // [{ id, url, caption, hashtags, rating }]
     layouts: { type: Array, required: true }, // [{ value, counts, uses, fits }]
+    // Las piezas para poner a mano: [{ key, title, items: [{ id, url, text, ink }] }]
+    trays: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
@@ -296,6 +298,70 @@ watch(chosenTemplate, (v) => {
         window.localStorage?.setItem('glow.contentTemplate', v === null ? 'null' : String(v));
     } catch { /* idem */ }
 });
+
+// ── El editor a mano ──────────────────────────────────────────────────
+//
+// Es la salida al único dato que la app NO puede sacar de la foto: si es
+// el antes, el proceso o el resultado. Ella lo dijo mirando posts reales:
+// «tú no sabes cuándo la foto está terminada o cuándo está empezando el
+// proceso [...] al otro le pones proceso y de repente no, ya eso es
+// terminado». Acá elige ella, que sí lo sabe.
+//
+// Las piezas caen donde las puso el diseñador —ella eligió que fuera así,
+// más rápido y siempre bien compuesto— y se quitan tocándolas de nuevo.
+const editorOpen = ref(false);
+const editorPhoto = ref(null);
+const editorPicked = ref([]); // ids, en el orden en que los tocó
+const composeForm = useForm({ uploadId: null, assetIds: [] });
+
+const editorAssets = computed(() => {
+    const porId = new Map();
+
+    for (const tray of props.trays) {
+        for (const item of tray.items) porId.set(item.id, item);
+    }
+
+    return editorPicked.value.map((id) => porId.get(id)).filter(Boolean);
+});
+
+function openEditor(item) {
+    editorPhoto.value = item;
+    editorPicked.value = [];
+    editorOpen.value = true;
+}
+
+function toggleSticker(id) {
+    const i = editorPicked.value.indexOf(id);
+
+    if (i !== -1) {
+        editorPicked.value.splice(i, 1);
+
+        return;
+    }
+
+    // Seis es lo que acepta el servidor; más que eso tapa la foto entera.
+    if (editorPicked.value.length >= 6) return;
+
+    editorPicked.value.push(id);
+    haptics.success();
+}
+
+function saveComposed() {
+    if (composeForm.processing || editorPicked.value.length === 0) return;
+
+    composeForm.uploadId = editorPhoto.value.id;
+    composeForm.assetIds = [...editorPicked.value];
+
+    composeForm.post('/admin/contenido/componer', {
+        preserveScroll: true,
+        onSuccess: () => {
+            haptics.success();
+            editorOpen.value = false;
+            editorPicked.value = [];
+        },
+        onError: () => haptics.error(),
+    });
+}
 
 function build(layout) {
     if (generateForm.processing) return;
@@ -574,6 +640,25 @@ const busyLabel = computed(() => {
                     </button>
                 </div>
             </div>
+
+            <!-- Armarlo a mano. Va acá, junto a las fotos, porque es lo que
+                 se hace ANTES de elegir un modelo automático: se toca una
+                 foto y se le ponen las piezas. -->
+            <button
+                v-if="waiting.length > 0 && trays.length > 0"
+                type="button"
+                class="flex items-center gap-3 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-3.5 text-left hover:border-[var(--gold-border)]"
+                @click="openEditor(waiting[0])"
+            >
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-soft)]">
+                    <Wand :size="17" class="text-[var(--gold-text)]" />
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-[14px] font-bold text-[var(--text-strong)]">{{ $t('content.editorCta') }}</span>
+                    <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.editorHint') }}</span>
+                </span>
+                <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+            </button>
 
             <p v-if="uploadForm.errors['photos.0']" class="text-[13px] font-normal text-[var(--danger)]">
                 {{ uploadForm.errors['photos.0'] }}
@@ -1011,6 +1096,88 @@ const busyLabel = computed(() => {
                         <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.purposeReferenceHint') }}</span>
                     </span>
                     <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                </button>
+            </div>
+        </BottomSheet>
+
+        <!-- El editor a mano: la foto arriba con las piezas encima, y las
+             bandejas debajo. Ver openEditor(). -->
+        <BottomSheet v-model="editorOpen">
+            <div v-if="editorPhoto" class="flex flex-col gap-3">
+                <!-- La vista: la foto con las piezas superpuestas, cada una
+                     en la posición en que la diseñaron. Se compone acá en el
+                     teléfono para que se vea al instante; el post final lo
+                     arma el servidor con las mismas piezas. -->
+                <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--surface-mute)]">
+                    <img :src="editorPhoto.url" alt="" class="absolute inset-0 h-full w-full object-cover" />
+                    <img
+                        v-for="a in editorAssets"
+                        :key="a.id"
+                        :src="a.url"
+                        alt=""
+                        class="absolute inset-0 h-full w-full object-contain"
+                    />
+                </div>
+
+                <p v-if="editorPicked.length === 0" class="text-center text-[13px] font-normal text-[var(--text-mute)]">
+                    {{ $t('content.editorEmpty') }}
+                </p>
+
+                <!-- Elegir con cuál de las fotos en cola trabajar. -->
+                <div v-if="waiting.length > 1" class="flex gap-1.5 overflow-x-auto pb-1">
+                    <button
+                        v-for="item in waiting"
+                        :key="item.id"
+                        type="button"
+                        class="h-14 w-14 shrink-0 overflow-hidden rounded-lg"
+                        :class="item.id === editorPhoto.id ? 'ring-2 ring-[var(--gold)]' : 'opacity-55'"
+                        @click="editorPhoto = item"
+                    >
+                        <img :src="item.url" alt="" class="h-full w-full object-cover" />
+                    </button>
+                </div>
+
+                <!-- Las bandejas. La primera es la de momento
+                     (antes/proceso/después): las que solo sabe ella. -->
+                <div v-for="tray in trays" :key="tray.key" class="flex flex-col gap-1.5">
+                    <div class="text-[12px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+                        {{ $t(tray.title) }}
+                    </div>
+                    <div class="flex gap-1.5 overflow-x-auto pb-1">
+                        <button
+                            v-for="item in tray.items"
+                            :key="item.id"
+                            type="button"
+                            class="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border"
+                            :class="editorPicked.includes(item.id)
+                                ? 'border-[var(--gold)] ring-2 ring-[var(--gold)]'
+                                : 'border-[var(--border-strong)]'"
+                            :style="{ background: item.ink === 'light' ? '#4a4a4a' : '#f3f4f6' }"
+                            :aria-pressed="editorPicked.includes(item.id)"
+                            @click="toggleSticker(item.id)"
+                        >
+                            <img :src="item.url" alt="" class="h-full w-full object-contain p-0.5" />
+                            <span
+                                v-if="editorPicked.includes(item.id)"
+                                class="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold)]"
+                            >
+                                <Check :size="10" class="text-white" />
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <p v-if="composeForm.errors.assetIds || composeForm.errors.uploadId" class="rounded-xl bg-[var(--danger-hover)] p-3 text-center text-[13px] font-medium text-[var(--danger)]">
+                    {{ composeForm.errors.assetIds || composeForm.errors.uploadId }}
+                </p>
+
+                <button
+                    type="button"
+                    :disabled="composeForm.processing || editorPicked.length === 0"
+                    class="w-full rounded-xl bg-[var(--btn-bg)] py-3.5 text-[15px] font-semibold text-white hover:bg-[var(--btn-hover)] disabled:opacity-40"
+                    @click="saveComposed"
+                >
+                    {{ composeForm.processing ? $t('content.building') : $t('content.editorSave') }}
                 </button>
             </div>
         </BottomSheet>

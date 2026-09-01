@@ -185,6 +185,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', EnsureUs
         ->name('contenido.referencias.nota');
     Route::patch('/contenido/fotos/color', [ContentController::class, 'updateColor'])
         ->name('contenido.fotos.color');
+    // Armar el post con las piezas que eligió ella a mano: la salida al
+    // único dato que la app no puede adivinar, si la foto es el antes, el
+    // proceso o el resultado.
+    Route::post('/contenido/componer', [ContentController::class, 'compose'])
+        ->name('contenido.componer');
     // Las dos con {id}, y por eso las dos con política.
     Route::patch('/contenido/{post}/calificar', [ContentController::class, 'rate'])
         ->can('update', 'post')->whereNumber('post')->name('contenido.calificar');
