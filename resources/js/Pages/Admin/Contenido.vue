@@ -184,14 +184,18 @@ function chooseReference() {
     send('reference');
 }
 
-// Solo los modelos que cuadran con las fotos que tiene ahora. Ofrecer uno
-// que no cuadra solo produce un error después de haber esperado.
-const usableLayouts = computed(() => props.layouts.filter((l) => l.fits));
+// Antes acá se filtraban los modelos que no cuadran y directamente no se
+// mostraban. Ahora se muestran todos, apagados y diciendo cuántas fotos les
+// faltan: así ella ve qué existe y qué necesita para usarlo, en vez de que
+// aparezcan y desaparezcan opciones sin explicación.
 
 // Elegido el diseño, falta el "¿como cuál de tus referencias?" — ella lo
 // pidió directo: en vez de que el sistema mezcle todas sus referencias en
 // un estilo promedio, poder elegir UNA puntual para copiar esa.
 const templateOpen = ref(false);
+// Las referencias arrancan plegadas: es un ajuste que se toca cada tanto, no
+// un paso del día a día.
+const referencesOpen = ref(false);
 const pendingLayout = ref(null);
 // null = usar las más viejas de la cola, automático. Un array = las que ella
 // misma eligió a mano (ver colorPick, para "Fondo de color").
@@ -520,37 +524,34 @@ const busyLabel = computed(() => {
                 @change="pickFiles"
             />
 
+            <!-- ══ PASO 1 ══ Las fotos.
+                 El taller creció por partes y quedó un montón de tarjetas
+                 compitiendo en vez de un camino. Ella lo dijo así: «todo el
+                 panel se ve complicado». Ahora son dos pasos numerados y
+                 todo lo demás queda abajo. -->
+            <div class="flex items-baseline gap-2 pt-1">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--gold)] text-[12px] font-bold text-white">1</span>
+                <span class="text-[15px] font-bold text-[var(--text-strong)]">{{ $t('content.step1') }}</span>
+            </div>
+
+            <!-- Sin fotos esperando, subir es lo único que se ofrece. -->
             <button
+                v-if="waiting.length === 0"
                 type="button"
-                class="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-7 hover:border-[var(--gold-border)] hover:bg-[var(--gold-soft)]"
+                class="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-[var(--border-strong)] bg-[var(--surface-alt)] px-4 py-9 hover:border-[var(--gold-border)] hover:bg-[var(--gold-soft)]"
                 :disabled="uploadForm.processing"
                 @click="fileInput?.click()"
             >
-                <Sparkles :size="22" class="text-[var(--gold)]" />
-                <span class="text-[15px] font-bold text-[var(--text-strong)]">
+                <Sparkles :size="24" class="text-[var(--gold)]" />
+                <span class="text-[16px] font-bold text-[var(--text-strong)]">
                     {{ uploadForm.processing ? $t('content.uploading') : $t('content.uploadCta') }}
                 </span>
                 <span class="text-[12px] font-normal text-[var(--text-mute)]">{{ $t('content.uploadHint') }}</span>
             </button>
 
-            <p v-if="uploadForm.errors['photos.0']" class="text-[13px] font-normal text-[var(--danger)]">
-                {{ uploadForm.errors['photos.0'] }}
-            </p>
-
-
-            <p v-if="uploadForm.errors.photos" class="text-[13px] font-normal text-[var(--danger)]">
-                {{ uploadForm.errors.photos }}
-            </p>
-
-            <!-- Fotos esperando un modelo -->
-            <div
-                v-if="waiting.length > 0"
-                class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-            >
-                <div class="text-[15px] font-semibold text-[var(--text-strong)]">
-                    {{ $t('content.waitingTitle', waiting.length) }}
-                </div>
-                <div class="mt-3 grid grid-cols-4 gap-1.5">
+            <!-- Con fotos ya elegidas, se ven y se puede agregar más. -->
+            <div v-else class="rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-soft)] p-3.5">
+                <div class="grid grid-cols-4 gap-1.5">
                     <img
                         v-for="item in waiting.slice(0, 8)"
                         :key="item.id"
@@ -559,220 +560,141 @@ const busyLabel = computed(() => {
                         class="aspect-square w-full rounded-lg object-cover"
                     />
                 </div>
-
-                <div v-if="usableLayouts.length > 0" class="mt-4 flex flex-col gap-2">
-                    <div class="text-[12px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-                        {{ $t('content.chooseLayout') }}
-                    </div>
-
+                <div class="mt-3 flex items-center justify-between">
+                    <span class="text-[13px] font-semibold text-[var(--text-strong)]">
+                        {{ $t('content.waitingTitle', waiting.length) }}
+                    </span>
                     <button
-                        v-for="layout in usableLayouts"
-                        :key="layout.value"
                         type="button"
-                        :disabled="generateForm.processing"
-                        class="flex w-full items-center gap-3.5 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-3.5 text-left hover:border-[var(--gold-border)] hover:bg-[var(--gold-soft)] disabled:cursor-not-allowed disabled:opacity-60"
-                        @click="build(layout)"
+                        :disabled="uploadForm.processing"
+                        class="text-[13px] font-semibold text-[var(--gold-text)] hover:underline disabled:opacity-60"
+                        @click="fileInput?.click()"
                     >
-                        <!-- Una miniatura del armado dibujada con cajitas: se
-                             entiende de un vistazo qué va a salir, que es lo
-                             que un nombre solo no dice. -->
-                        <span class="grid h-11 w-11 shrink-0 gap-[2px] rounded-lg bg-[var(--surface-mute)] p-1.5"
-                            :class="{
-                                'grid-cols-1': layout.value === 'hero' || layout.value === 'combo',
-                                'grid-cols-2': layout.value === 'collage' || layout.value === 'color',
-                                'grid-cols-3 items-center': layout.value === 'carousel',
-                            }"
-                        >
-                            <template v-if="layout.value === 'hero'">
-                                <span class="rounded-[3px] bg-[var(--gold)]" />
-                            </template>
-                            <template v-else-if="layout.value === 'collage'">
-                                <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)]" />
-                            </template>
-                            <!-- Fondo de color: las cuatro esquinas con el
-                                 medio libre, que es justo lo que la define. -->
-                            <template v-else-if="layout.value === 'color'">
-                                <span v-for="n in 4" :key="n" class="rounded-[2px] bg-[var(--gold)] opacity-70" />
-                            </template>
-                            <!-- Combinación: una foto arriba, otra abajo — la
-                                 tarjeta de los dos colores va en la costura. -->
-                            <template v-else-if="layout.value === 'combo'">
-                                <span class="h-[17px] rounded-[2px] bg-[var(--gold)]" />
-                                <span class="h-[17px] rounded-[2px] bg-[var(--gold)] opacity-70" />
-                            </template>
-                            <template v-else>
-                                <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
-                                <span class="h-8 rounded-[2px] bg-[var(--gold)]" />
-                                <span class="h-6 rounded-[2px] bg-[var(--gold)] opacity-40" />
-                            </template>
-                        </span>
-
-                        <span class="min-w-0 flex-1">
-                            <span class="block text-[15px] font-bold text-[var(--text-strong)]">
-                                {{ $t(`content.layout_${layout.value}`) }}
-                            </span>
-                            <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">
-                                {{ $t(`content.layoutHint_${layout.value}`) }} · {{ $t('content.usesPhotos', layout.uses) }}
-                            </span>
-                        </span>
-
-                        <ChevronRight :size="17" class="shrink-0 text-[var(--text-faint)]" />
+                        {{ $t('content.addMore') }}
                     </button>
                 </div>
-                <p v-else class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
-                    {{ $t('content.needOneMore') }}
-                </p>
+            </div>
 
-                <!-- La referencia a copiar, como ajuste y no como paso.
-                     Antes se preguntaba en cada post; ahora queda puesta y
-                     solo se toca si la quiere cambiar. -->
+            <p v-if="uploadForm.errors['photos.0']" class="text-[13px] font-normal text-[var(--danger)]">
+                {{ uploadForm.errors['photos.0'] }}
+            </p>
+
+            <p v-if="uploadForm.errors.photos" class="text-[13px] font-normal text-[var(--danger)]">
+                {{ uploadForm.errors.photos }}
+            </p>
+
+            <!-- ══ PASO 2 ══ El modelo, mostrado y no descrito.
+                 Antes era una lista de renglones con cajitas de 11px: no se
+                 entendía qué iba a salir. Ahora cada modelo es una silueta
+                 grande que dibuja el armado real. -->
+            <div class="flex items-baseline gap-2 pt-2">
+                <span
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
+                    :class="waiting.length > 0 ? 'bg-[var(--gold)] text-white' : 'bg-[var(--surface-mute)] text-[var(--text-faint)]'"
+                >2</span>
+                <span
+                    class="text-[15px] font-bold"
+                    :class="waiting.length > 0 ? 'text-[var(--text-strong)]' : 'text-[var(--text-faint)]'"
+                >{{ $t('content.step2') }}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5" :class="waiting.length === 0 && 'pointer-events-none opacity-45'">
                 <button
-                    v-if="references.length > 0 && usableLayouts.length > 0"
+                    v-for="layout in layouts"
+                    :key="layout.value"
                     type="button"
-                    class="mt-3 flex w-full items-center justify-between rounded-xl px-1 py-2 text-left"
-                    @click="templateOpen = true"
+                    :disabled="generateForm.processing || !layout.fits"
+                    class="flex flex-col overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] text-left transition-colors hover:border-[var(--gold-border)] disabled:cursor-not-allowed"
+                    :class="!layout.fits && 'opacity-50'"
+                    @click="build(layout)"
                 >
-                    <span class="text-[12px] font-normal text-[var(--text-mute)]">
-                        {{ $t('content.templateCurrent') }}
-                        <span class="font-semibold text-[var(--text-strong)]">{{ chosenTemplateLabel }}</span>
+                    <!-- La silueta: dibuja el armado a tamaño que se ve. -->
+                    <span class="relative block aspect-square w-full bg-[var(--surface-alt)] p-2.5">
+                        <span class="flex h-full w-full flex-col gap-[3px] overflow-hidden rounded-lg">
+                            <!-- Foto grande: una sola foto, titular al medio. -->
+                            <template v-if="layout.value === 'hero'">
+                                <span class="relative flex h-full w-full items-center justify-center bg-[var(--surface-mute)]">
+                                    <span class="flex w-full flex-col items-center gap-[5px] px-3">
+                                        <span class="h-[7px] w-3/4 rounded-full bg-[var(--gold)]" />
+                                        <span class="h-[5px] w-1/2 rounded-full bg-[var(--gold)] opacity-60" />
+                                    </span>
+                                </span>
+                            </template>
+
+                            <!-- Collage: rejilla de fotos. -->
+                            <template v-else-if="layout.value === 'collage'">
+                                <span class="grid h-full w-full grid-cols-2 gap-[3px]">
+                                    <span v-for="n in 4" :key="n" class="bg-[var(--surface-mute)]" />
+                                </span>
+                            </template>
+
+                            <!-- Carrusel: portada con frase y las láminas
+                                 asomando detrás, como se desliza en Instagram. -->
+                            <template v-else-if="layout.value === 'carousel'">
+                                <span class="relative flex h-full w-full items-center">
+                                    <span class="relative z-10 flex h-full w-[72%] shrink-0 items-center justify-center rounded-r-md bg-[var(--surface-mute)]">
+                                        <span class="flex w-full flex-col items-center gap-[4px] px-2">
+                                            <span class="h-[6px] w-4/5 rounded-full bg-[var(--gold)]" />
+                                            <span class="h-[4px] w-3/5 rounded-full bg-[var(--gold)] opacity-60" />
+                                        </span>
+                                    </span>
+                                    <span class="h-[86%] w-[14%] shrink-0 rounded-r-md bg-[var(--surface-mute)] opacity-75" />
+                                    <span class="h-[70%] w-[14%] shrink-0 rounded-r-md bg-[var(--surface-mute)] opacity-45" />
+                                </span>
+                            </template>
+
+                            <!-- Fondo de color: dos franjas de foto y la banda
+                                 del color en el medio. Es el armado nuevo,
+                                 sin la cruz blanca de antes. -->
+                            <template v-else-if="layout.value === 'color'">
+                                <span class="h-[38%] w-full bg-[var(--surface-mute)]" />
+                                <span class="flex flex-1 flex-col items-center justify-center gap-[4px] bg-[var(--gold-soft)]">
+                                    <span class="h-[6px] w-1/2 rounded-full bg-[var(--gold)]" />
+                                    <span class="h-[4px] w-2/3 rounded-full bg-[var(--gold)] opacity-55" />
+                                </span>
+                                <span class="h-[38%] w-full bg-[var(--surface-mute)]" />
+                            </template>
+
+                            <!-- Combinación: dos fotos y la tarjetita de los
+                                 dos colores en la costura. -->
+                            <template v-else-if="layout.value === 'combo'">
+                                <span class="relative flex h-full w-full flex-col gap-[3px]">
+                                    <span class="h-1/2 w-full bg-[var(--surface-mute)]" />
+                                    <span class="h-1/2 w-full bg-[var(--surface-mute)]" />
+                                    <span class="absolute left-1/2 top-1/2 flex w-[62%] -translate-x-1/2 -translate-y-1/2 flex-col gap-[3px] rounded-[3px] border border-[var(--border-strong)] bg-[var(--surface)] p-[5px]">
+                                        <span class="h-[8px] w-full rounded-[2px] bg-[var(--gold)]" />
+                                        <span class="h-[8px] w-full rounded-[2px] bg-[var(--gold)] opacity-50" />
+                                    </span>
+                                </span>
+                            </template>
+                        </span>
                     </span>
-                    <span class="text-[12px] font-semibold text-[var(--gold)]">{{ $t('common.change') }}</span>
+
+                    <span class="flex flex-col gap-0.5 px-3 pb-3 pt-0.5">
+                        <span class="text-[14px] font-bold leading-tight text-[var(--text-strong)]">
+                            {{ $t(`content.layout_${layout.value}`) }}
+                        </span>
+                        <span class="text-[11.5px] font-normal leading-snug text-[var(--text-mute)]">
+                            <!-- Con fotos de sobra dice cuántas usa; sin
+                                 suficientes, dice cuántas faltan, que es lo
+                                 que de verdad hace falta saber ahí. -->
+                            {{ layout.fits
+                                ? $t('content.usesPhotos', layout.uses)
+                                : $t('content.needsPhotos', layout.min) }}
+                        </span>
+                    </span>
                 </button>
-
-                <!-- Por qué no salió nada: antes esto se quedaba en el
-                     servidor sin avisar nunca. Ella lo probó con "Fondo de
-                     color" y "Combinación" y no vio ni un mensaje — parecía
-                     que el botón no hacía nada. -->
-                <p v-if="generateForm.errors.uploadIds" class="mt-3 rounded-xl bg-[var(--danger-hover)] p-3 text-center text-[13px] font-medium text-[var(--danger)]">
-                    {{ generateForm.errors.uploadIds }}
-                </p>
-
-                <p class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
-                    {{ $t('content.noAiOnWork') }}
-                </p>
             </div>
 
-            <!-- Tus fotos: queda todo lo que subió "para editar", ya se haya
-                 usado o no. Antes, apenas se armaba un post, la foto
-                 desaparecía sin dejar rastro — acá se puede volver a ver y,
-                 si ya se usó, ponerla de nuevo en la cola con un toque. -->
-            <div v-if="recentEdits.length > 0" class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="text-[15px] font-semibold text-[var(--text-strong)]">
-                    {{ $t('content.recentEditsTitle') }}
-                </div>
-                <div class="mt-0.5 text-[12px] font-normal text-[var(--text-mute)]">
-                    {{ $t('content.recentEditsHint') }}
-                </div>
+            <!-- Por qué no salió nada: antes esto se quedaba en el servidor
+                 sin avisar nunca y parecía que el botón estaba roto. -->
+            <p v-if="generateForm.errors.uploadIds" class="rounded-xl bg-[var(--danger-hover)] p-3 text-center text-[13px] font-medium text-[var(--danger)]">
+                {{ generateForm.errors.uploadIds }}
+            </p>
 
-                <!-- Un toque mete la foto en la cola, otro la saca. Antes
-                     solo se podía meter y ella se quedaba trabada. -->
-                <div class="mt-3.5 grid grid-cols-5 gap-1.5">
-                    <button
-                        v-for="item in recentEdits"
-                        :key="item.id"
-                        type="button"
-                        :disabled="queueForm.processing"
-                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)] disabled:opacity-60"
-                        :class="!item.used && 'ring-2 ring-[var(--gold)]'"
-                        :aria-pressed="!item.used"
-                        :aria-label="$t('content.togglePhoto')"
-                        @click="toggleQueued(item)"
-                    >
-                        <img :src="item.url" alt="" class="h-full w-full object-cover" :class="item.used && 'opacity-45'" />
-
-                        <!-- Marcada = entra en el próximo post. -->
-                        <span
-                            v-if="!item.used"
-                            class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold)]"
-                        >
-                            <Check :size="12" class="text-white" />
-                        </span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Referencias: se ven, se abren y se pueden quitar -->
-            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
-                <div class="flex items-center gap-3">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-soft)]">
-                        <Pin :size="17" class="text-[var(--gold-text)]" />
-                    </span>
-                    <div class="min-w-0 flex-1">
-                        <div class="text-[15px] font-semibold text-[var(--text-strong)]">
-                            {{ $t('content.referencesTitle', references.length) }}
-                        </div>
-                        <div class="mt-0.5 text-[12px] font-normal text-[var(--text-mute)]">
-                            {{ $t('content.referencesHint') }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- El estilo se aprende solo apenas sube una referencia (ver
-                     ContentController::store()); esto ya no es el botón
-                     principal, queda para releerlo a mano después de borrar
-                     una referencia que no quería. -->
-                <div v-if="references.length > 0" class="mt-3.5">
-                    <p v-if="styleForm.errors.style" class="text-[13px] font-normal text-[var(--danger)]">
-                        {{ styleForm.errors.style }}
-                    </p>
-
-                    <div v-else-if="contentStyle" class="flex items-center gap-2.5 rounded-xl bg-[var(--surface-alt)] px-3 py-2.5">
-                        <span class="flex gap-1">
-                            <span
-                                v-for="c in contentStyle.colores"
-                                :key="c"
-                                class="h-4 w-4 rounded-full border border-[var(--border-strong)]"
-                                :style="{ background: c }"
-                            />
-                        </span>
-                        <span class="text-[12px] font-normal text-[var(--text-mute)]">
-                            {{ $t('content.styleLearnedFrom', contentStyle.referencias) }}
-                        </span>
-                    </div>
-                    <p v-else class="text-[12px] font-normal text-[var(--text-faint)]">
-                        {{ $t('content.styleNotYet') }}
-                    </p>
-
-                    <button
-                        type="button"
-                        :disabled="styleForm.processing"
-                        class="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-mute)] hover:text-[var(--text-strong)] disabled:opacity-60"
-                        @click="learnStyle"
-                    >
-                        <Wand :size="13" />
-                        {{ styleForm.processing ? $t('content.learning') : $t('content.relearnStyle') }}
-                    </button>
-                </div>
-
-                <div v-if="references.length > 0" class="mt-3.5 grid grid-cols-4 gap-1.5">
-                    <button
-                        v-for="ref in references"
-                        :key="ref.id"
-                        type="button"
-                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
-                        :aria-label="$t('content.openReference')"
-                        @click="openReference(ref)"
-                    >
-                        <video v-if="ref.kind === 'video'" :src="ref.url" muted playsinline preload="metadata" class="h-full w-full object-cover" />
-                        <img v-else :src="ref.url" alt="" class="h-full w-full object-cover" />
-
-                        <span
-                            v-if="ref.kind === 'video'"
-                            class="absolute inset-0 flex items-center justify-center bg-black/30"
-                        >
-                            <Clapperboard :size="15" class="text-white" />
-                        </span>
-                        <!-- La chincheta marca cuáles llevan una nota escrita:
-                             son las que de verdad enseñan algo. -->
-                        <span
-                            v-else-if="ref.note"
-                            class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold)]"
-                        >
-                            <Pin :size="9" class="text-white" />
-                        </span>
-                    </button>
-                </div>
-            </div>
+            <p class="text-center text-[12px] font-normal text-[var(--text-faint)]">
+                {{ $t('content.noAiOnWork') }}
+            </p>
 
             <!-- Lo último armado, entero. Lo de antes queda abajo en
                  miniaturas: ocupando cada uno la pantalla completa había que
@@ -850,6 +772,160 @@ const busyLabel = computed(() => {
                             <Check :size="14" />
                             {{ post.rating === 'up' ? $t('content.ratedUp') : $t('content.ratedDown') }}
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tus fotos: queda todo lo que subió "para editar", ya se haya
+                 usado o no. Antes, apenas se armaba un post, la foto
+                 desaparecía sin dejar rastro — acá se puede volver a ver y,
+                 si ya se usó, ponerla de nuevo en la cola con un toque. -->
+            <div v-if="recentEdits.length > 0" class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)] p-4">
+                <div class="text-[15px] font-semibold text-[var(--text-strong)]">
+                    {{ $t('content.recentEditsTitle') }}
+                </div>
+                <div class="mt-0.5 text-[12px] font-normal text-[var(--text-mute)]">
+                    {{ $t('content.recentEditsHint') }}
+                </div>
+
+                <!-- Un toque mete la foto en la cola, otro la saca. Antes
+                     solo se podía meter y ella se quedaba trabada. -->
+                <div class="mt-3.5 grid grid-cols-5 gap-1.5">
+                    <button
+                        v-for="item in recentEdits"
+                        :key="item.id"
+                        type="button"
+                        :disabled="queueForm.processing"
+                        class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)] disabled:opacity-60"
+                        :class="!item.used && 'ring-2 ring-[var(--gold)]'"
+                        :aria-pressed="!item.used"
+                        :aria-label="$t('content.togglePhoto')"
+                        @click="toggleQueued(item)"
+                    >
+                        <img :src="item.url" alt="" class="h-full w-full object-cover" :class="item.used && 'opacity-45'" />
+
+                        <!-- Marcada = entra en el próximo post. -->
+                        <span
+                            v-if="!item.used"
+                            class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold)]"
+                        >
+                            <Check :size="12" class="text-white" />
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Referencias, plegadas.
+                 Ocupaban una tarjeta entera con paleta, botón de reaprender
+                 y una rejilla, arriba de todo — y es algo que se toca una vez
+                 cada tanto, no todos los días. Ahora es un renglón que se
+                 abre si lo necesita. -->
+            <div class="rounded-2xl border border-[var(--surface-mute)] bg-[var(--surface)]">
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-3 p-3.5 text-left"
+                    :aria-expanded="referencesOpen"
+                    @click="referencesOpen = !referencesOpen"
+                >
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-soft)]">
+                        <Pin :size="15" class="text-[var(--gold-text)]" />
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[14px] font-semibold text-[var(--text-strong)]">
+                            {{ $t('content.referencesTitle', references.length) }}
+                        </span>
+                        <span class="mt-0.5 block text-[12px] font-normal text-[var(--text-mute)]">
+                            {{ references.length > 0 ? $t('content.templateCurrent') + ' ' + chosenTemplateLabel : $t('content.referencesHint') }}
+                        </span>
+                    </span>
+                    <ChevronRight
+                        :size="17"
+                        class="shrink-0 text-[var(--text-faint)] transition-transform"
+                        :class="referencesOpen && 'rotate-90'"
+                    />
+                </button>
+
+                <div v-if="referencesOpen" class="px-3.5 pb-3.5">
+                    <p class="text-[12px] font-normal leading-relaxed text-[var(--text-mute)]">
+                        {{ $t('content.referencesHint') }}
+                    </p>
+
+                    <button
+                        v-if="references.length > 0"
+                        type="button"
+                        class="mt-3 flex w-full items-center justify-between rounded-xl bg-[var(--surface-alt)] px-3 py-2.5 text-left"
+                        @click="templateOpen = true"
+                    >
+                        <span class="text-[12px] font-normal text-[var(--text-mute)]">
+                            {{ $t('content.templateCurrent') }}
+                            <span class="font-semibold text-[var(--text-strong)]">{{ chosenTemplateLabel }}</span>
+                        </span>
+                        <span class="text-[12px] font-semibold text-[var(--gold-text)]">{{ $t('common.change') }}</span>
+                    </button>
+
+                    <!-- El estilo se aprende solo apenas sube una referencia
+                         (ver ContentController::store()); esto queda para
+                         releerlo a mano después de borrar una que no quería. -->
+                    <div v-if="references.length > 0" class="mt-3">
+                        <p v-if="styleForm.errors.style" class="text-[13px] font-normal text-[var(--danger)]">
+                            {{ styleForm.errors.style }}
+                        </p>
+
+                        <div v-else-if="contentStyle" class="flex items-center gap-2.5">
+                            <span class="flex gap-1">
+                                <span
+                                    v-for="c in contentStyle.colores"
+                                    :key="c"
+                                    class="h-4 w-4 rounded-full border border-[var(--border-strong)]"
+                                    :style="{ background: c }"
+                                />
+                            </span>
+                            <span class="text-[12px] font-normal text-[var(--text-mute)]">
+                                {{ $t('content.styleLearnedFrom', contentStyle.referencias) }}
+                            </span>
+                        </div>
+                        <p v-else class="text-[12px] font-normal text-[var(--text-faint)]">
+                            {{ $t('content.styleNotYet') }}
+                        </p>
+
+                        <button
+                            type="button"
+                            :disabled="styleForm.processing"
+                            class="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-mute)] hover:text-[var(--text-strong)] disabled:opacity-60"
+                            @click="learnStyle"
+                        >
+                            <Wand :size="13" />
+                            {{ styleForm.processing ? $t('content.learning') : $t('content.relearnStyle') }}
+                        </button>
+                    </div>
+
+                    <div v-if="references.length > 0" class="mt-3 grid grid-cols-4 gap-1.5">
+                        <button
+                            v-for="ref in references"
+                            :key="ref.id"
+                            type="button"
+                            class="relative aspect-square overflow-hidden rounded-lg bg-[var(--surface-mute)]"
+                            :aria-label="$t('content.openReference')"
+                            @click="openReference(ref)"
+                        >
+                            <video v-if="ref.kind === 'video'" :src="ref.url" muted playsinline preload="metadata" class="h-full w-full object-cover" />
+                            <img v-else :src="ref.url" alt="" class="h-full w-full object-cover" />
+
+                            <span
+                                v-if="ref.kind === 'video'"
+                                class="absolute inset-0 flex items-center justify-center bg-black/30"
+                            >
+                                <Clapperboard :size="15" class="text-white" />
+                            </span>
+                            <!-- La chincheta marca cuáles llevan una nota
+                                 escrita: son las que de verdad enseñan algo. -->
+                            <span
+                                v-else-if="ref.note"
+                                class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold)]"
+                            >
+                                <Pin :size="9" class="text-white" />
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>
