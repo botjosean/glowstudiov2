@@ -49,10 +49,7 @@ class BuildHero
             return false;
         }
 
-        $spot = BrandStyle::headlineSpotFor($provider->content_style)
-            ?? ['center', 'bottom', 'top'][array_rand(['center', 'bottom', 'top'])];
-
-        $elegida = $this->stamp->pick($canvas, $this->pick->phrases($provider, $serviceSlug), $spot);
+        $elegida = $this->stamp->pick($canvas, $this->pick->phrases($provider, $serviceSlug));
 
         if ($elegida === null) {
             return false;
@@ -62,17 +59,22 @@ class BuildHero
         // dos tintas: ni la clara ni la oscura se despegan del fondo. Ahí
         // —y solo ahí— se apoya una sombra del pack debajo de la frase,
         // para no ensuciar las fotos que no la necesitan.
-        $brillo = $this->stamp->brightness($canvas, $spot);
+        //
+        // Solo sombras neutras: las del pack incluyen degradados de color, y
+        // usar uno de esos de velo dejaba a la clienta teñida de verde. Pasó
+        // de verdad en el perfil de Patricia; por eso ImportContentPack ahora
+        // mide la saturación y las aparta como 'color'.
+        $brillo = $this->stamp->brightness($canvas, $elegida);
 
         if ($brillo > 0.40 && $brillo < 0.66) {
             $sombra = $this->pick->ofKind('sombra')->where('ink', 'dark');
 
             if ($sombra->isNotEmpty()) {
-                $this->stamp->wash($canvas, $sombra->random(), $spot);
+                $this->stamp->wash($canvas, $sombra->random(), $elegida);
             }
         }
 
-        $this->stamp->handle($canvas, $elegida, $spot);
+        $this->stamp->handle($canvas, $elegida);
 
         return true;
     }
@@ -260,35 +262,43 @@ class BuildHero
     }
 
     /**
-     * La marca arriba al centro: su logo si lo tiene, su nombre si no.
+     * La marca arriba al centro: el nombre del negocio.
      *
      * Mismo criterio que el sello del collage — ver BuildCollage::badge().
      */
     private function mark(ImageInterface $canvas, Provider $provider): void
     {
-        $key = $provider->avatar_photo_url;
-
-        if ($key !== null && $key !== '') {
-            $size = 96;
-
-            // El recorte circular vive en BuildCollage: una sola manera de
-            // hacerlo para los dos formatos.
-            $logo = ImageManager::imagick()->read(BuildCollage::circularLogo(Storage::disk('r2')->get($key), $size));
-
-            $canvas->place($logo, 'top-left', (int) round((self::CANVAS - $size) / 2), 44);
-
-            return;
-        }
-
+        // SIEMPRE el nombre escrito, nunca la foto de perfil.
+        //
+        // Antes, si la proveedora tenía foto de perfil, se estampaba
+        // recortada en redondo arriba al centro. Funciona cuando esa foto es
+        // un logo —el caso de Vanessa— pero es una foto de PERFIL, no un
+        // logo: la de Patricia es una selfie suya en el salón, y salía una
+        // carita diminuta flotando sobre el pelo de la clienta. Ella lo vio
+        // y dijo "está mal", con razón: parece un error, no una marca.
+        //
+        // El nombre en versalitas espaciadas se ve igual de bien en las dos
+        // cuentas y no depende de qué subió cada una como foto.
         $name = $provider->public_name ?? Provider::DEFAULT_BUSINESS_NAME;
 
-        $canvas->text($this->spaced(Str::upper($name)), (int) round(self::CANVAS / 2), 62, function (FontFactory $font): void {
-            $font->filename(resource_path('fonts/Manrope.ttf'));
-            $font->size(19);
-            $font->color('#e8c877');
-            $font->align('center');
-            $font->valign('middle');
-        });
+        $texto = $this->spaced(Str::upper($name));
+        $centro = (int) round(self::CANVAS / 2);
+
+        // Una sombra suave detrás, y recién después el dorado.
+        //
+        // El dorado solo no alcanza: sobre un pelo rubio a contraluz se leía
+        // a medias y parecía un defecto de la imagen. Cambiarlo a oscuro
+        // resolvería el contraste pero le saca la marca, y el dorado es de
+        // ella. Con la sombra el mismo color se despega de cualquier foto.
+        foreach ([['#00000059', 2], ['#e8c877', 0]] as [$color, $offset]) {
+            $canvas->text($texto, $centro + $offset, 62 + $offset, function (FontFactory $font) use ($color): void {
+                $font->filename(resource_path('fonts/Manrope.ttf'));
+                $font->size(19);
+                $font->color($color);
+                $font->align('center');
+                $font->valign('middle');
+            });
+        }
     }
 
     private function spaced(string $text): string

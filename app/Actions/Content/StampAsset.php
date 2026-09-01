@@ -3,6 +3,7 @@
 namespace App\Actions\Content;
 
 use App\Models\ContentAsset;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\ImageManager;
@@ -17,71 +18,60 @@ use Intervention\Image\ImageManager;
  * siempre lo mismo — «no son las letras, no logras llegar al punto». Tenía
  * razón: estas frases las diseñó una persona, y con código no se llega ahí.
  *
- * El pack trae cada frase en tinta oscura y en tinta clara. Cuál se usa no
- * se sortea: se mide qué tan clara es la zona de la foto donde va a caer, y
- * se elige la que contrasta. Ese detalle es lo que hace que el titular se
- * lea igual sobre unas uñas blancas que sobre una mesa negra, sin necesidad
- * de meterle una sombra encima que ensucia la foto.
+ * **Se estampan tal cual, sin recortar ni reescalar.** La primera versión
+ * recortaba la pieza a su dibujo y la recolocaba arriba, al centro o abajo
+ * según la ficha. Eso rompía las composiciones grandes: una frase que viene
+ * con un círculo alrededor —pensada para enmarcar la foto entera— salía
+ * recortada y agrandada hasta tapar el trabajo. Visto en el perfil de
+ * Patricia. El pack ya viene armado sobre un lienzo de 1080, igual que el
+ * post: la posición la decidió el diseñador y se respeta.
+ *
+ * **La tinta sí se elige.** El pack trae cada frase en oscuro y en claro, y
+ * cuál usar no se sortea: se mide qué tan clara es la zona de la foto donde
+ * cae el dibujo. Eso es lo que hace que se lea igual sobre unas uñas blancas
+ * que sobre una mesa negra, sin taparle la foto con una sombra.
  */
 class StampAsset
 {
     private const CANVAS = 1080;
 
-    /** Cuánto del ancho puede ocupar la pieza, como mucho. */
-    private const MAX_WIDTH = 0.82;
-
-    /**
-     * @param  'top'|'center'|'bottom'  $spot
-     */
-    public function handle(ImageInterface $canvas, ContentAsset $asset, string $spot = 'center'): void
+    /** Pinta la pieza en la posición en que fue diseñada. */
+    public function handle(ImageInterface $canvas, ContentAsset $asset): void
     {
-        $arte = $this->art($asset);
+        $arte = $this->read($asset->path);
 
         if ($arte === null) {
             return;
         }
 
-        [$ancho, $alto] = [$arte->width(), $arte->height()];
-        $x = (int) round((self::CANVAS - $ancho) / 2);
-        $y = match ($spot) {
-            'top' => (int) round(self::CANVAS * 0.10),
-            'bottom' => self::CANVAS - $alto - (int) round(self::CANVAS * 0.16),
-            default => (int) round((self::CANVAS - $alto) / 2),
-        };
+        // A 1080 si viniera de otro tamaño; el pack ya está en esa medida,
+        // así que en la práctica no toca nada.
+        if ($arte->width() !== self::CANVAS || $arte->height() !== self::CANVAS) {
+            $arte->resize(self::CANVAS, self::CANVAS);
+        }
 
-        $canvas->place($arte, 'top-left', $x, max($y, 0));
+        $canvas->place($arte, 'top-left', 0, 0);
     }
 
     /**
-     * Una sombra del pack estirada a todo el lienzo, debajo del texto.
+     * Una sombra del pack, para cuando la foto no le da contraste a ninguna
+     * de las dos tintas.
      *
-     * A diferencia de handle(), esta NO se recorta ni se centra: una sombra
-     * es un velo que tiene que cubrir de borde a borde, y recortarla a su
-     * contenido la volvería una mancha en el medio.
-     *
-     * Se usa solo cuando la foto no le da contraste a ninguna de las dos
-     * tintas. En las fotos que sí contrastan no se pone nada: el trabajo se
-     * ve mejor sin un velo encima.
-     *
-     * @param  'top'|'center'|'bottom'  $spot
+     * Se pone entera y se da vuelta si el dibujo cae arriba: las sombras del
+     * pack vienen oscuras abajo, y sin dar vuelta el velo quedaría del lado
+     * contrario al texto.
      */
-    public function wash(ImageInterface $canvas, ContentAsset $asset, string $spot = 'center'): void
+    public function wash(ImageInterface $canvas, ContentAsset $shadow, ContentAsset $under): void
     {
-        try {
-            $bytes = Storage::disk('r2')->get($asset->path);
-        } catch (\Throwable) {
+        $velo = $this->read($shadow->path);
+
+        if ($velo === null) {
             return;
         }
 
-        if ($bytes === null || $bytes === '') {
-            return;
-        }
+        $velo->resize(self::CANVAS, self::CANVAS);
 
-        $velo = ImageManager::imagick()->read($bytes)->resize(self::CANVAS, self::CANVAS);
-
-        // Las sombras del pack vienen oscuras abajo. Para un titular arriba
-        // hay que darla vuelta, o el velo queda del lado contrario al texto.
-        if ($spot === 'top') {
+        if ($under->box_y + ($under->box_h / 2) < self::CANVAS / 2) {
             $velo->flip();
         }
 
@@ -89,103 +79,82 @@ class StampAsset
     }
 
     /**
-     * La pieza recortada a su dibujo y escalada para que entre.
+     * Elige la frase y, dentro de ella, la tinta que se va a leer.
      *
-     * Se recorta porque el arte viene centrado en un lienzo de 1080 casi
-     * vacío: sin recortar no se puede subir ni bajar sin mover también el
-     * aire de alrededor.
+     * Primero se sortea QUÉ dice —entre los textos distintos que hay— y
+     * recién después se elige la tinta midiendo la foto justo donde ese
+     * dibujo va a caer. Al revés no se puede: sin saber cuál es la pieza no
+     * se sabe qué parte de la foto medir, y medir el promedio de todo hace
+     * que una foto oscura arriba y clara abajo dé "gris" y ninguna tinta
+     * contraste.
+     *
+     * @param  Collection<int, ContentAsset>  $candidatas
      */
-    private function art(ContentAsset $asset): ?ImageInterface
-    {
-        try {
-            $bytes = Storage::disk('r2')->get($asset->path);
-        } catch (\Throwable) {
-            return null;
-        }
-
-        if ($bytes === null || $bytes === '') {
-            return null;
-        }
-
-        $arte = ImageManager::imagick()->read($bytes);
-
-        if ($asset->box_w > 0 && $asset->box_h > 0) {
-            $arte->crop($asset->box_w, $asset->box_h, $asset->box_x, $asset->box_y);
-        }
-
-        $tope = (int) round(self::CANVAS * self::MAX_WIDTH);
-
-        if ($arte->width() > $tope) {
-            $arte->scaleDown(width: $tope);
-        }
-
-        return $arte;
-    }
-
-    /**
-     * Elige entre las candidatas la que se va a leer sobre esta foto.
-     *
-     * Mide la claridad de la franja donde va a caer, no de la foto entera:
-     * una foto puede ser oscura arriba y clarísima abajo, y lo que importa
-     * es lo que queda justo detrás de las letras.
-     *
-     * @param  \Illuminate\Support\Collection<int, ContentAsset>  $candidatas
-     * @param  'top'|'center'|'bottom'  $spot
-     */
-    public function pick(ImageInterface $canvas, $candidatas, string $spot = 'center'): ?ContentAsset
+    public function pick(ImageInterface $canvas, Collection $candidatas): ?ContentAsset
     {
         if ($candidatas->isEmpty()) {
             return null;
         }
 
-        $tinta = ContentAsset::inkFor($this->brightness($canvas, $spot));
+        // Las que no tienen texto leído se agrupan por su ruta, así cada una
+        // es su propio grupo y el sorteo sigue funcionando.
+        $porTexto = $candidatas->groupBy(fn (ContentAsset $a): string => $a->slug ?? $a->path);
+        $grupo = $porTexto->get($porTexto->keys()->random());
 
-        // Las de color —un marco dorado, un esmalte rosa— no entran en la
-        // elección por contraste: no son ni claras ni oscuras, así que si
-        // se mezclaran ganarían por azar y a veces no se leerían.
-        $encaja = $candidatas->where('ink', $tinta);
+        $muestra = $grupo->first();
+        $tinta = ContentAsset::inkFor($this->brightness($canvas, $muestra));
 
-        if ($encaja->isNotEmpty()) {
-            return $encaja->random();
-        }
+        $encaja = $grupo->where('ink', $tinta);
 
-        return $candidatas->random();
+        return $encaja->isNotEmpty() ? $encaja->random() : $grupo->random();
     }
 
     /**
-     * Qué tan clara es la franja donde va a caer la pieza, de 0 a 1.
+     * Qué tan clara es la foto justo debajo de esta pieza, de 0 a 1.
      *
-     * @param  'top'|'center'|'bottom'  $spot
+     * Se mide sobre el recuadro del dibujo y no sobre la foto entera: lo que
+     * importa es lo que queda detrás de las letras.
      */
-    public function brightness(ImageInterface $canvas, string $spot = 'center'): float
+    public function brightness(ImageInterface $canvas, ContentAsset $asset): float
     {
-        $alto = $canvas->height();
-        $franja = (int) round($alto * 0.34);
-        $desde = match ($spot) {
-            'top' => 0,
-            'bottom' => $alto - $franja,
-            default => (int) round(($alto - $franja) / 2),
-        };
+        $ancho = max($asset->box_w, 1);
+        $alto = max($asset->box_h, 1);
+        $x = min($asset->box_x, max($canvas->width() - $ancho, 0));
+        $y = min($asset->box_y, max($canvas->height() - $alto, 0));
 
         $muestra = clone $canvas;
-        $muestra->crop($canvas->width(), $franja, 0, max($desde, 0));
+        $muestra->crop(
+            min($ancho, $canvas->width()),
+            min($alto, $canvas->height()),
+            max($x, 0),
+            max($y, 0),
+        );
 
         // Una miniatura alcanza y de sobra: interesa el promedio, no el
-        // detalle, y sobre el recorte entero serían más de trescientos mil
+        // detalle, y sobre el recorte entero serían cientos de miles de
         // píxeles por post.
         $muestra->resize(24, 24);
 
         $suma = 0.0;
-        $n = 0;
 
-        for ($x = 0; $x < 24; $x++) {
-            for ($y = 0; $y < 24; $y++) {
-                $c = $muestra->pickColor($x, $y)->toArray();
+        for ($px = 0; $px < 24; $px++) {
+            for ($py = 0; $py < 24; $py++) {
+                $c = $muestra->pickColor($px, $py)->toArray();
                 $suma += ($c[0] * 0.299 + $c[1] * 0.587 + $c[2] * 0.114) / 255;
-                $n++;
             }
         }
 
-        return $n === 0 ? 0.5 : $suma / $n;
+        return $suma / (24 * 24);
+    }
+
+    private function read(string $path): ?ImageInterface
+    {
+        try {
+            $bytes = Storage::disk('r2')->get($path);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $bytes === null || $bytes === '' ? null : ImageManager::imagick()->read($bytes);
     }
 }

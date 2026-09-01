@@ -97,10 +97,16 @@ class ImportContentPack extends Command
             // con eso se pisarían entre sí.
             $path = sprintf('pack/%s/%s/%s.png', $kind, $trade ?? 'general', substr(hash_file('sha256', $archivo), 0, 24));
 
-            Storage::disk('r2')->put($path, (string) file_get_contents($archivo), [
-                'ContentType' => 'image/png',
-                'CacheControl' => 'public, max-age=31536000, immutable',
-            ]);
+            // La ruta sale del contenido, así que si ya está es idéntica: se
+            // salta la subida. Eso vuelve barato volver a correr esto para
+            // reclasificar, que es justo lo que hizo falta cuando un
+            // degradado verde se estaba usando de sombra.
+            if (! Storage::disk('r2')->exists($path)) {
+                Storage::disk('r2')->put($path, (string) file_get_contents($archivo), [
+                    'ContentType' => 'image/png',
+                    'CacheControl' => 'public, max-age=31536000, immutable',
+                ]);
+            }
 
             ContentAsset::query()->updateOrCreate(['path' => $path], [
                 'kind' => $kind,
@@ -223,6 +229,7 @@ class ImportContentPack extends Command
         $pixeles = $recorte->exportImagePixels(0, 0, $ancho, $alto, 'RGBA', Imagick::PIXEL_CHAR);
 
         $suma = 0.0;
+        $saturacion = 0.0;
         $cuenta = 0;
 
         for ($i = 0, $n = count($pixeles); $i + 3 < $n; $i += 4) {
@@ -232,19 +239,36 @@ class ImportContentPack extends Command
                 continue;
             }
 
-            $suma += ($pixeles[$i] * 0.299 + $pixeles[$i + 1] * 0.587 + $pixeles[$i + 2] * 0.114) / 255;
+            [$r, $g, $b] = [$pixeles[$i], $pixeles[$i + 1], $pixeles[$i + 2]];
+
+            $suma += ($r * 0.299 + $g * 0.587 + $b * 0.114) / 255;
+
+            // Cuánto se aleja del gris. Sin esto, un degradado VERDE oscuro
+            // pasaba por "sombra" —su luz es baja— y se usaba de velo sobre
+            // una foto: el post salía con la clienta teñida de verde. Pasó
+            // de verdad, en el perfil de Patricia.
+            $max = max($r, $g, $b);
+            $min = min($r, $g, $b);
+            $saturacion += $max === 0 ? 0.0 : ($max - $min) / $max;
+
             $cuenta++;
         }
 
         $recorte->destroy();
         $im->destroy();
 
+        $luz = $cuenta === 0 ? 0.0 : $suma / $cuenta;
+        $tono = $cuenta === 0 ? 0.0 : $saturacion / $cuenta;
+
         $caja['ink'] = match (true) {
             $cuenta === 0 => null,
-            $suma / $cuenta < 0.38 => 'dark',
-            $suma / $cuenta > 0.68 => 'light',
-            // Ni clara ni oscura: un esmalte rosa, un marco dorado. Se
-            // guarda aparte porque no sirve para elegir por contraste.
+            // Con color de verdad no es ni clara ni oscura, por más apagada
+            // que sea: un esmalte rosa, un marco dorado, un degradado verde.
+            // Se apartan porque no sirven para elegir por contraste ni para
+            // hacer de sombra.
+            $tono > 0.22 => 'color',
+            $luz < 0.38 => 'dark',
+            $luz > 0.68 => 'light',
             default => 'color',
         };
 

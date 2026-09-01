@@ -65,26 +65,30 @@ class ContentPackTest extends TestCase
     {
         // Es el detalle que hace que el titular se lea igual sobre unas uñas
         // blancas que sobre una mesa negra, sin ensuciar la foto con sombra.
-        $this->asset('dark');
-        $clara = $this->asset('light');
+        //
+        // Las dos llevan el MISMO texto porque así viene el pack: cada frase
+        // existe en tinta oscura y en clara. Primero se sortea qué dice y
+        // recién dentro de ese par se elige la que contrasta.
+        $this->asset('dark', null, 'agenda-tu-cita');
+        $clara = $this->asset('light', null, 'agenda-tu-cita');
 
         $provider = Provider::factory()->published()->create();
         $canvas = ImageManager::imagick()->create(1080, 1080)->fill('#141414');
 
-        $elegida = app(StampAsset::class)->pick($canvas, app(PickAsset::class)->phrases($provider), 'center');
+        $elegida = app(StampAsset::class)->pick($canvas, app(PickAsset::class)->phrases($provider));
 
         $this->assertSame($clara->id, $elegida->id);
     }
 
     public function test_a_bright_photo_gets_the_dark_lettering(): void
     {
-        $oscura = $this->asset('dark');
-        $this->asset('light');
+        $oscura = $this->asset('dark', null, 'agenda-tu-cita');
+        $this->asset('light', null, 'agenda-tu-cita');
 
         $provider = Provider::factory()->published()->create();
         $canvas = ImageManager::imagick()->create(1080, 1080)->fill('#f2f2f2');
 
-        $elegida = app(StampAsset::class)->pick($canvas, app(PickAsset::class)->phrases($provider), 'center');
+        $elegida = app(StampAsset::class)->pick($canvas, app(PickAsset::class)->phrases($provider));
 
         $this->assertSame($oscura->id, $elegida->id);
     }
