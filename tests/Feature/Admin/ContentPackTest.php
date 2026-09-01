@@ -32,11 +32,17 @@ class ContentPackTest extends TestCase
         Storage::fake('r2');
     }
 
-    /** Una frase de prueba: una mancha del color pedido, centrada. */
+    /**
+     * Una frase de prueba: una mancha del color pedido, centrada.
+     *
+     * Siempre con texto leído, porque el sistema no estampa lo que no puede
+     * leer — no sabría si afirma un momento del trabajo. Ver PhraseSafety.
+     */
     private function asset(string $ink, ?string $trade = null, ?string $slug = null): ContentAsset
     {
+        $slug ??= 'agenda-abierta';
         $color = $ink === 'dark' ? '#101010' : '#f5f5f5';
-        $path = 'pack/frase/'.$ink.'-'.($trade ?? 'general').'-'.($slug ?? 'x').'-'.uniqid().'.png';
+        $path = 'pack/frase/'.$ink.'-'.($trade ?? 'general').'-'.$slug.'-'.uniqid().'.png';
 
         $manager = ImageManager::imagick();
         $arte = $manager->create(1080, 1080)->fill('rgba(0,0,0,0)');

@@ -47,15 +47,25 @@ class PickAsset
                 ->where(fn ($q) => $q->where('slug', $slug)->orWhere('slug', 'like', $slug.'-%'))
                 ->get();
 
+            // Las rotas del pack quedan fuera también acá: "Traicional" está
+            // mal escrita y no se estampa nunca.
+            $delServicio = $delServicio->filter(fn (ContentAsset $a): bool => PhraseSafety::autoSafe($a->slug));
+
             if ($delServicio->isNotEmpty()) {
-                return $delServicio;
+                return $delServicio->values();
             }
         }
 
+        // Sin técnica conocida quedan las generales, pero SOLO las que no
+        // afirman un momento del trabajo. Ver PhraseSafety: el sistema no
+        // sabe si la foto es el antes, el proceso o el resultado, y
+        // adivinarlo produce posts que se contradicen.
         return ContentAsset::query()
             ->where('kind', 'frase')
             ->forTrade($trade)
-            ->get();
+            ->get()
+            ->filter(fn (ContentAsset $a): bool => PhraseSafety::autoSafe($a->slug))
+            ->values();
     }
 
     /**
