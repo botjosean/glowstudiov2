@@ -1205,7 +1205,7 @@ class ContentPanelTest extends TestCase
             ->assertSessionHasNoErrors();
 
         // En la primera, igual que al subir — no repetida en las dos.
-        $notas = ContentUpload::query()->where('provider_id', $provider->id)->oldest()->pluck('note')->all();
+        $notas = ContentUpload::query()->where('provider_id', $provider->id)->orderBy('id')->pluck('note')->all();
         $this->assertSame(['Lo edité yo.', null], $notas);
     }
 

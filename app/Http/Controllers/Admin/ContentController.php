@@ -84,7 +84,9 @@ class ContentController extends Controller
             'waiting' => ContentUpload::query()
                 ->where('provider_id', $provider->id)
                 ->waiting()
-                ->oldest()
+                // Por id y no por fecha: dos fotos subidas en el mismo
+                // segundo empatan y el orden sale al azar.
+                ->orderBy('id')
                 ->get()
                 ->map(fn (ContentUpload $upload): array => [
                     'id' => $upload->id,
@@ -330,7 +332,7 @@ class ContentController extends Controller
             ->where('provider_id', $provider->id)
             ->waiting()
             ->whereIn('id', $validated['uploadIds'])
-            ->oldest()
+            ->orderBy('id')
             ->get();
 
         // Todas las que quepan: el collage arma filas de distinto largo, así
@@ -564,7 +566,9 @@ class ContentController extends Controller
             ->where('provider_id', $provider->id)
             ->references()
             ->whereIn('id', $validated['uploadIds'])
-            ->oldest()
+            // Por id: con fecha, dos filas del mismo segundo empatan y la
+            // nota podia terminar guardada en la foto equivocada.
+            ->orderBy('id')
             ->first();
 
         $primera?->update(['note' => $validated['note'] ?: null]);

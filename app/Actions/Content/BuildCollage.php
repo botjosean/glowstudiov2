@@ -278,17 +278,24 @@ class BuildCollage
         $logo->setImageFormat('png');
         $logo->cropThumbnailImage($size, $size);
 
-        // Blanco donde se ve, negro donde se recorta.
+        // Opaco donde se ve, TRANSPARENTE donde se recorta.
+        //
+        // Antes la máscara era negra y el recorte no se aplicaba: en
+        // ImageMagick 7, COPYOPACITY copia el ALFA de la máscara, y una
+        // máscara negra es opaca en todos lados. El logo salía cuadrado y
+        // nadie lo notó porque los logos suelen venir con fondo blanco.
+        // Salió a la luz recortando fotos en círculo, donde el cuadrado se
+        // ve de inmediato.
         $mask = new \Imagick;
-        $mask->newImage($size, $size, new \ImagickPixel('black'), 'png');
+        $mask->newImage($size, $size, new \ImagickPixel('transparent'), 'png');
 
         $draw = new \ImagickDraw;
         $draw->setFillColor(new \ImagickPixel('white'));
         $draw->circle($size / 2, $size / 2, $size / 2, 0);
         $mask->drawImage($draw);
 
-        $logo->setImageAlphaChannel(\Imagick::ALPHACHANNEL_SET);
-        $logo->compositeImage($mask, \Imagick::COMPOSITE_COPYOPACITY, 0, 0);
+        $logo->setImageAlphaChannel(\Imagick::ALPHACHANNEL_OPAQUE);
+        $logo->compositeImage($mask, \Imagick::COMPOSITE_DSTIN, 0, 0);
 
         return $logo->getImageBlob();
     }
