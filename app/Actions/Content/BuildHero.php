@@ -58,6 +58,20 @@ class BuildHero
             return false;
         }
 
+        // Una foto de brillo intermedio no le da contraste a ninguna de las
+        // dos tintas: ni la clara ni la oscura se despegan del fondo. Ahí
+        // —y solo ahí— se apoya una sombra del pack debajo de la frase,
+        // para no ensuciar las fotos que no la necesitan.
+        $brillo = $this->stamp->brightness($canvas, $spot);
+
+        if ($brillo > 0.40 && $brillo < 0.66) {
+            $sombra = $this->pick->ofKind('sombra')->where('ink', 'dark');
+
+            if ($sombra->isNotEmpty()) {
+                $this->stamp->wash($canvas, $sombra->random(), $spot);
+            }
+        }
+
         $this->stamp->handle($canvas, $elegida, $spot);
 
         return true;

@@ -106,6 +106,36 @@ class ContentPackTest extends TestCase
         $this->assertSame($delServicio->id, $candidatas->first()->id);
     }
 
+    public function test_the_technique_is_matched_even_when_written_differently(): void
+    {
+        // El modelo dice "acrílicas" con tilde y la pieza se llama
+        // "acrilicas": tienen que encontrarse igual.
+        $this->asset('dark');
+        $acrilicas = $this->asset('dark', 'nails', 'acrilicas');
+
+        $provider = Provider::factory()->published()->create(['business_category' => BusinessCategory::Nails]);
+
+        $candidatas = app(PickAsset::class)->phrases($provider, 'Acrílicas');
+
+        $this->assertCount(1, $candidatas);
+        $this->assertSame($acrilicas->id, $candidatas->first()->id);
+    }
+
+    public function test_a_partial_word_never_matches_the_wrong_technique(): void
+    {
+        // "gel" no puede traer "builder gel": estampar la técnica
+        // equivocada es peor que estampar una frase general.
+        $general = $this->asset('dark');
+        $this->asset('dark', 'nails', 'builder-gel');
+
+        $provider = Provider::factory()->published()->create(['business_category' => BusinessCategory::Nails]);
+
+        $candidatas = app(PickAsset::class)->phrases($provider, 'gel');
+
+        $this->assertTrue($candidatas->contains('id', $general->id));
+        $this->assertGreaterThan(1, $candidatas->count());
+    }
+
     public function test_another_trades_phrases_are_never_offered(): void
     {
         $this->asset('dark', 'hair');
@@ -125,6 +155,10 @@ class ContentPackTest extends TestCase
         $this->asset('light');
 
         $provider = Provider::factory()->published()->create(['business_category' => BusinessCategory::Nails]);
+        // Con la posición fijada en la ficha: sin esto se sortea entre
+        // arriba, centro y abajo, y la prueba pasaba solo cuando salía
+        // centro, que es donde mira el barrido de abajo.
+        $provider->content_style = ['posicion_texto' => 'centro'];
         $foto = $this->foto($provider, '#8a8a8a');
 
         $key = app(BuildHero::class)->handle($provider, [$foto], ['LO QUE SEA']);

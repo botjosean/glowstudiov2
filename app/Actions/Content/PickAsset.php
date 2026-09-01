@@ -5,6 +5,7 @@ namespace App\Actions\Content;
 use App\Models\ContentAsset;
 use App\Models\Provider;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Elige qué pieza del pack le toca a este post.
@@ -31,11 +32,19 @@ class PickAsset
     {
         $trade = $provider->business_category?->value;
 
-        if ($serviceSlug !== null) {
+        $slug = $serviceSlug === null ? null : Str::slug($serviceSlug);
+
+        if ($slug !== null && $slug !== '') {
+            // Primero la coincidencia exacta y, si no hay, la que empieza
+            // igual: el modelo puede decir "acrílicas" y la pieza llamarse
+            // "acrilicas rosas". Lo que NO se hace es buscar por dentro
+            // ("like %x%"), porque "gel" encontraría "builder gel" y
+            // "softgel" y estampar la técnica equivocada es peor que
+            // estampar una frase general.
             $delServicio = ContentAsset::query()
                 ->where('kind', 'frase')
                 ->forTrade($trade)
-                ->where('slug', $serviceSlug)
+                ->where(fn ($q) => $q->where('slug', $slug)->orWhere('slug', 'like', $slug.'-%'))
                 ->get();
 
             if ($delServicio->isNotEmpty()) {

@@ -53,6 +53,42 @@ class StampAsset
     }
 
     /**
+     * Una sombra del pack estirada a todo el lienzo, debajo del texto.
+     *
+     * A diferencia de handle(), esta NO se recorta ni se centra: una sombra
+     * es un velo que tiene que cubrir de borde a borde, y recortarla a su
+     * contenido la volvería una mancha en el medio.
+     *
+     * Se usa solo cuando la foto no le da contraste a ninguna de las dos
+     * tintas. En las fotos que sí contrastan no se pone nada: el trabajo se
+     * ve mejor sin un velo encima.
+     *
+     * @param  'top'|'center'|'bottom'  $spot
+     */
+    public function wash(ImageInterface $canvas, ContentAsset $asset, string $spot = 'center'): void
+    {
+        try {
+            $bytes = Storage::disk('r2')->get($asset->path);
+        } catch (\Throwable) {
+            return;
+        }
+
+        if ($bytes === null || $bytes === '') {
+            return;
+        }
+
+        $velo = ImageManager::imagick()->read($bytes)->resize(self::CANVAS, self::CANVAS);
+
+        // Las sombras del pack vienen oscuras abajo. Para un titular arriba
+        // hay que darla vuelta, o el velo queda del lado contrario al texto.
+        if ($spot === 'top') {
+            $velo->flip();
+        }
+
+        $canvas->place($velo, 'top-left', 0, 0);
+    }
+
+    /**
      * La pieza recortada a su dibujo y escalada para que entre.
      *
      * Se recorta porque el arte viene centrado en un lienzo de 1080 casi

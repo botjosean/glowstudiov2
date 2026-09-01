@@ -91,17 +91,25 @@ class ReadPhotoColor
 
         Si tiene dos tonos (un degradado, una francesa), nombralos juntos.
 
+        Decime también qué TÉCNICA se ve, en una o dos palabras, con el nombre que
+        usaría la profesional: acrílicas, softgel, polygel, semipermanente, rubber,
+        builder gel, tradicional, pedicura, balayage, mechas, corte, alisado,
+        microblading, laminado de cejas, lifting de pestañas, extensiones, depilación.
+        Si no estás seguro, dejala vacía — vale más vacía que equivocada.
+
         Respondé SOLO con este JSON, sin explicar nada y sin ```:
 
         {
           "nombre": "rosa bebé con blanco",
-          "hex": "#F2D5D5"
+          "hex": "#F2D5D5",
+          "tecnica": "acrílicas"
         }
 
         nombre: en español, corto y natural, como se lo diría una manicurista a su
         clienta. Máximo cuatro palabras. En minúscula.
         hex: el tono principal del trabajo, el que se usaría para pintar un fondo que
         combine con la foto.
+        tecnica: en minúscula, o "" si no se distingue.
         TXT;
     }
 
@@ -124,6 +132,7 @@ class ReadPhotoColor
 
         $nombre = trim((string) ($decoded['nombre'] ?? ''));
         $hex = strtoupper(trim((string) ($decoded['hex'] ?? '')));
+        $tecnica = trim((string) ($decoded['tecnica'] ?? ''));
 
         // Sin un tono válido no sirve para pintar nada, y un nombre suelto
         // sin color deja las plantillas a medias.
@@ -131,6 +140,14 @@ class ReadPhotoColor
             return null;
         }
 
-        return ['nombre' => mb_substr($nombre, 0, 60), 'hex' => $hex];
+        return [
+            'nombre' => mb_substr($nombre, 0, 60),
+            'hex' => $hex,
+            // La técnica es opcional a propósito: se le pidió al modelo que
+            // la deje vacía antes que inventarla, porque estampar
+            // "Acrílicas" sobre un trabajo de gel es peor que no estampar
+            // nada.
+            'tecnica' => $tecnica === '' ? null : mb_substr($tecnica, 0, 60),
+        ];
     }
 }

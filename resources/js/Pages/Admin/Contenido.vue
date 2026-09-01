@@ -260,6 +260,39 @@ function confirmColorPick() {
     templateOpen.value = true;
 }
 
+// Cuál referencia copiar, recordada entre posts.
+//
+// Antes esto era una hoja que se abría en CADA generación: elegir modelo,
+// esperar, elegir referencia, esperar. Dos toques y dos pantallas para algo
+// que ella casi nunca cambia. Ella lo dijo así: «solo elijo alguna
+// plantilla, subo las fotos sin nada y listo». Ahora es un ajuste que se
+// queda puesto, y la hoja solo se abre si lo quiere cambiar.
+//
+// null = "Sorpréndeme", que es lo que hace el sistema si nunca eligió.
+const chosenTemplate = ref(null);
+
+const chosenTemplateLabel = computed(() => {
+    if (chosenTemplate.value === null) return t('content.templateSurprise');
+
+    const i = props.references.findIndex((r) => r.id === chosenTemplate.value);
+
+    return i === -1 ? t('content.templateSurprise') : t('content.templateNth', { n: i + 1 });
+});
+
+// Se guarda en el teléfono para que siga puesta mañana. Si el navegador la
+// bloquea o la borra, se vuelve a "Sorpréndeme" sin romper nada.
+try {
+    const guardada = window.localStorage?.getItem('glow.contentTemplate');
+
+    if (guardada !== null && guardada !== 'null') chosenTemplate.value = Number(guardada);
+} catch { /* sin memoria del navegador se sigue igual */ }
+
+watch(chosenTemplate, (v) => {
+    try {
+        window.localStorage?.setItem('glow.contentTemplate', v === null ? 'null' : String(v));
+    } catch { /* idem */ }
+});
+
 function build(layout) {
     if (generateForm.processing) return;
 
@@ -273,22 +306,13 @@ function build(layout) {
         return;
     }
 
-    // Sin referencias guardadas no hay nada entre qué elegir: se arma
-    // directo, como antes.
-    if (props.references.length === 0) {
-        generate(layout, null);
-
-        return;
-    }
-
-    templateOpen.value = true;
+    generate(layout, chosenTemplate.value);
 }
 
+// Ya no arma el post: solo deja elegida la referencia para los que vengan.
 function chooseTemplate(templateId) {
-    if (!pendingLayout.value) return;
-
+    chosenTemplate.value = templateId;
     templateOpen.value = false;
-    generate(pendingLayout.value, templateId);
 }
 
 function generate(layout, templateId) {
@@ -598,6 +622,22 @@ const busyLabel = computed(() => {
                 <p v-else class="mt-2 text-center text-[12px] font-normal text-[var(--text-faint)]">
                     {{ $t('content.needOneMore') }}
                 </p>
+
+                <!-- La referencia a copiar, como ajuste y no como paso.
+                     Antes se preguntaba en cada post; ahora queda puesta y
+                     solo se toca si la quiere cambiar. -->
+                <button
+                    v-if="references.length > 0 && usableLayouts.length > 0"
+                    type="button"
+                    class="mt-3 flex w-full items-center justify-between rounded-xl px-1 py-2 text-left"
+                    @click="templateOpen = true"
+                >
+                    <span class="text-[12px] font-normal text-[var(--text-mute)]">
+                        {{ $t('content.templateCurrent') }}
+                        <span class="font-semibold text-[var(--text-strong)]">{{ chosenTemplateLabel }}</span>
+                    </span>
+                    <span class="text-[12px] font-semibold text-[var(--gold)]">{{ $t('common.change') }}</span>
+                </button>
 
                 <!-- Por qué no salió nada: antes esto se quedaba en el
                      servidor sin avisar nunca. Ella lo probó con "Fondo de

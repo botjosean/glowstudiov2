@@ -684,7 +684,10 @@
         "layout_combo": "Combo",
         "layoutHint_combo": "Two colors together, with their card",
         "comboPickTitle": "Pick the two photos",
-        "comboPickHint": "One for each color in the combo."
+        "comboPickHint": "One for each color in the combo.",
+        "templateCurrent": "Copying the style of:",
+        "templateNth": "Reference {n}",
+        "templateSaved": "Done — it stays set for your next posts."
     },
     "home": {
         "heroTitle": "Book your next cut in seconds",
@@ -759,7 +762,8 @@
         "install": "Install",
         "installPrompt": "Install the app to get in faster, without hunting for the link.",
         "search": "Search",
-        "noResults": "No results"
+        "noResults": "No results",
+        "change": "Change"
     },
     "signIn": {
         "title": "Welcome back",

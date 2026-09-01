@@ -684,7 +684,10 @@
         "layout_combo": "Combinación",
         "layoutHint_combo": "Dos colores juntos, con su tarjeta",
         "comboPickTitle": "Elegí las dos fotos",
-        "comboPickHint": "Una por cada color de la combinación."
+        "comboPickHint": "Una por cada color de la combinación.",
+        "templateCurrent": "Copiando el estilo de:",
+        "templateNth": "Referencia {n}",
+        "templateSaved": "Listo, se queda puesta para los próximos posts."
     },
     "home": {
         "heroTitle": "Reserva tu próximo corte en segundos",
@@ -759,7 +762,8 @@
         "install": "Instalar",
         "installPrompt": "Instalá la app para entrar más rápido, sin buscar el enlace.",
         "search": "Buscar",
-        "noResults": "Sin resultados"
+        "noResults": "Sin resultados",
+        "change": "Cambiar"
     },
     "signIn": {
         "title": "Bienvenido de nuevo",

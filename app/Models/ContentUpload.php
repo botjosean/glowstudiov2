@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Una foto que la profesional subió al Taller de Contenido, con lo que dijo
  * que quería hacer con ella.
  */
-#[Fillable(['provider_id', 'path', 'kind', 'purpose', 'note', 'used_at', 'learned_style', 'learned_style_at', 'color_name', 'color_hex'])]
+#[Fillable(['provider_id', 'path', 'kind', 'purpose', 'note', 'used_at', 'learned_style', 'learned_style_at', 'color_name', 'color_hex', 'technique'])]
 class ContentUpload extends Model
 {
     protected function casts(): array

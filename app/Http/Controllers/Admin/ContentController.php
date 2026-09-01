@@ -251,7 +251,15 @@ class ContentController extends Controller
             if ($color !== null) {
                 ContentUpload::query()
                     ->whereIn('id', $creadas->pluck('id'))
-                    ->update(['color_name' => $color['nombre'], 'color_hex' => $color['hex']]);
+                    ->update([
+                        'color_name' => $color['nombre'],
+                        'color_hex' => $color['hex'],
+                        // La técnica viene de la misma llamada: sirve para
+                        // estampar la palabra del pack que corresponde
+                        // ("Acrílicas" si fue de acrílicas) en vez de una
+                        // frase al azar.
+                        'technique' => $color['tecnica'] ?? null,
+                    ]);
 
                 $redirect->with('colorSuggestion', [
                     'uploadIds' => $creadas->pluck('id')->all(),
@@ -413,8 +421,12 @@ class ContentController extends Controller
         // dentro de la imagen, así que no se puede armar sin él.
         $written = $this->caption->handle($provider);
 
+        // La técnica de la primera foto elegida: con ella el titular puede
+        // ser la palabra exacta del trabajo en vez de una frase cualquiera.
+        $tecnica = $uploads->first(fn (ContentUpload $u): bool => $u->technique !== null)?->technique;
+
         $slides = match ($layout) {
-            PostLayout::Hero => [$this->hero->handle($provider, $paths, $written['headline'])],
+            PostLayout::Hero => [$this->hero->handle($provider, $paths, $written['headline'], $tecnica)],
             PostLayout::Collage => [$this->collage->handle($provider, $paths, $written['headline'])],
             PostLayout::Carousel => $this->carousel->handle($provider, $paths, $written['headline']),
             // Esta no usa el titular: su texto ES el nombre del color, que
